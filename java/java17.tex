@@ -1,0 +1,266 @@
+\documentclass{scrartcl}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{lightcyan}{HTML}{E0FFFF}
+\usepackage[colorlinks=true, urlcolor=blue, linkcolor=red]{hyperref}
+\usepackage{graphicx}
+
+
+\begin{document}
+    \lstset{
+        language=Java,
+        numbers=left,
+        stepnumber=1,
+        numbersep=5pt,
+        backgroundcolor=\color{lightcyan},
+        showspaces=false,
+        showstringspaces=false,
+        showtabs=false,
+        tabsize=2,
+        captionpos=b,
+        breaklines=true,
+        breakatwhitespace=true,
+        title=\lstname,
+    }
+
+
+\section{Data Types}
+
+\subsection{Date and Time}
+
+\subsubsection{\lstinline$ LocalDate $}
+
+    LocalDate is an immutable date-time object that represents a date, often viewed as year-month-day. Other date fields, such as day-of-year, day-of-week and week-of-year, can also be accessed.
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+        static LocalDate of(int year, int month, int dayOfMonth)
+        static LocalDate of(int year, Month month, int dayOfMonth)
+        static LocalDate ofInstant(Instant instant, ZoneId zone)
+        static LocalDate parse(CharSequence text, DateTimeFormatter formatter)
+
+        // instance methods, e.g.
+        LocalDateTime atTime(int hour, int minute, int second, int nanoOfSecond)
+        LocalDateTime atTime(LocalTime time)
+
+        int getDayOfMonth()
+        DayOfWeek getDayOfWeek()
+        int getDayOfYear()
+        Month getMonth()
+        int getMonthValue()
+        int getYear()
+
+        // same for plus
+        LocalDate minus(long amountToSubtract, TemporalUnit unit)
+        LocalDate minusDays(long daysToSubtract)
+        LocalDate minusMonths(long monthsToSubtract) //etc
+    \end{lstlisting}
+
+\subsubsection{\lstinline$ LocalTime $}
+
+    LocalTime is an immutable date-time object that represents a time, often viewed as hour-minute-second. Time is represented to nanosecond precision. For example, the value "13:45.30.123456789" can be stored in a LocalTime.
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+        static LocalTime of(int hour, int minute, int second, int nanoOfSecond)
+        static LocalTime ofInstant(Instant instant, ZoneId zone)
+
+        // instance methods, e.g.
+        LocalDateTime atDate(LocalDate date)
+
+        int getHour()
+        int getMinute() //etc.
+
+        // same for minus
+        LocalTime plus(long amountToAdd, TemporalUnit unit)
+        LocalTime plusNanos(long nanosToAdd) // etc.
+
+        // returns copy
+        LocalTime withHour(int hour)
+        LocalTime withMinute(int minute) //etc.
+        \end{lstlisting}
+
+\subsubsection{\lstinline$ LocalDateTime $}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+        static LocalDateTime of(int year, Month month, int dayOfMonth, int hour, int minute, int second, int nanoOfSecond)
+        static LocalDateTime of(LocalDate date, LocalTime time)
+        // instance methods analogous to above
+    \end{lstlisting}
+
+\subsubsection{\lstinline$ Month $}
+
+    In addition to the textual enum name, each month-of-year has an int value (1-12).
+    Do not use ordinal() to obtain the numeric representation of Month. Use getValue() instead.
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+        static Month of(int month)
+        Month e = Month.of(10); // DECEMBER
+        static Month valueOf(String name)
+        Month m = Month.valueOf("DECEMBER"); // DECEMBER
+
+        // instance methods, e.g.
+        int getValue()
+        int length(boolean leapYear)
+        minus(long months)
+        plus(long months)
+    \end{lstlisting}
+
+\subsubsection{\lstinline$ ChronoUnit $}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+        static ChronoUnit valueOf(String name)
+
+        // instance methods, e.g.
+        <R extends Temporal> R addTo(R temporal, long amount) // returns a copy!
+        long between(Temporal temporal1Inclusive, Temporal temporal2Exclusive)
+\end{lstlisting}
+
+\subsubsection{\lstinline$ Instant $}
+
+     An \lstinline$ Instant $ represents a specific moment in time using GMT.
+    Consequently, there is no time zone information.
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+        static Instant from(TemporalAccessor temporal)
+        static Instant now()
+        static Instant ofEpochMilli(long epochMilli)
+
+        // instance methods, e.g.
+        OffsetDateTime atOffset(ZoneOffset offset)
+        ZonedDateTime atZone(ZoneId zone)
+
+        Instant minus(long amountToSubtract, TemporalUnit unit) //returns copy! others too
+        Instant minus(TemporalAmount amountToSubtract)
+
+        Instant minusMillis(long millisToSubtract)
+        Instant minusNanos(long nanosToSubtract)
+
+        var instant = trainDay.toInstant(); // will not compile if this is a LocalDateTime!
+
+    \end{lstlisting}
+
+\subsubsection{\lstinline$ Period $}
+
+    This class models a quantity or amount of time in terms of years, months and days. See Duration for the time-based equivalent to this class.
+
+    Durations and periods differ in their treatment of daylight savings time when added to ZonedDateTime. A Duration will add an exact number of seconds, thus a duration of one day is always exactly 24 hours. By contrast, a Period will add a conceptual day, trying to maintain the local time.
+
+    For example, consider adding a period of one day and a duration of one day to 18:00 on the evening before a daylight savings gap. The Period will add the conceptual day and result in a ZonedDateTime at 18:00 the following day. By contrast, the Duration will add exactly 24 hours, resulting in a ZonedDateTime at 19:00 the following day (assuming a one hour DST gap).
+
+    The supported units of a period are YEARS, MONTHS and DAYS. All three fields are always present, but may be set to zero.
+
+    The period is modeled as a directed amount of time, meaning that individual parts of the period may be negative.
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+        static Period between(LocalDate startDateInclusive, LocalDate endDateExclusive)
+        static Period of(int years, int months, int days)
+        static Period ofDays(int days) // other fields will be 0
+        static Period ofMonths(int months)
+
+        // instance methods, e.g.
+        Temporal addTo(Temporal temporal)
+        Period minusDays(long daysToSubtract) // all return copies!
+        minusMonths(long monthsToSubtract)
+
+        Period withMonths(int months) // copies, too!
+        Period withYears(int years)
+
+        int getDays()
+        \end{lstlisting}
+
+ \subsubsection{\lstinline$ Duration $}
+
+    This class models a quantity or amount of time in terms of seconds and nanoseconds. It can be accessed using other duration-based units, such as minutes and hours. In addition, the DAYS unit can be used and is treated as exactly equal to 24 hours, thus ignoring daylight savings effects.
+
+    See Period for the date-based equivalent to this class.
+
+     \begin{lstlisting}
+     // to obtain, e.g.
+     static Duration of(long amount, TemporalUnit unit)
+     static Duration ofDays(long days)
+
+     // instance methods, e.g.
+     Duration dividedBy(long divisor) // all these copy
+     long dividedBy(Duration divisor)
+
+     long get(TemporalUnit unit)
+     int getNano()
+     long getSeconds()
+     \end{lstlisting}
+
+ \subsection{\lstinline$ String $ and \lstinline$ StringBuffer $}
+ \subsubsection{\lstinline$ String $}
+
+    \begin{lstlisting}
+     // strip()-related methods (these are the only ones)
+     strip(), stripLeading(), stripTrailing(), stripIndent()
+
+     // indent(): normalizes the output by adding a line break to the end
+     // does not change the indentation, but still adds a normalizing line break
+     System.out.println(phrase.indent(0).length());
+
+     // translateEscapes()
+     // these print 2 lines:
+     System.out.println("cheetah\ncub");
+     System.out.println("cheetah\ncub".translateEscapes());
+     System.out.println("cheetah\\ncub".translateEscapes());
+     - this prints 1:
+     System.out.println("cheetah\\ncub");
+
+     // format string
+     var quotes = """
+     \"The Quotes that Could\" // could remove both backslashes
+     \"\"\"                    // could remove 2 backslashes
+     """;
+
+     // there is no reverse()
+     \end{lstlisting}
+
+ \subsubsection{\lstinline$ StringBuilder $}
+
+    \begin{lstlisting}
+
+        // instance methods, e.g.
+        char charAt(int index)
+        IntStream chars()
+
+        int indexOf(String str)
+
+        int length()
+
+        StringBuilder
+        delete(int start, int end)
+    \end{lstlisting}
+
+
+
+
+
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+
+
+
+
+\end{document}
+
