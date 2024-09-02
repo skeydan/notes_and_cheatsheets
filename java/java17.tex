@@ -1,10 +1,12 @@
 \documentclass{scrartcl}
 \usepackage{listings}
 \usepackage{xcolor}
-
-\definecolor{lightcyan}{HTML}{E0FFFF}
+\usepackage{amssymb}
 \usepackage[colorlinks=true, urlcolor=blue, linkcolor=red]{hyperref}
 \usepackage{graphicx}
+
+\definecolor{lightcyan}{HTML}{E0FFFF}
+
 
 
 
@@ -311,10 +313,7 @@
        \item     Rewrite this as a negative integer: -17
    \end{enumerate}
 
-
-
 \subsubsection{Bitwise operators: arithmetic}
-
     \begin{lstlisting}
 
         << // shift left (signed)
@@ -326,6 +325,129 @@
         -12 >> 2: -3 //               (neg..: fill with 1)
         12 >>> 2: 3 // 1100 -> 0011
         -12 >>> 2: 1073741821 // fill with 0 too
+    \end{lstlisting}
+
+\subsection{Precedence}
+
+    Default evaluation order is left-to-right.
+
+    \begin{tabular}{|l|c|r|}
+        \hline
+        Post-­unary operator& x++, x-- &  \\
+        \hline
+        Pre-­unary operator& ++x, ++x &  \\
+        \hline
+        Other unary operators& -­, !, ~, + &  Right-­to-­left \\
+        \hline
+        Cast(type)reference&  &  Right-­to-­left \\
+        \hline
+        Multiplication/division/modulus& *, /, \% &  \\
+        \hline
+        Addition/subtraction& +, - &  \\
+        \hline
+        Shift operators& $\ll, \gg, \ggg$ &  \\
+        \hline
+        Relational operators & $<$, $>$, $<=$, $>=$, instanceof & \\
+        \hline
+        Equal to/not equal to& ==, != &\\
+        \hline
+        Logical and& \& &  \\
+        \hline
+        Logical exclusive OR& \textasciicircum \\
+        \hline
+        Logical inclusive OR& $|$ &  \\
+        \hline
+        Conditional OR& $||$ &  \\
+        \hline
+        Ternary operator& e1 ? e2 : e3 & Right-­to-­left\\
+        \hline
+        Assignment operators& =, +=, -­=, *=, /=, \%=, \&=, \textasciicircum, & Right-­to-­left\\
+        & $|$, $<<=$ , $>>=$, $>>>=$ & \\
+        \hline
+        Ternary operator& e1 ? e2 : e3 & Right-­to-­left\\
+        \hline
+        Arrow operator& $->$ &  \\\\
+        \hline
+    \end{tabular}
+
+    In a nutshell:
+    \begin{itemize}
+        \item shift ops after +, -
+        \item relational before equality before logical
+        \item \& $|$ before \&\& $||$
+        \item ternary thereafter but before assignment
+        \item assignment last
+    \end{itemize}
+
+
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // to obtain, e.g.
+
+        // instance methods, e.g.
 
     \end{lstlisting}
 
