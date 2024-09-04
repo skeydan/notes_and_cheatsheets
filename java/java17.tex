@@ -200,7 +200,7 @@
      long getSeconds()
      \end{lstlisting}
 
- \subsection{\lstinline$ String $ and \lstinline$ StringBuffer $}
+ \subsection{String and StringBuilder}
  \subsubsection{\lstinline$ String $}
 
     \begin{lstlisting}
@@ -252,12 +252,19 @@
         Math.pow() // double -> double
     \end{lstlisting}
 
-\subsubsection{\lstinline$ Parsing $ methods}
+\subsubsection{Parsing Strings}
     \begin{lstlisting}
         var numPigeons = Long.parseLong("100"); // returns long
         var numPigeons2 = Long.valueOf("100"); // returns Long
     \end{lstlisting}
 
+    Examples:
+    \begin{lstlisting}
+        Boolean.valueOf("8").booleanValue() // false
+        Character.valueOf('x').byteValue(); // does not compile
+        Double.valueOf("9_.3").byteValue(); // NumberFormatException
+        Long.valueOf(128).byteValue(); // - 128
+    \end{lstlisting}
 
 \section{Operators}
 \subsection{Kinds}
@@ -369,8 +376,10 @@
         Arrow operator& $->$ &  \\\\
         \hline
     \end{tabular}
+     \\
 
     In a nutshell:
+
     \begin{itemize}
         \item shift ops after +, -
         \item relational before equality before logical
@@ -379,56 +388,161 @@
         \item assignment last
     \end{itemize}
 
+\section{Syntax}
+\subsection{switch}
 
+\subsubsection{General}
+
+        \begin{itemize}
+            \item Supports: enum, byte, Byte, short, Short, char, Character, int, Integer,
+            String, var (if resolves to one of those types)
+            \item Does not support: boolean, Boolean, double, Double, float, Float
+         \end{itemize}
+
+\subsubsection{Statement}
+
+    \begin{itemize}
+        \item The value of a case statement must be a constant, a literal value, or a final variable (not, e.g., \lstinline$ case red:  $)
+        \item May use comma to separate case constants in statements: e.g.,
+            \begin{lstlisting}
+                public int getAverageTemperate(Season s) {
+                    switch (s) {
+                        default:
+                        case WINTER, SUMMER: return 30;
+                }}
+            \end{lstlisting}
+    \end{itemize}
+
+\subsubsection{Expression}
+
+    \begin{itemize}
+        \item Can omit default clause in when either all the values of an enum are covered or no value is returned
+    \end{itemize}
+
+\subsection{ for (x : y)}
+
+     A for-­each loop accepts arrays and classes that implement java.lang.Iterable, such as List. Not: String, StringBuilder
+
+\subsection{Flow Scoping}
 
     \begin{lstlisting}
-        // to obtain, e.g.
+        if (number instanceof Integer i && Math.abs(i) == 0) // ok
+        if (number instanceof Integer i || Math.abs(i) == 0) // i not defined
+        if (number instanceof int i && Math.abs(i) == 0) // can't use primitives
+    \end{lstlisting}
 
-        // instance methods, e.g.
+\subsection{Loops}
+
+    for and while (but not do-while) don't need braces if just one statement follows.
+
+    \begin{lstlisting}
+        while (i<6) System.out.println("");
+        for (;;) System.out.println();
+    \end{lstlisting}
+
+\section{Objects, Interfaces, Records and Enums}
+\subsection{Objects}
+\subsection{Interfaces}
+\subsection{Records}
+
+    Minimal example:
+
+    \begin{lstlisting}
+        public record Crane(int numberEggs, String name) { }
+    \end{lstlisting}
+
+    Records may optionally have constructors.
+
+    A (short) constructor (at most one):
+
+    \begin{lstlisting}
+        public Crane { // no parens
+            if (numberEggs < 0) throw new IllegalArgumentException();
+            name = name.toUpperCase();
+            // long form is automatically called here
+        }
+    \end{lstlisting}
+
+    A long constructor:
+
+    \begin{lstlisting}
+        public Crane(int numberEggs, String name) {
+            if (numberEggs < 0) throw new IllegalArgumentException();
+            this.numberEggs = numberEggs;
+            this.name = name;
+        }
+    \end{lstlisting}
+
+    Constructors may be overloaded:
+
+    \begin{lstlisting}
+        public record Crane(int numberEggs, String name) {
+            public Crane(String firstName, String lastName) {
+                // must be 1st call, must either call another constructor or the long constructor
+                this(0, firstName + " " + lastName);
+            }
+        }
+    \end{lstlisting}
+
+    They can also implement interfaces:
+
+    \begin{lstlisting}
+        public record Crane(int numberEggs, String name) implements Bird {}
+    \end{lstlisting}
+
+    Overriding a method:
+
+     \begin{lstlisting}
+        public record BeardedDragon(boolean fun) {
+            // overriding generated accessor
+            @Override public boolean fun() { return false; }
+        }
+    \end{lstlisting}
+
+    Records may be package access or public. They may contain methods, nested classes, interfaces, annotations, enums, and other records.
+
+    Records can't be subclassed, since they are implicitly final.
+
+    Records \textit{cannot} declare instance \textit{variables} (as opposed to instance \textit{methods}) or instance \textit{initializers}.
+
+\subsection{Enums}
+
+    Enums can have constructors, methods, and fields. Example:
+
+        \begin{lstlisting}
+        enum Flavors {
+            VANILLA, CHOCOLATE, STRAWBERRY;
+            static final Flavors DEFAULT = STRAWBERRY;
+        }
+    \end{lstlisting}
+
+    Constructors are implicitly private. Example:
+
+     \begin{lstlisting}
+        enum Animals {
+              // When an enum contains any other members, such as a constructor or variable, a semicolon is required:
+            MAMMAL(true), INVERTEBRATE(Boolean.FALSE), BIRD(false),REPTILE(false),
+            AMPHIBIAN(false), FISH(false) {public int swim() { return 4; }};
+
+            final boolean hasHair;
+
+            private Animals(boolean hasHair) {this.hasHair = hasHair;}
+
+            public boolean hasHair() { return hasHair; }
+            public int swim() { return 0; }
+        }
 
     \end{lstlisting}
 
-    \begin{lstlisting}
-        // to obtain, e.g.
 
-        // instance methods, e.g.
 
-    \end{lstlisting}
 
-    \begin{lstlisting}
-        // to obtain, e.g.
 
-        // instance methods, e.g.
 
-    \end{lstlisting}
 
-    \begin{lstlisting}
-        // to obtain, e.g.
 
-        // instance methods, e.g.
 
-    \end{lstlisting}
 
-    \begin{lstlisting}
-        // to obtain, e.g.
-
-        // instance methods, e.g.
-
-    \end{lstlisting}
-
-    \begin{lstlisting}
-        // to obtain, e.g.
-
-        // instance methods, e.g.
-
-    \end{lstlisting}
-
-    \begin{lstlisting}
-        // to obtain, e.g.
-
-        // instance methods, e.g.
-
-    \end{lstlisting}
 
     \begin{lstlisting}
         // to obtain, e.g.
