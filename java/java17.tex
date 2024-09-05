@@ -440,9 +440,97 @@
         for (;;) System.out.println();
     \end{lstlisting}
 
-\section{Objects, Interfaces, Records and Enums}
-\subsection{Objects}
+\section{Classes, Interfaces, Records and Enums}
+\subsection{Classes}
+\subsubsection{Nested Classes}
+
+    There are four types of nested classes: inner, static, local, and anonymous.
+    Nested classes can be public.
+
+    An \textit{inner} class requires an instance of the outer class to use.
+    Three ways that are legal:
+
+    \begin{lstlisting}
+    public class Dinosaur {
+        class Pterodactyl extends Dinosaur {}
+
+        // it all happens in an instance method
+        public void roar() {
+            var dino = new Dinosaur();
+
+            // uses instance to create inner
+            dino.new Pterodactyl();
+
+            // relies on the fact that roar() is an instance method
+            //, which means there's an implicit instance of the outer class Dinosaur available
+            new Dinosaur.Pterodactyl();
+
+            // The Dinosaur. prefix is optional, though
+            new Pterodactyl();
+        } }
+    \end{lstlisting}
+
+    While a \textit{static} nested class does not:
+
+    \begin{lstlisting}
+        new Lion.Den()
+    \end{lstlisting}
+
+    A \textit{local} class is commonly defined within a method or block.
+    Local classes can only access local variables that are final or effectively final.
+
+    \textit{Anonymous} classes are a special type of local class that does not have a name.
+    Anonymous classes are required to extend exactly one class or implement one interface.
+
+    Note:
+
+    \textit{Inner, local, and anonymous} classes can \textit{access private members} of the class in which they are defined, provided the latter two are used inside an instance method.
+
+    \textit{All four} types of nested classes can now define static variables and methods.
+
+\subsubsection{Sealed Classes}
+
+    A sealed class is a class that restricts which other classes may directly extend it:
+
+    \begin{lstlisting}
+         sealed class Friendly extends Mandrill permits Silly {}
+    \end{lstlisting}
+
+    Parent and child must be in same package. If they are in same file or the extension is nested, no permits are needed.
+
+    Every class that directly extends a sealed class must specify exactly one of the following three modifiers: final, sealed, or non-­sealed.
+
+    Note:
+
+    - We can have sealed interfaces (permitting both extensions and implementations).
+    - While a sealed class is commonly extended by a subclass marked final, it can also be extended by a sealed or non-­sealed subclass marked abstract.
+
+    \begin{lstlisting}
+        // extends clause missing; it is Friendly that does not compile!
+        sealed class Friendly extends Mandrill permits Silly {}
+        final class Silly {}
+    \end{lstlisting}
+\subsubsection{Final and Immutable Classes}
+
+    - Classes marked as final can’t be extended.
+    - Immutable classes do not include setter methods. They must be marked final \textit{or} contain only private constructors.
+
 \subsection{Interfaces}
+
+    \textit{Variables} are always publics, static, final.
+
+    \textit{Methods} can be either \textit{default} (these are always public), static (always public), private, or private and static. There are no protected members.
+
+    \textit{Non-­static} methods with a body must be explicitly marked \textit{private} or \textit{default}.
+
+    Note:
+
+    - There is no modifier that can prevent a default method from being overridden in a class implementing an interface!
+
+    - If implementing two interfaces with conflicting signatures, \textit{default} methods have to override it explicitly. They  can then access the inherited ones by calling Interface.super.method().
+
+    - \textit{Static} methods are only accessible with a qualifier.
+
 \subsection{Records}
 
     Minimal example:
@@ -534,46 +622,39 @@
 
     \end{lstlisting}
 
+\subsection{Overriding and overloading}
 
+\subsubsection{Overloading}
 
-
-
-
-
-
-
-
+    Overloading works also for pairs of primitive + wrapper, e.g.
 
     \begin{lstlisting}
-        // to obtain, e.g.
 
-        // instance methods, e.g.
-
-    \end{lstlisting}
-
-    \begin{lstlisting}
-        // to obtain, e.g.
-
-        // instance methods, e.g.
-
-    \end{lstlisting}
-
-    \begin{lstlisting}
-        // to obtain, e.g.
-
-        // instance methods, e.g.
-
-    \end{lstlisting}
-
-    \begin{lstlisting}
-        // to obtain, e.g.
-
-        // instance methods, e.g.
-
+        public static void main(String... args) {
+            System.out.println(new App().woof(5)); // 1
+            System.out.println(new App().woof(Integer.valueOf(5))); // 2
+        }
+        public String woof(int bark) {
+            return "1";
+        }
+        public String woof(Integer bark) {
+            return "2";
+        }
     \end{lstlisting}
 
 
 
+\subsubsection{Overriding}
+
+    Overridden and hidden methods can only have covariant return types.
+    This also applies to implementing abstract methods.
+
+    When a parent method is private, no overriding takes place (so the child can do what it wants).
+
+    Note:
+
+    - Overriding replaces the method \textit{regardless of the reference type}.
+    - There is no overriding of instance \textit{variables}! Instance variables are always determined based on the reference type!
 
 
 \end{document}
