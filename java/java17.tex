@@ -656,6 +656,114 @@
     - Overriding replaces the method \textit{regardless of the reference type}.
     - There is no overriding of instance \textit{variables}! Instance variables are always determined based on the reference type!
 
+\section{IO}
+\subsection{java.nio}
+\subsection{java.io}
+
+\subsubsection{Constructing a path}
+
+    To construct a path, use Path.of or Paths.get:
+
+    \begin{lstlisting}
+        Path zooPath1 = Path.of("/home/tiger/data/stripes.txt");
+        Path zooPath2 = Path.of("/home", "tiger", "data", "stripes.txt");
+
+        Path zooPath3 = Paths.get("/home/tiger/data/stripes.txt");
+        Path zooPath4 = Paths.get("/home", "tiger", "data", "stripes.txt");
+    \end{lstlisting}
+
+\subsubsection{Conversion to or back from java.io.File}
+
+    \begin{lstlisting}
+        File file = new File("rabbit");
+        Path nowPath = file.toPath();
+        File backToFile = nowPath.toFile();
+    \end{lstlisting}
+
+\subsubsection{Concatenation: Path resolve(Path other)}
+
+    Resolves the given path against this path. Does not normalize!
+
+    \begin{lstlisting}
+        // the input argument is appended onto the Path, e.g.
+
+        // with input a relative path:
+        Path path1 = Path.of("/cats/../panther");
+        Path path2 = Path.of("food");
+        System.out.println(path1.resolve(path2));
+        // /cats/../panther/food
+
+        // if input is absolute, return input
+        Path path3 = Path.of("/turkey/food");
+        path3.resolve("/tiger/cage");
+        // /turkey/food
+    \end{lstlisting}
+
+\subsubsection{Constructing a relative path: Path relativize(Path other)}
+
+    \begin{lstlisting}
+        //requires that both path values be absolute or relative
+        // otherwise, an exception is produced at runtime
+        var path1 = Path.of("fish.txt");
+        var path2 = Path.of("friendly/birds.txt");
+        path1.relativize(path2);
+        // ../friendly/birds.txt
+
+        // Note: the file itself counts as one level!
+        path2.relativize(path1);
+        // ../../fish.txt
+        // go up "plus 1"
+    \end{lstlisting}
+
+\subsubsection{Normalizing a path}
+
+    \begin{lstlisting}
+        var p1 = Paths.get("/pony/../weather.txt");
+        var p2 = Paths.get("/weather.txt");
+        p1.equals(p2); // false
+        p1.normalize().equals(p2.normalize()); // true
+    \end{lstlisting}
+
+\subsubsection{Resolve symlinks: toRealPath}
+
+    \begin{lstlisting}
+        ll horse/
+        schedule/
+        food.txt
+
+        ll zebra/
+        schedule/
+        food.txt
+
+        Paths.get("/zebra/food.txt").toRealPath(); // /horse/food.txt
+        Paths.get(".././food.txt").toRealPath());  // same -- normalizes
+    \end{lstlisting}
+
+\subsubsection{Constructing a path}
+
+    \begin{lstlisting}
+
+    \end{lstlisting}
+
+\subsubsection{Common method arguments}
+
+    \begin{lstlisting}
+
+        // Enums implementing (empty) interfaces, e.g.
+        public enum StandardCopyOption implements CopyOption {
+            REPLACE_EXISTING,
+            COPY_ATTRIBUTES,
+            ATOMIC_MOVE;
+            private StandardCopyOption() {}}
+
+    \end{lstlisting}
+
+
+
+
+
+
+
 
 \end{document}
 
