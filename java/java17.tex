@@ -521,7 +521,15 @@
 
     \textit{Methods} can be either \textit{default} (these are always public), static (always public), private, or private and static. There are no protected members.
 
-    \textit{Non-­static} methods with a body must be explicitly marked \textit{private} or \textit{default}.
+    \textit{Non-­static} metho47.3 concatenation:
+    47.4 relativize():
+
+    47.5 normalize
+
+    47.6 : Resolves symbolic links. Normalizes path. Interacts with the file system - throws exception if not exists!
+    - we have a symbolic link from /zebra to /horse.
+    - current working directory is /horse/schedule
+    ds with a body must be explicitly marked \textit{private} or \textit{default}.
 
     Note:
 
@@ -657,12 +665,50 @@
     - There is no overriding of instance \textit{variables}! Instance variables are always determined based on the reference type!
 
 \section{IO}
-\subsection{java.nio}
 \subsection{java.io}
+\subsubsection{Serialization}
 
-\subsubsection{Constructing a path}
+    To be serializable, a class must implement the Serializable marker interface.
+    All members must either be serializable, as well, or must be declared transient (otherwise
+    a NotSerializableException is thrown).
 
-    To construct a path, use Path.of or Paths.get:
+    Methods and the exceptions they throw:
+
+    \begin{lstlisting}
+        // ObjectInputStream
+        public Object readObject() throws IOException, ClassNotFoundException
+
+        // ObjectOutputStream
+        public void writeObject(Object obj) throws IOException
+    \end{lstlisting}
+
+    On deserialization, the constructor and any instance initializers \textit{not} called.
+    Instead, Java will call the \textit{no-­arg constructor of the first non-serializable parent class} it can find in the class hierarchy.
+
+    Static (!) as well as transient fields are ignored.
+
+    Values that are not provided are  given their default Java value, such as null for String, or 0 for int values.
+
+    To read several objects from a file, we need to use an infinite loop to process the data,
+    which throws an EOFException when the end of the I/O stream is reached. That's because, when calling readObject(), null and -­1 do not have any special meaning,
+    as someone might have serialized objects with those values.
+
+    \begin{lstlisting}
+        var gorillas = new ArrayList<Gorilla>();
+        try (var in = new ObjectInputStream(new BufferedInputStream(new FileInputStream(dataFile)))) {
+            while (true) {
+                var object = in.readObject();
+                if (object instanceof Gorilla g)
+                gorillas.add(g);
+            }
+        } catch (EOFException e) { // File end reached
+        }
+        return go
+    \end{lstlisting}
+
+\subsection{java.nio}
+
+\subsubsection{Constructing a path: Path.of, Paths.get}
 
     \begin{lstlisting}
         Path zooPath1 = Path.of("/home/tiger/data/stripes.txt");
@@ -712,10 +758,20 @@
         // Note: the file itself counts as one level!
         path2.relativize(path1);
         // ../../fish.txt
-        // go up "plus 1"
+        // => go up "plus 1"
+
+        // Relativization is the inverse of resolution.
+        // For any two normalized paths p and q, where q does not have a root component, we have
+        p.relativize(p.resolve(q)).equals(q)
     \end{lstlisting}
 
-\subsubsection{Normalizing a path}
+
+\subsubsection{toAbsolutePath}
+
+    Resolves the path in an implementation dependent manner, typically by resolving the path against a file system default directory.
+    For me, the current working directory is picked, and transformed to absolute.
+
+\subsubsection{Normalizing a path: normalize}
 
     \begin{lstlisting}
         var p1 = Paths.get("/pony/../weather.txt");
@@ -739,7 +795,123 @@
         Paths.get(".././food.txt").toRealPath());  // same -- normalizes
     \end{lstlisting}
 
-\subsubsection{Constructing a path}
+\subsubsection{Copying files: copy}
+
+    \begin{lstlisting}
+        // copy from file to file
+        Files.copy(Paths.get("book.txt"), Paths.get("movie.txt"), StandardCopyOption.REPLACE_EXISTING);
+        // copy from stream to file
+        try (var is = new FileInputStream("source-data.txt")) {
+            Files.copy(is, Paths.get("/mammals/wolf.txt"));
+        }
+        // copy from file to stream
+        Files.copy(Paths.get("/fish/clown.xsl"), System.out);
+
+        // copy a file into a directory
+        var file = Paths.get("food.txt");
+        var directory = Paths.get("/enclosure/food.txt"); // NOT /enclosure!
+        Files.copy(file, directory);
+    \end{lstlisting}
+
+\subsubsection{Comparing file content: isSameFile() and mismatch()}
+    isSameFile() uses equals (maybe having to normalize).
+
+    mismatch() returns -1 if the files are the same; otherwise, it returns the index of the first position in the file that differs.
+
+\subsubsection{Reading files}
+
+    \begin{lstlisting}
+        // reads the entire file into memory
+        // returns List<String>
+        Files.readAllLines(Paths.get("birds.txt"))
+            .forEach(System.out::println);
+
+        // reads lazily
+        // returns Stream<String>
+        Files.lines(Paths.get("birds.txt"))
+            .forEach(System.out::println);
+    \end{lstlisting}
+
+\subsubsection{java.nio.Files methods}
+
+    e.g.,
+
+    \begin{itemize}
+        \item creation: createDirectories, createSymbolicLink, ...
+        \item deletion: deleteIfExists, delete, ...
+        \item other: newBufferedWriter, ...
+        \item retrieve attributes: isDirectory, isRegularFile, isSymbolicLink,
+            isHidden(), isReadable(), isWriteable(), isExecutable()
+    \end{itemize}
+
+
+    \begin{lstlisting}
+        // find
+        Stream<Path> find(Path start, int maxDepth, BiPredicate<Path, BasicFileAttributes> matcher, FileVisitOption... options) throws IOException
+
+        // walk
+        public static Stream<Path> walk(Path start, int maxDepth, FileVisitOption... options) throws IOException
+    \end{lstlisting}
+
+\subsubsection{Using views for attribute retrieval}
+
+    A view is a group of related attributes for a particular file system type.
+
+    \begin{lstlisting}
+        public static <A extends BasicFileAttributes> A readAttributes(
+            Path path,
+            Class<A> type,
+            LinkOption... options
+        ) throws IOException
+
+        var path = Paths.get("/turtles/sea.txt");  // needs a Path!
+        BasicFileAttributes data = Files.readAttributes(path, BasicFileAttributes.class);
+        System.out.println("Is a directory? " + data.isDirectory());
+        System.out.println("Is a regular file? " + data.isRegularFile());
+        System.out.println("Is a symbolic link? " + data.isSymbolicLink());
+        System.out.println("Size (in bytes): " + data.size()); // not length()!
+        System.out.println("Last modified: " + data.lastModifiedTime());
+    \end{lstlisting}
+
+    To modify attributes, use BasicFileAttributeView, not BasicFileAttributes:
+
+    \begin{lstlisting}
+        public static <V extends FileAttributeView> V getFileAttributeView(
+            Path path,
+            Class<V> type,
+            LinkOption... options
+        ) throws IOException
+
+        // step 1: Read file attributes, using BasicFileAttributeView
+        var path = Paths.get("/turtles/sea.txt");
+        // this uses BasicFileAttributeView, NOT BasicFileAttributes
+        BasicFileAttributeView view = Files.getFileAttributeView(path,
+        BasicFileAttributeView.class);
+        BasicFileAttributes attributes = view.readAttributes();
+
+        // step 2: Modify file last modified time
+        FileTime lastModifiedTime = FileTime.fromMillis(attributes.lastModifiedTime().toMillis() + 10_000);
+        // BasicFileAttributeView instance method
+        //public void setTimes(FileTime lastModifiedTime,
+        //FileTime lastAccessTime, FileTime createTime)
+        view.setTimes(lastModifiedTime, null, null);
+    \end{lstlisting}
+
+
+
+    \begin{lstlisting}
+
+
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+
+    \end{lstlisting}
 
     \begin{lstlisting}
 
