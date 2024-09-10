@@ -706,6 +706,51 @@
         return go
     \end{lstlisting}
 
+\subsubsection{Abstract base classes}
+
+    InputStream, OutputStream, Reader, Writer.
+
+    Beware: these are abstract classes, not interfaces!
+
+\subsubsection{Byte Streams}
+
+    Classes: FileInputStream, FileOutputStream, BufferedInputStream (readAllBytes), BufferedOutputStream, PrintStream.
+
+    PrintStream methods: append(byte b),..., format(Locale l, String format, Object... args), void print(boolean b),...
+
+\subsubsection{Character Streams}
+
+    FileReader, FileWriter, BufferedReader (readLine), BufferedWriter (write (line), newLine), PrintWriter.
+
+    PrintWriter methods: append(char c),..., format(Locale l, String format, Object... args), void print(boolean b),...
+
+    Beware: As opposed to BufferedInputStream, Buffered Reader does not have a method to read all lines!
+
+\subsubsection{Console}
+
+    \begin{lstlisting}
+        // to obtain (constructor is private)
+        Console console = System.console();
+
+        // always check that console is not null
+        Console console = System.console();
+        if (console != null)  String userInput = console.readLine();
+
+        // fields e.g.
+        Reader, Writer, PrintWriter
+
+        // methods e.g.
+        reader()
+        readLine() - this we wouldn't get from the Reader field!
+        // NOT: read() - we have to get the Reader first
+        reader.read()
+
+    \end{lstlisting}
+
+
+
+
+
 \subsection{java.nio}
 
 \subsubsection{Constructing a path: Path.of, Paths.get}
