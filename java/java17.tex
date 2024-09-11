@@ -28,8 +28,6 @@
         basicstyle=\small
     }
 
-
-
 \section{Data Types}
 
 \subsection{Date and Time}
@@ -389,6 +387,10 @@
     \end{itemize}
 
 \section{Syntax}
+\subsection{Allowed variable names}
+
+    Names may contain: underscore, currency symbol, numbers, letters (first may not be a number)
+
 \subsection{switch}
 
 \subsubsection{General}
@@ -650,8 +652,6 @@
         }
     \end{lstlisting}
 
-
-
 \subsubsection{Overriding}
 
     Overridden and hidden methods can only have covariant return types.
@@ -663,6 +663,35 @@
 
     - Overriding replaces the method \textit{regardless of the reference type}.
     - There is no overriding of instance \textit{variables}! Instance variables are always determined based on the reference type!
+
+\subsection{Class loading and initialization}
+\subsubsection{Class}
+
+    First, static variables are created, then static initializers are run.
+
+    Static variables cannot access instance variables.
+
+    If any static variable is final, it must be initialized.
+
+\subsubsection{Instance}
+
+    \textit{Instance initialization} blocks are invoked after the \textit{parent class constructor} has been invoked (i.e., after the super() constructor call).
+    An instance initializer can also access any static variables.
+
+    Beware: Variables newly created in the initializer block are in scope only there!
+
+    If any instance variable is final, it must be initialized.
+
+\subsection{Overall initialization order}
+
+    \begin{enumerate}
+        \item static variables in order
+        \item static initializers in order
+        \item instance variables in order
+        \item call to \textit{parent class constructor}
+        \item instance initializers in order
+        \item local variables created in constructor
+    \end{enumerate}
 
 \section{IO}
 \subsection{java.io}
@@ -744,10 +773,39 @@
         readLine() - this we wouldn't get from the Reader field!
         // NOT: read() - we have to get the Reader first
         reader.read()
-
     \end{lstlisting}
 
+\subsubsection{Using mark()}
 
+    \begin{lstlisting}
+        // methods
+        public boolean markSupported()
+
+        // readLimit: instructs the I/O stream that we expect to call reset() after at most readLimit bytes.
+        // If our program calls reset() after reading more than 100 bytes from calling mark(readLimit), it may throw an exception, depending on the I/O stream class.
+        public void mark(int readLimit)
+
+        public void reset() throws IOException
+
+        // returns number of values skipped
+        public long skip(long n) throws IOException
+
+        // how to use
+        public void readData(InputStream is) throws IOException {
+            System.out.print((char) is.read()); // L
+
+            if (is.markSupported()) {
+
+            is.mark(100); // Marks up to 100 bytes
+            System.out.print((char) is.read()); // I
+            System.out.print((char) is.read()); // O
+            is.reset(); // Resets stream to position before I
+            }
+            System.out.print((char) is.read()); // I
+            System.out.print((char) is.read()); // O
+            System.out.print((char) is.read()); // N
+        }
+    \end{lstlisting}
 
 
 
@@ -975,12 +1033,183 @@
 
     \end{lstlisting}
 
+\section{Exception handling}
+\subsection{try-with-resources}
+
+    Only classes that implement the AutoCloseable interface can be used in a try-with-resources statement.
+
+    Resources are closed in reverse order of how they were created.
+
+    Resources can be declared in advance, provided they are final or effectively final.
+
+    \begin{lstlisting}
+        // simple syntax
+        try (FileInputStream is = new FileInputStream("myfile.txt")) {}
+
+        // if we have several resources, a semicolon between them is needed
+        try (
+            var in = new FileInputStream("data.txt");
+             // the one at the end is optional
+            var out = new FileOutputStream("output.txt");) {}
+    \end{lstlisting}
+
+    If the close() method also throws an exception, this is added as \textit{suppressed}. In other words: If exceptions are thrown from both the try block and the try-with-resources statement,
+    the exception from the try block thrown; the exception thrown from the try-with-resources block is added as suppressed.
+
+    Example:
+    \begin{lstlisting}
+        public class JammedTurkeyCage implements AutoCloseable {
+
+            public void close() throws IllegalStateException {
+                throw new IllegalStateException("Cage door does not close");
+            }
+
+            public static void main(String[] args) {
+                try (JammedTurkeyCage t = new JammedTurkeyCage()) {
+                    // primary
+                    throw new IllegalStateException("Turkeys ran off");
+                    // here close is called, we get an IllegalStateException
+                    // this is added as suppressed
+                } catch (IllegalStateException e) {
+                    // primary
+                    System.out.println("Caught: " + e.getMessage());
+                    for (Throwable t: e.getSuppressed())
+                    // the one from close()
+                    System.out.println("Suppressed: "+t.getMessage());
+        }}}
+        // Output
+        // Caught: Turkeys ran off
+        // Suppressed: Cage door does not close
+    \end{lstlisting}
+
+    Another example:
+    \begin{lstlisting}
+        try (JammedTurkeyCage t = new JammedTurkeyCage()) {
+            // primary exception
+            // not caught
+            throw new RuntimeException("Turkeys ran off");
+            // close is called, get IllegalStateException
+            // this is added as suppressed
+        } catch (IllegalStateException e) {
+            System.out.println("caught: " + e.getMessage());
+            for (Throwable t: e.getSuppressed())
+                // the one from close()
+                System.out.println("Suppressed: "+t.getMessage());
+        }
+        // Output
+        // Exception in thread "main" java.lang.RuntimeException: // Turkeys ran off
+        // Suppressed: java.lang.IllegalStateException:Cage door does not close
+    \end{lstlisting}
+
+    Note: Programmer-provided catch and final blocks are run after automatic ones.
+
+\section{Internationalization}
+\subsection{Resource bundles}
+
+    Once a resource bundle has been selected, only properties along a \textit{single hierarchy} will be used.
+
+\section{Concurrency}
+\subsection{Thread states}
+
+    Note: Calling interrupt()
+    on a thread in the TIMED\_WAITING or WAITING states causes the main() thread to become RUNNABLE again, triggering an InterruptedException.
+
+    Calling interrupt() on a thread already in a RUNNABLE state doesn’t change the state.
+
+\subsection{Interface Runnable}
+    \begin{lstlisting}
+        // def.
+        @FunctionalInterface public interface Runnable {void run();}
+
+        // to start, call start, not run
+        new Thread(() -> System.out.print("Hello")).start();
+
+        // example
+        Runnable printInventory = () -> System.out.println("Printing zoo inventory");
+        new Thread(printInventory).start();
+    \end{lstlisting}
 
 
+\subsection{Interface Callable}
+
+    \begin{lstlisting}
+        // def.
+        @FunctionalInterface public interface Callable<V> {V call() throws Exception;}
+    \end{lstlisting}
+
+\subsection{Concurrency API}
+
+    \begin{lstlisting}
+        ExecutorService service = Executors.newSingleThreadExecutor();
+        try {
+            service.execute(printInventory);
+        } finally {
+            // doesn't implement AutoCloseable!
+            service.shutdown();
+        }
+
+        // isShutdown() -- no longer accepts new
+        // isTerminated() -- is shut down
+
+        service.awaitTermination(1, TimeUnit.MINUTES); // after shutdown
 
 
+    \end{lstlisting}
 
+    Comparing execute() and submit(). Excute():
 
+    \begin{lstlisting}
+
+        // def.
+        void execute(Runnable command)	/ no returns!
+
+    \end{lstlisting}
+
+    Submit():
+    \begin{lstlisting}
+
+        // def.
+        // pass Runnable, get Future
+        Future<?> submit(Runnable task)
+
+        // pass Callable<T>, get Future<T>
+        <T> Future<T> submit(Callable<T> task)
+
+        // pass collection of Callables
+        // waits for all tasks to complete
+        <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
+
+        // pass collection of Callables
+        // waits for at least one task to complete
+        <T> T invokeAny(Collection<? extends Callable<T>> tasks)
+
+        // get result
+        // for Runnable: always null!
+        ExecutorService service = Executors.newSingleThreadExecutor();
+        try {
+            Future<?> result = service.submit(() -> {
+                for(int i = 0; i < 1_000_000; i++) counter++;
+            });
+            // Returns null for Runnable!
+            result.get(10, TimeUnit.SECONDS);
+            System.out.println("Reached!");
+        } catch (TimeoutException e) {
+            System.out.println("Not reached in time");
+        } finally {
+            service.shutdown();
+        }}
+
+        // for Callable, this returns something
+        try {
+            Future<Integer> result = service.submit(() -> 30 + 11);
+            System.out.println(result.get());
+        }
+    \end{lstlisting}
+
+\subsection{volatile}
+
+    Ensures that only one thread is modifying a variable at one time and that data read among multiple threads is consistent.
+    But operations are not atomic!
 
 \end{document}
 
