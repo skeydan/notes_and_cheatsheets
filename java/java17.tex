@@ -60,6 +60,12 @@
         LocalDate minusMonths(long monthsToSubtract) //etc
     \end{lstlisting}
 
+    Beware immutability:
+    \begin{lstlisting}
+        var date = LocalDate.of(2022, Month.APRIL, 30);
+        date.plusDays(2); // does not change date
+    \end{lstlisting}
+
 \subsubsection{\lstinline$ LocalTime $}
 
     LocalTime is an immutable date-time object that represents a time, often viewed as hour-minute-second. Time is represented to nanosecond precision. For example, the value "13:45.30.123456789" can be stored in a LocalTime.
@@ -205,8 +211,9 @@
      // strip()-related methods (these are the only ones)
      strip(), stripLeading(), stripTrailing(), stripIndent()
 
-     // indent(): normalizes the output by adding a line break to the end
-     // does not change the indentation, but still adds a normalizing line break
+     // indent():
+     // indent(n) splits into lines and then indents each; also adds newline if missing at end.
+     // indent(0) does not change the indentation, but still adds a normalizing line break
      System.out.println(phrase.indent(0).length());
 
      // translateEscapes()
@@ -243,6 +250,23 @@
     \end{lstlisting}
 
 \subsection{Numbers}
+\subsubsection{Number types: automatic promotion}
+
+    Integer literals are considered int by default (size notwithstanding). But they can be automatically promoted to long or double.
+
+    \begin{lstlisting}
+        final ___ song = 6; // can be int, long, double (automatic promotion from int)
+    \end{lstlisting}
+
+\subsubsection{Autoboxing}
+
+    Beware: cannot autobox and promote at the same time!
+
+    \begin{lstlisting}
+
+    \end{lstlisting}
+
+
 \subsubsection{\lstinline$ Math $ methods}
     \begin{lstlisting}
         Math.round() // double -> double
@@ -391,6 +415,42 @@
 
     Names may contain: underscore, currency symbol, numbers, letters (first may not be a number)
 
+\subsection{Variable declarations and initialization topics}
+
+    For instance variables, on a single line only one type should be specified.
+
+
+
+\subsection{Text blocks}
+
+    Imagine a vertical line drawn on the leftmost non-­whitespace character in the text block. Everything to the left of it is incidental whitespace, and everything to the right is essential whitespace.
+
+    Note:
+    \begin{itemize}
+        \item \ at end of line -> no newline!
+        \item Space at end of line is ignored
+        \item \textbackslash s yields two spaces
+        \item  \textbackslash n yields additional line break
+    \end{itemize}
+
+    Example:
+
+    \begin{lstlisting}
+        String block = """              // on sep. line
+        doe \
+        doof""";                        // on same line
+    \end{lstlisting}
+
+\subsection{var}
+
+    A var cannot be initialized with a null value without giving a type.
+
+    var cannot be used in a multiple-­variable assignment.
+
+\subsection{underscore}
+
+    An underscore can be placed in any numeric literal, as long as it is not at the beginning, at the end, or next to a decimal point. Underscores can even be placed next to each other.
+
 \subsection{switch}
 
 \subsubsection{General}
@@ -418,14 +478,53 @@
 \subsubsection{Expression}
 
     \begin{itemize}
-        \item Can omit default clause in when either all the values of an enum are covered or no value is returned
+        \item A switch expression requires all possible case values to be handled, or a default to be added.
+        \item switch expressions execute exactly one branch and do not use break statements.
+        \item switch expressions need a semicolon.
+        \item Can omit default clause in when either all the values of an enum are covered or no value is returned.
+        \item Case labels must be compile-time constants.
+        \item Every path must return a value.
     \end{itemize}
+
+    Example:
+
+    \begin{lstlisting}
+        case 10 -> {"Jane";} // yield implied
+        case 20 -> {yield "Lisa";}
+        case 30 -> "Kelly";
+        default -> "Unassigned";
+    \end{lstlisting}
 
 \subsection{ for (x : y)}
 
      A for-­each loop accepts arrays and classes that implement java.lang.Iterable, such as List. Not: String, StringBuilder
 
 \subsection{Flow Scoping}
+
+    Example:
+
+    \begin{lstlisting}
+        static void printIfString(Object o) {
+            if (!(o instanceof String s)) {
+                // 's' is NOT in scope
+                return;
+            } else {
+                // 's' is in scope
+                // s is a string
+                System.out.println(s);
+            }
+        }
+
+        // this is valid:
+        if (x instanceof Foo(var v) && v != null) {
+            A;
+        }
+
+        //this is NOT:
+        if (x instanceof Foo(var v) || v != null) {
+            A;
+        }
+    \end{lstlisting}
 
     \begin{lstlisting}
         if (number instanceof Integer i && Math.abs(i) == 0) // ok
@@ -441,6 +540,17 @@
         while (i<6) System.out.println("");
         for (;;) System.out.println();
     \end{lstlisting}
+
+\section{Methods and functions}
+\subsection{General notes}
+
+    Java does not support setting default method parameter values.
+
+\subsection{Mixed notes on functions}
+\subsubsection{compose()}
+
+    The \lstinline{a.compose(b)} method calls the Function parameter b before the reference Function variable a.
+
 
 \section{Classes, Interfaces, Records and Enums}
 \subsection{Classes}
@@ -692,6 +802,211 @@
         \item instance initializers in order
         \item local variables created in constructor
     \end{enumerate}
+
+\section{Streams}
+\subsection{Stream characteristics}
+\subsubsection{Ordered}
+
+    ORed values from: ORDERED, DISTINCT, SORTED, SIZED, NONNULL, IMMUTABLE, CONCURRENT, SUBSIZED
+
+    If the stream is parallel, and the Collector is concurrent,
+    and either the stream is unordered or the collector is unordered,
+    then a concurrent reduction will be performed.
+
+    \begin{lstlisting}
+        boolean isOrdered = stream.spliterator().hasCharacteristics(Spliterator.ORDERED);
+    \end{lstlisting}
+
+\subsection{Grouping/Collecting}
+
+    Grouping operations return \textit{boxed} numbers, Map, Optional, ...
+
+\subsubsection{Grouping vs. partitioning}
+
+    \lstinline{groupingBy} creates a \lstinline{Map<K, List<T>>} as per the specified function, with optional \textit{downstream collector} and optional \textit{map type supplier}.
+
+    \begin{lstlisting}
+        groupingBy(Function f);
+        groupingBy(Function f, Collector dc);
+        groupingBy(Function f, Supplier s, Collector dc);
+    \end{lstlisting}
+
+    \lstinline{partitioningBy} creates a \lstinline{Map<Boolean, List<T>>} as per the specified predicate, with optional further downstream collector.
+    Note: there is no map type specifier!
+
+    \begin{lstlisting}
+        partitioningBy(Predicate p);
+        partitioningBy(Predicate p, Collector dc);
+    \end{lstlisting}
+
+\subsubsection{collect() with downstream collector: Collectors.toMap(), Collectors.toSet(), Collectors.counting(), Collectors.mapping()}
+
+    \begin{lstlisting}
+        var ohMy = Stream.of("lions", "tigers", "bears");
+        Map<Integer, String> map = ohMy.collect(
+            Collectors.toMap(
+                String::length,
+                k -> k,
+                (s1, s2) -> s1 + "," + s2
+            )
+        );
+
+        Map<Integer, Set<String>> map = ohMy.collect(
+                Collectors.groupingBy(
+                String::length,
+                Collectors.toSet()
+            )
+        );
+
+        Map<Integer, Long> map = ohMy.collect(
+            Collectors.groupingBy(
+                String::length,
+                Collectors.counting()
+            )
+        );
+        System.out.println(map); // {5=2, 6=1}
+
+        // specifying map type
+        TreeMap<Integer, Set<String>> map = ohMy.collect(
+            Collectors.groupingBy(
+                String::length,
+                TreeMap::new,
+                Collectors.toSet()
+            )
+        );
+
+        // using another Collector in mapping
+        Stream<String> ohMy = Stream.of("lions", "tigers", "bears");
+        Map<Integer, Optional<Character>> map = ohMy.collect(
+            Collectors.groupingBy(
+                String::length,
+                Collectors.mapping(s -> s.charAt(0), Collectors.minBy((a, b) -> a-b))
+            )
+        );
+        System.out.println(map); //{5=Optional[b], 6=Optional[t]}
+
+        // teeing to return multiple results
+        record Separations(String spaceSeparated, String commaSeparated) {}
+        var list = List.of("x", "y", "z");
+        Separations result = list.stream()
+            .collect(Collectors.teeing(
+                Collectors.joining(" "),
+                Collectors.joining(","),
+                (s, c) -> new Separations(s, c)
+                )
+             );
+        // Separations[spaceSeparated=x y z, commaSeparated=x,y,z]
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+     \begin{lstlisting}
+     \end{lstlisting}
+
+     \begin{lstlisting}
+     \end{lstlisting}
+
+     \begin{lstlisting}
+     \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+
+
 
 \section{IO}
 \subsection{java.io}
