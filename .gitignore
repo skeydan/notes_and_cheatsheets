@@ -2,4 +2,7 @@
 */*.log
 */*.synctex.gz
 */*.out
+.vscode
+*/*.odt
+
 
