@@ -546,6 +546,55 @@
 
     Java does not support setting default method parameter values.
 
+\subsection{Pass-by-value and references}
+
+    Java creates a copy of references and pass it to the invoked method,     but they still point to same memory reference. Thus, changes made to the object are reflected in the caller.
+
+    \textit{However}, changes are not reflected back if we \textit{change the reference itself} to refer some other location or object!
+
+
+\subsection{Method references}
+
+    Method references cannot take parameters. Therefore, the output from the previous expression needs to match the input parameters of the referenced method signature.
+
+    Types:
+    \begin{itemize}
+        \item Itatic method
+        \item Instance method called on object \textit{instance}
+
+            \begin{lstlisting}
+                // No need to specify parameters explicitly if will get as many arguments as needed              createBicyclesList()
+                    .stream()
+                    .sorted(bikeFrameSizeComparator::compare);
+
+                // equivalent to
+                createBicyclesList()
+                    .stream()
+                    .sorted((a, b) -> bikeFrameSizeComparator.compare(a, b));
+            \end{lstlisting}
+
+        \item Instance method called on object \textit{type}
+
+            \begin{lstlisting}
+                // lambda way
+                numbers.stream()
+                    .sorted((a, b) -> a.compareTo(b))
+                    .forEach(s -> System.out.print(s + " "));
+
+                // method ref way
+                numbers.stream()
+                    .sorted(Integer::compareTo)
+                    .forEach(s -> System.out.print(s + " "));
+            \end{lstlisting}
+
+        \item  constructor
+
+            \begin{lstlisting}
+                Bicycle[]::new
+            \end{lstlisting}
+
+    \end{itemize}
+
 \subsection{Mixed notes on functions}
 \subsubsection{compose()}
 
@@ -553,6 +602,14 @@
 
 
 \section{Classes, Interfaces, Records and Enums}
+\subsection{General notes on inheritance}
+
+    When a parent defines a with-arg constructor only, the child must call the parent constructor explicitly - it is not enough for both to take the same arguments.
+
+    An instance variable with same name in the child hides the parent variable.
+
+    When a parent method is static, the child cannot "override" (\textit{nor complement}) this by a same-arg instance method.
+
 \subsection{Classes}
 \subsubsection{Nested Classes}
 
@@ -742,8 +799,7 @@
 
     \end{lstlisting}
 
-\subsection{Overriding and overloading}
-
+\subsection{Overriding, overloading and method hiding}
 \subsubsection{Overloading}
 
     Overloading works also for pairs of primitive + wrapper, e.g.
@@ -774,6 +830,18 @@
     - Overriding replaces the method \textit{regardless of the reference type}.
     - There is no overriding of instance \textit{variables}! Instance variables are always determined based on the reference type!
 
+    when parent defines a with-arg constructor only, child must call parent constructor
+    explicitly (not enough for both to take the same args!)
+    - instance variable with same name in child hides parent variable
+    - when parent method is static, child cannot "override" (nor complement) this
+    by same-arg instance method
+
+\subsubsection{Method Hiding}
+
+    When a child class defines a \textit{static method with the same signature} as a static method in the parent class, then the child’s method hides the one in the parent class.
+
+    This is determined at \textit{compile} time, as opposed to overriding of instance methods, which is resolved at runtime.
+
 \subsection{Class loading and initialization}
 \subsubsection{Class}
 
@@ -792,7 +860,7 @@
 
     If any instance variable is final, it must be initialized.
 
-\subsection{Overall initialization order}
+\subsubsection{Overall initialization order}
 
     \begin{enumerate}
         \item static variables in order
@@ -803,7 +871,63 @@
         \item local variables created in constructor
     \end{enumerate}
 
-\section{Streams}
+\section{Streams, functional interfaces, and lambda functions}
+\subsection{Lambda functions}
+
+    Lambdas and method references use type inference.
+
+    \begin{lstlisting}
+        // does not compile
+        var c4 = ArrayList::new;
+
+        // nor does this:
+        var dino = s -> "dino".equals(animal);
+        var dragon = s -> "dragon".equals(animal);
+        var combined = dino.or(dragon); // because var
+    \end{lstlisting}
+
+    Lambda expressions cannot redeclare any local variable defined in an enclosing scope.
+
+    \begin{lstlisting}
+        // does not compile
+        var p = new Hyena();
+        testLaugh(p, p -> true); // local variable already exists
+
+        // nor does this:
+        Set<?> s = Set.of("lion", "tiger", "bear");
+        Consumer<Object> consumer = s -> s.forEach(consumer);
+    \end{lstlisting}
+
+
+
+
+\subsection{Functional interfaces}
+
+    A valid functional interface is one that contains a single abstract method, excluding any public methods that are already defined in the java.lang.Object class.
+
+    Beware: Types must match!
+
+    \begin{lstlisting}
+        @FunctionalInterface
+        public interface Consumer<T> {
+            void accept(T var1);
+        }
+
+        // So this will not compile:
+        Consumer<Object> c2 = String::new; // there is no new String(object)
+    \end{lstlisting}
+
+
+    28.2
+    28.3 the final modifier can only be used if a type or var is specified.
+    - ok: Predicate<String> pred3 = (final var s) -­> s.isEmpty();
+    - not ok: Predicate<String> pred2 = (final s) -­> s.isEmpty();
+    28.4 NO: BiFunction<Integer,Integer,Integer> l = (Object w, var c) -> 39; // var cannot be mixed with non-var parameters
+    28.5 (NO: a,b,c) -­> {int b = 3; return 2;} // cannot redeclare variable
+    --> does not work in function either!!!
+    void nothing(int g) {
+        int g = 0;
+    }
 \subsection{Stream characteristics}
 \subsubsection{Ordered}
 
@@ -899,7 +1023,129 @@
 
     \end{lstlisting}
 
+\subsection{Comparing and sorting}
+
     \begin{lstlisting}
+        // syntax note: compare
+        // 1
+        s.sorted(Comparator.reverseOrder())
+
+        // 2
+        s.sorted(Comparator::reverseOrder) // does not compile! Why?
+
+        // sorted() takes a Comparator, i.e. a functional interface that takes 2 parameters and returns an int
+        // while Comparator::reverseOrder is equivalent to (() -> Comparator.reverseOrder()), which is a Supplier<Comparator>
+    \end{lstlisting}
+
+\subsection{Primitive streams}
+
+    Primitive streams cannot take Double, Integer, etc. - there is no unboxing!
+
+    The other way round, boxing does happen! See:
+
+    \begin{lstlisting}
+        // this works:
+        IntFunction<Integer> f3 = s -> s; // int is boxed to Integer
+
+        // this does not:
+        IntFunction<Integer> f1 = (Integer f) -> f; // Integer is NOT unboxed to int
+    \end{lstlisting}
+
+\subsubsection{Optional types}
+
+    Nearly all statistics operations on primitive streams return optional types.
+    Only sum() returns 0.
+
+    \begin{lstlisting}
+        OptionalDouble opt = s.average()
+        opt.getAsDouble() (may throw NoSuchElementException)
+
+        27.5 IntSummaryStatistics etc.
+        - getMax() etc. -> has get(), in contrast to that op on stream!
+        27.6
+    \end{lstlisting}
+
+\subsubsection{Summary statistics}
+
+    \begin{lstlisting}
+       // note:
+       // methods like getMax(), as opposed to max() on streams
+    \end{lstlisting}
+
+\subsection{Mapping, reducing, filtering}
+\subsubsection{reduce()}
+
+    If a combiner present, we get different results with parallel and serial streams.
+
+    \begin{lstlisting}
+        var data = List.of(1,2,3);
+        int j = data.parallelStream().reduce(1, (a,b) -> a+b, (a,b) -> a+b); // 9
+        int f = data.stream().reduce(1, (a,b) -> a+b, (a,b) -> a+b); // 7
+    \end{lstlisting}
+
+\subsubsection{flatmap()}
+
+    E.g.,
+
+    \begin{lstlisting}
+        integerList.stream().flatMapToInt(x -> IntStream.of(x))
+        integerList.stream().flatMapToDouble(x -> DoubleStream.of(x))
+    \end{lstlisting}
+
+\subsubsection{Mapping primitive streams to object streams or primitive streams}
+
+    Examples:
+
+    \begin{lstlisting}
+        // analogously for IntStream, LongStream
+        DoubleStream -> map() -> DoubleStream
+
+        // analogously for IntStream, LongStream
+        DoubleStream ->mapToObj()-> Stream<T>
+
+    \end{lstlisting}
+
+    Re. mapping functions:
+
+    \begin{lstlisting}
+        // generic to all generic (no primitives involved): takes Function<T,R>
+
+        // generic to primitive:
+        ToDoubleFunction<T>, ToIntFunction<T>, ToLongFunction<T>
+
+        // primitive to primitive:
+        // e.g.
+
+        // DoubleStream -> map()-> generic: takes
+        DoubleFunction<R>
+
+        // DoubleStream -> mapToDouble()-> DoubleStream takes:
+        DoubleUnaryOperator
+
+        // DoubleStream -> mapToInt()-> IntStream: takes
+        DoubleToIntFunction
+
+        // DoubleStream -> mapToLong() -> LongStream takes:
+            DoubleToLongFunction
+
+        // IntStream -> map[...]() -> generic/Int/Long/Double-Stream takes:
+        IntFunction<R>, IntUnaryOperator, IntToLongFunction, IntToDoubleFunction
+
+        // LongStream -> map[...]() -> generic/Int/Long/Double-Stream takes:
+        LongFunction<R>, LongUnaryOperator, LongToIntFunction, LongToDoubleFunction
+
+        // DoubleStream -> map[...]*( )-> generic/Int/Long/Double-Stream: takes
+        DoubleFunction<R>, DoubleUnaryOperator, DoubleToIntFunction, DoubleToLongFunction
+    \end{lstlisting}
+
+\subsubsection{Chaining operations}
+
+    E.g., andThen():
+
+    \begin{lstlisting}
+        // andThen: for Consumer and Function
+        // Returns a composed BiConsumer that performs, in sequence, this operation followed by the after operation.
+        default BiConsumer<T,U> andThen BiConsumer<? super T, ? super U> after
     \end{lstlisting}
 
     \begin{lstlisting}
@@ -911,27 +1157,6 @@
     \begin{lstlisting}
     \end{lstlisting}
 
-    \begin{lstlisting}
-    \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
 
 
     \begin{lstlisting}
@@ -951,8 +1176,7 @@
     \end{lstlisting}
 
 
-    \begin{lstlisting}
-    \end{lstlisting}
+
 
 
 
