@@ -871,6 +871,99 @@
         \item local variables created in constructor
     \end{enumerate}
 
+\section{Collections}
+
+\subsection{Collections}
+
+    what is??? class?
+
+\subsection{Lists}
+
+\subsection{Maps}
+
+\subsection{Sets}
+
+\subsection{Queues}
+
+
+
+
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
+
+
+
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
+
+\section{Generics}
+
+
+
 \section{Streams, functional interfaces, and lambda functions}
 \subsection{Lambda functions}
 
@@ -1025,6 +1118,16 @@
 
 \subsection{Comparing and sorting}
 
+\subsubsection{Using Comparator}
+
+    Comparator is a functional interface with one non-default method (besides equals()), compare():
+
+    \begin{lstlisting}
+        compare(T o1, T o2);
+    \end{lstlisting}
+
+    Comparator returns a negative integer if the first argument is smaller, zero if both are the same, or a positive integer if the first argument is bigger. I.e., if (a-b) is negative, then a ist smaller than b.
+
     \begin{lstlisting}
         // syntax note: compare
         // 1
@@ -1035,6 +1138,14 @@
 
         // sorted() takes a Comparator, i.e. a functional interface that takes 2 parameters and returns an int
         // while Comparator::reverseOrder is equivalent to (() -> Comparator.reverseOrder()), which is a Supplier<Comparator>
+    \end{lstlisting}
+
+\subsubsection{Using Comparable}
+
+    Comparable is an interface with one method to be implemented, compareTo():
+
+    \begin{lstlisting}
+        public int compareTo(Sometype m)
     \end{lstlisting}
 
 \subsection{Primitive streams}
@@ -1148,89 +1259,32 @@
         default BiConsumer<T,U> andThen BiConsumer<? super T, ? super U> after
     \end{lstlisting}
 
-    \begin{lstlisting}
-    \end{lstlisting}
+\subsection{Splitting up streams with Spliterator}
 
     \begin{lstlisting}
+        var stream = List.of("bird-", "bunny-", "cat-", "dog-", "fish-", "lamb-", "mouse-");
+        Spliterator<String> originalBagOfFood = stream.spliterator();
+
+        // has the ones at the beginning
+        Spliterator<String> emmasBag = originalBagOfFood.trySplit();
+
+        // bird-bunny-cat
+        emmasBag.forEachRemaining(System.out::print);
+
+        // original now has the 4 ones at the end, jill gets dog and fish
+        Spliterator<String> jillsBag = originalBagOfFood.trySplit();
+
+        // dog-
+        // advance gets the first and removes it
+        jillsBag.tryAdvance(System.out::print);
+
+        // fish-
+        jillsBag.forEachRemaining
+        (System.out::print);
+
+        // lamb-mouse
+        originalBagOfFood.forEachRemaining(System.out::print);
     \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-
-
-
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-     \begin{lstlisting}
-     \end{lstlisting}
-
-     \begin{lstlisting}
-     \end{lstlisting}
-
-     \begin{lstlisting}
-     \end{lstlisting}
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-    \begin{lstlisting}
-    \end{lstlisting}
-
-
-
-
 
 \section{IO}
 \subsection{java.io}
