@@ -288,6 +288,17 @@
         Long.valueOf(128).byteValue(); // - 128
     \end{lstlisting}
 
+\subsection{Arrays}
+
+    These are all legal array declarations:
+
+    \begin{lstlisting}
+        // no var allowed
+        String[][] gamma;
+        String[] delta[];
+        String epsilon[][];
+    \end{lstlisting}
+
 \section{Operators}
 \subsection{Kinds}
 \subsubsection{Logical Operators}
@@ -873,11 +884,76 @@
 
 \section{Collections}
 
-\subsection{Collections}
+\subsection{Collections class}
 
-    what is??? class?
+    This class consists exclusively of static methods that operate on or return collections. It contains polymorphic algorithms that operate on collections, "wrappers", which return a new collection backed by a specified collection.
 
-\subsection{Lists}
+    Notes on methods:
+
+    \begin{lstlisting}
+        // Collections.binarySearch() returns index
+
+    \end{lstlisting}
+
+\subsection{Arrays class}
+
+    This class contains various static methods for manipulating arrays (such as sorting and searching). This class also contains a static factory that allows arrays to be viewed as lists.
+
+    Examples:
+
+    \begin{lstlisting}
+        Arrays.length()
+
+        Arrays.binarySearch()
+
+        // takes array or individual elements
+        // eturns a fixed-size list backed by the specified array
+        // size has to remain the same
+        // hanges made to the array will be visible in the returned list,
+        // and changes made to the list will be visible in the array
+        Arrays.asList()
+        // e. g.
+        Integer[] numbers = [1,2,3];
+        List<Integer> values = Arrays.asList(numbers);
+        List<String> stooges = Arrays.asList("Larry", "Moe", "Curly");
+
+        // takes two arrays and returns the index of the first item differing between the arrays.
+        Arrays.mismatch()
+
+        // compares every element in order, returns positive if first is bigger
+        Arrays.compare()
+
+    \end{lstlisting}
+
+
+\subsection{List}
+
+    \begin{lstlisting}
+        // Collections.binarySearch() returns index
+
+        // remove() is overloaded!
+        // boolean remove(Object obj) removes an object that matches the parameter.
+        // E remove(int index) removes (and returns) the element at the specified index.
+        var list = new LinkedList<Integer>();
+        list.add(3);
+        list.add(2);
+        list.add(1);
+        list.remove(2); // int, index
+        list.remove(Integer.valueOf(2)); //Integer, value
+
+        // List.of(): returns an unmodifiable list containing an arbitrary number of elements.
+        // can take individual elements or array
+        List.of()
+
+        // List.copyOf(): takes Collection and returns an immutable List
+        static <E> List<E> copyOf(Collection<? extends E> coll)
+        \end{lstlisting}
+
+
+\subsubsection{ArrayList}
+
+
+
 
 \subsection{Maps}
 
@@ -885,30 +961,140 @@
 
 \subsection{Queues}
 
+    Queue methods exists in two forms: one throws an exception if the operation fails, the other returns a special value (either null or false, depending on the operation).
+
+    \begin{tabular}{|c|c|c|}
+        \hline
+        & Throws exception & Returns special value \\
+        \hline
+        Insert & add(e) & offer(e) \\
+        \hline
+        Remove & remove() & poll() \\
+        \hline
+        Examine & element() & peek() \\
+        \hline
+    \end{tabular}
+
+    \begin{lstlisting}
+        // --------------------- INSERTION ------------------------
+        // inserts the specified element
+        // returns true upon success, throws an IllegalStateException if no space is currently available
+        boolean add(E e)
+
+        // inserts the specified element
+        // returns true if the element was added to this queue, else false
+        boolean offer ()
+
+        // --------------------- RETRIEVAL -------------------------
+        // retrieves, but does not remove, the head of this queue
+        // throws NoSuchElementException if this queue is empty
+        E element()
+
+        // retrieves, but does not remove, the head of this queue, or returns null if this queue is empty
+        E peek()
+
+        // --------------------- REMOVAL ---------------------------
+        // retrieves and removes the head of this queue
+        // throws NoSuchElementException if the queue is empty
+        E remove()
+
+        // retrieves and removes the head of this queue, or returns null if this queue is empty.
+        E poll()
+    \end{lstlisting}
+
+\subsection{Deque}
+
+    A linear collection that supports element insertion and removal at both ends.
+
+    This interface defines methods to access the elements at both ends of the deque. Methods are provided to insert, remove, and examine the element. Each of these methods exists in two forms: one throws an exception if the operation fails, the other returns a special value (either null or false, depending on the operation).
+
+    Methods overview:
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        &  & First Element (Head) &  & Last Element (Tail) \\
+        \hline
+        & Throws exception & Special value  & Throws exception & Special value  \\
+        \hline
+        Insert & addFirst(e) & offerFirst(e) & addLast(e) & offerLast(e) \\
+        \hline
+        &  &  &  &  \\
+        \hline
+        &  &  &  &  \\
+        \hline
+    \end{tabular}
+    Summary of Deque methods:
 
 
+    Remove 	removeFirst() 	pollFirst() 	removeLast() 	pollLast()
+    Examine 	getFirst() 	peekFirst() 	getLast() 	peekLast()
 
+    This interface extends the Queue interface. When a deque is used as a queue, FIFO (First-In-First-Out) behavior results. Elements are added at the end of the deque and removed from the beginning. The methods inherited from the Queue interface are precisely equivalent to Deque methods as indicated in the following table:
+    Comparison of Queue and Deque methods Queue Method 	Equivalent Deque Method
+    add(e) 	addLast(e)
+    offer(e) 	offerLast(e)
+    remove() 	removeFirst()
+    poll() 	pollFirst()
+    element() 	getFirst()
+    peek() 	peekFirst()
 
-\begin{lstlisting}
-\end{lstlisting}
+    Deques can also be used as LIFO (Last-In-First-Out) stacks. This interface should be used in preference to the legacy Stack class. When a deque is used as a stack, elements are pushed and popped from the beginning of the deque. Stack methods are precisely equivalent to Deque methods as indicated in the table below:
 
-
-\begin{lstlisting}
-\end{lstlisting}
-
-
-\begin{lstlisting}
-\end{lstlisting}
-
-
-
-\begin{lstlisting}
-\end{lstlisting}
-
-
-
-
-
+    \begin{lstlisting}
+        boolean 	add(E e)
+        Inserts the specified element into the queue represented by this deque (in other words, at the tail of this deque) if it is possible to do so immediately without violating capacity restrictions, returning true upon success and throwing an IllegalStateException if no space is currently available.
+        void 	addFirst(E e)
+        Inserts the specified element at the front of this deque if it is possible to do so immediately without violating capacity restrictions, throwing an IllegalStateException if no space is currently available.
+        void 	addLast(E e)
+        Inserts the specified element at the end of this deque if it is possible to do so immediately without violating capacity restrictions, throwing an IllegalStateException if no space is currently available.
+        boolean 	contains(Object o)
+        Returns true if this deque contains the specified element.
+        Iterator<E> 	descendingIterator()
+        Returns an iterator over the elements in this deque in reverse sequential order.
+        E 	element()
+        Retrieves, but does not remove, the head of the queue represented by this deque (in other words, the first element of this deque).
+        E 	getFirst()
+        Retrieves, but does not remove, the first element of this deque.
+        E 	getLast()
+        Retrieves, but does not remove, the last element of this deque.
+        Iterator<E> 	iterator()
+        Returns an iterator over the elements in this deque in proper sequence.
+        boolean 	offer(E e)
+        Inserts the specified element into the queue represented by this deque (in other words, at the tail of this deque) if it is possible to do so immediately without violating capacity restrictions, returning true upon success and false if no space is currently available.
+        boolean 	offerFirst(E e)
+        Inserts the specified element at the front of this deque unless it would violate capacity restrictions.
+        boolean 	offerLast(E e)
+        Inserts the specified element at the end of this deque unless it would violate capacity restrictions.
+        E 	peek()
+        Retrieves, but does not remove, the head of the queue represented by this deque (in other words, the first element of this deque), or returns null if this deque is empty.
+        E 	peekFirst()
+        Retrieves, but does not remove, the first element of this deque, or returns null if this deque is empty.
+        E 	peekLast()
+        Retrieves, but does not remove, the last element of this deque, or returns null if this deque is empty.
+        E 	poll()
+        Retrieves and removes the head of the queue represented by this deque (in other words, the first element of this deque), or returns null if this deque is empty.
+        E 	pollFirst()
+        Retrieves and removes the first element of this deque, or returns null if this deque is empty.
+        E 	pollLast()
+        Retrieves and removes the last element of this deque, or returns null if this deque is empty.
+        E 	pop()
+        Pops an element from the stack represented by this deque.
+        void 	push(E e)
+        Pushes an element onto the stack represented by this deque (in other words, at the head of this deque) if it is possible to do so immediately without violating capacity restrictions, throwing an IllegalStateException if no space is currently available.
+        E 	remove()
+        Retrieves and removes the head of the queue represented by this deque (in other words, the first element of this deque).
+        boolean 	remove(Object o)
+        Removes the first occurrence of the specified element from this deque.
+        E 	removeFirst()
+        Retrieves and removes the first element of this deque.
+        boolean 	removeFirstOccurrence(Object o)
+        Removes the first occurrence of the specified element from this deque.
+        E 	removeLast()
+        Retrieves and removes the last element of this deque.
+        boolean 	removeLastOccurrence(Object o)
+        Removes the last occurrence of the specified element from this deque.
+        int 	size()
+        Returns the number of elements in this deque.
+    \end{lstlisting}
 
 \begin{lstlisting}
 \end{lstlisting}
