@@ -1011,144 +1011,149 @@
     Methods overview:
     \begin{tabular}{|c|c|c|c|c|}
         \hline
-        &  & First Element (Head) &  & Last Element (Tail) \\
+        &  \multicolumn{2}{c}{First Element (Head)} & \multicolumn{2}{c}{Last Element (Tail)} \\
         \hline
         & Throws exception & Special value  & Throws exception & Special value  \\
         \hline
         Insert & addFirst(e) & offerFirst(e) & addLast(e) & offerLast(e) \\
         \hline
-        &  &  &  &  \\
+        Remove& removeFirst() & pollFirst() & removeLast() & pollLast() \\
         \hline
-        &  &  &  &  \\
+        Examine& getFirst() & peekFirst() & getLast() &  peekLast()\\
         \hline
     \end{tabular}
-    Summary of Deque methods:
-
-
-    Remove 	removeFirst() 	pollFirst() 	removeLast() 	pollLast()
-    Examine 	getFirst() 	peekFirst() 	getLast() 	peekLast()
 
     This interface extends the Queue interface. When a deque is used as a queue, FIFO (First-In-First-Out) behavior results. Elements are added at the end of the deque and removed from the beginning. The methods inherited from the Queue interface are precisely equivalent to Deque methods as indicated in the following table:
-    Comparison of Queue and Deque methods Queue Method 	Equivalent Deque Method
-    add(e) 	addLast(e)
-    offer(e) 	offerLast(e)
-    remove() 	removeFirst()
-    poll() 	pollFirst()
-    element() 	getFirst()
-    peek() 	peekFirst()
 
-    Deques can also be used as LIFO (Last-In-First-Out) stacks. This interface should be used in preference to the legacy Stack class. When a deque is used as a stack, elements are pushed and popped from the beginning of the deque. Stack methods are precisely equivalent to Deque methods as indicated in the table below:
+    \begin{tabular}{|c|c|}
+        \hline
+        Queue Method& Eqv. Deque Method \\
+        \hline
+        add(e) &	addLast(e)  \\
+        \hline
+        offer(e) &	offerLast(e)  \\
+        \hline
+        remove() & 	removeFirst() \\
+        \hline
+        poll() &	pollFirst()  \\
+        \hline
+        element() &	getFirst()  \\
+        \hline
+        peek() &	peekFirst()  \\
+        \hline
+    \end{tabular}
 
-    \begin{lstlisting}
-        boolean 	add(E e)
-        Inserts the specified element into the queue represented by this deque (in other words, at the tail of this deque) if it is possible to do so immediately without violating capacity restrictions, returning true upon success and throwing an IllegalStateException if no space is currently available.
-        void 	addFirst(E e)
-        Inserts the specified element at the front of this deque if it is possible to do so immediately without violating capacity restrictions, throwing an IllegalStateException if no space is currently available.
-        void 	addLast(E e)
-        Inserts the specified element at the end of this deque if it is possible to do so immediately without violating capacity restrictions, throwing an IllegalStateException if no space is currently available.
-        boolean 	contains(Object o)
-        Returns true if this deque contains the specified element.
-        Iterator<E> 	descendingIterator()
-        Returns an iterator over the elements in this deque in reverse sequential order.
-        E 	element()
-        Retrieves, but does not remove, the head of the queue represented by this deque (in other words, the first element of this deque).
-        E 	getFirst()
-        Retrieves, but does not remove, the first element of this deque.
-        E 	getLast()
-        Retrieves, but does not remove, the last element of this deque.
-        Iterator<E> 	iterator()
-        Returns an iterator over the elements in this deque in proper sequence.
-        boolean 	offer(E e)
-        Inserts the specified element into the queue represented by this deque (in other words, at the tail of this deque) if it is possible to do so immediately without violating capacity restrictions, returning true upon success and false if no space is currently available.
-        boolean 	offerFirst(E e)
-        Inserts the specified element at the front of this deque unless it would violate capacity restrictions.
-        boolean 	offerLast(E e)
-        Inserts the specified element at the end of this deque unless it would violate capacity restrictions.
-        E 	peek()
-        Retrieves, but does not remove, the head of the queue represented by this deque (in other words, the first element of this deque), or returns null if this deque is empty.
-        E 	peekFirst()
-        Retrieves, but does not remove, the first element of this deque, or returns null if this deque is empty.
-        E 	peekLast()
-        Retrieves, but does not remove, the last element of this deque, or returns null if this deque is empty.
-        E 	poll()
-        Retrieves and removes the head of the queue represented by this deque (in other words, the first element of this deque), or returns null if this deque is empty.
-        E 	pollFirst()
-        Retrieves and removes the first element of this deque, or returns null if this deque is empty.
-        E 	pollLast()
-        Retrieves and removes the last element of this deque, or returns null if this deque is empty.
-        E 	pop()
-        Pops an element from the stack represented by this deque.
-        void 	push(E e)
-        Pushes an element onto the stack represented by this deque (in other words, at the head of this deque) if it is possible to do so immediately without violating capacity restrictions, throwing an IllegalStateException if no space is currently available.
-        E 	remove()
-        Retrieves and removes the head of the queue represented by this deque (in other words, the first element of this deque).
-        boolean 	remove(Object o)
-        Removes the first occurrence of the specified element from this deque.
-        E 	removeFirst()
-        Retrieves and removes the first element of this deque.
-        boolean 	removeFirstOccurrence(Object o)
-        Removes the first occurrence of the specified element from this deque.
-        E 	removeLast()
-        Retrieves and removes the last element of this deque.
-        boolean 	removeLastOccurrence(Object o)
-        Removes the last occurrence of the specified element from this deque.
-        int 	size()
-        Returns the number of elements in this deque.
-    \end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-
-
-\begin{lstlisting}
-\end{lstlisting}
-
-
-\begin{lstlisting}
-\end{lstlisting}
-
-
-\begin{lstlisting}
-\end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-
-\begin{lstlisting}
-\end{lstlisting}
-
-
-\begin{lstlisting}
-\end{lstlisting}
-
+    Deques can also be used as LIFO (Last-In-First-Out) stacks. This interface should be used in preference to the legacy Stack class. When a deque is used as a stack, elements are pushed and popped from the beginning of the deque.
 
 
 \section{Generics}
+\subsection{Declare}
+
+     To declare (may leave out types on the right):
+
+    \begin{lstlisting}
+        Map<Long,List<Integer>> mapOfLists = new HashMap<>();
+    \end{lstlisting}
+
+    These all work:
+
+    \begin{lstlisting}
+         // Object assumed
+        var list = new ArrayList<>();
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        // recommended:
+        var wash = new Wash<String>();
+        Wash<String> wash = new Wash<>();
+
+        // these compile, too:
+        var wash = new Wash<>();
+        Wash wash = new Wash();
+        Wash wash = new Wash<String>();
+
+    \end{lstlisting}
 
 
+
+\subsection{Wildcards}
+
+    \begin{lstlisting}
+         // Unbounded Wildcard
+         //	?
+         List<?> a = new ArrayList<String>();
+
+         // Wildcard with upper bound
+         // ? extends type
+         List<? extends Exception> a = new ArrayList<RuntimeException>();
+
+         // Wildcard with lower bound
+         //	? super type
+         List<? super Exception> a = new ArrayList<Object>();
+    \end{lstlisting}
+
+     Wildcards are only allowed in variable references (on left side), not in a class definition.
+
+    \begin{lstlisting}
+        // NOT allowed
+        class Fur<? extends Mammal> {)
+    \end{lstlisting}
+
+    Valid and invalid method declarations
+
+    \begin{lstlisting}
+        // this is possible
+        public static <E> void swap(List<E> list, int src, int des);
+        // if a type parameter appears only once in the method declaration, a wildcard is fine, too (and is preferable)
+        public static void swap(List<?> list, int src, int des);
+
+        // here a wildcard cannot be used:
+        private static <T extends Collection, U> U add(T list, U element)
+        // the return type is T!
+
+        // can't use T here (couldn't add anything)
+        public static void getExceptions(Collection<? extends Mammal)
+    \end{lstlisting}
+
+\subsection{When and why use lower bounds?}
+
+    Consider:
+
+    \begin{lstlisting}
+        List<String> strings = new ArrayList<String>();
+        strings.add("tweet");
+
+        List<Object> objects = new ArrayList<Object>(strings);
+
+        // to a List<Object>, can't pass List<String> (need exact match)
+        public static void addSound(List<? super String> list) {list.add("quack");}
+        addSound(strings);
+        addSound(objects);
+
+        // to be able to do those...
+        coll.add(new RuntimeException());
+        coll.add(new Exception());
+        // need this:
+        public static void getExceptions(Collection<? super Exception>)
+        // whereas here, we could not add a broader type
+        public static void getExceptions(Collection<? super RuntimeException>)
+
+    \end{lstlisting}
+
+\subsection{Notes on upper bounds}
+
+    \begin{lstlisting}
+        List<? super IOException> exceptions = new ArrayList<Exception>();
+
+        // DOES NOT COMPILE because this could be a List<IOException>
+        exceptions.add(new Exception());
+
+        exceptions.add(new IOException());
+        exceptions.add(new FileNotFoundException());
+
+        // BUT this is ok:
+        List<? super Exception>
+    \end{lstlisting}
 
 \section{Streams, functional interfaces, and lambda functions}
 \subsection{Lambda functions}
@@ -1313,6 +1318,52 @@
     \end{lstlisting}
 
     Comparator returns a negative integer if the first argument is smaller, zero if both are the same, or a positive integer if the first argument is bigger. I.e., if (a-b) is negative, then a ist smaller than b.
+
+    Example:
+    \begin{lstlisting}
+        Comparator<Duck> byWeight = new Comparator<Duck>() {
+            public int compare(Duck d1, Duck d2) {
+                return d1.getWeight() - d2.getWeight();
+            }
+        };
+    \end{lstlisting}
+
+    Methods:
+
+    \begin{lstlisting}
+        // Compare by results of function that returns any Object (or primitive autoboxed into Object).
+        comparing(function)
+
+        // Compare by results of function that returns double.
+        comparingDouble(function)
+
+        // Compare by results of function that returns int.
+        comparingInt(function)
+
+        // Compare by results of function that returns long.
+        comparingLong(function)
+
+        // Sort using order specified by the Comparable implementation on object itself.
+        naturalOrder()
+
+        // Sort using reverse of order specified by Comparable implementation on object itself.
+        reverseOrder()
+
+        //Method chaining
+        reversed(), thenComparing(function), thenComparingDouble(function) ...
+
+    \end{lstlisting}
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
+
+
+    \begin{lstlisting}
+    \end{lstlisting}
 
     \begin{lstlisting}
         // syntax note: compare
@@ -1779,26 +1830,6 @@
         view.setTimes(lastModifiedTime, null, null);
     \end{lstlisting}
 
-
-
-    \begin{lstlisting}
-
-
-
-    \end{lstlisting}
-
-    \begin{lstlisting}
-
-    \end{lstlisting}
-
-    \begin{lstlisting}
-
-    \end{lstlisting}
-
-    \begin{lstlisting}
-
-    \end{lstlisting}
-
 \subsubsection{Common method arguments}
 
     \begin{lstlisting}
@@ -1813,6 +1844,20 @@
     \end{lstlisting}
 
 \section{Exception handling}
+\subsection{Multi-catch}
+
+
+    \begin{lstlisting}
+        // DOES NOT COMPILE
+        catch(Exception1 e | Exception2 e | Exception3 e)
+
+        // DOES NOT COMPILE
+        catch(Exception1 e1 | Exception2 e2 | Exception3 e3)
+
+        // this works
+        catch(Exception1 | Exception2 | Exception3 e)
+    \end{lstlisting}
+
 \subsection{try-with-resources}
 
     Only classes that implement the AutoCloseable interface can be used in a try-with-resources statement.
@@ -1886,6 +1931,80 @@
 \subsection{Resource bundles}
 
     Once a resource bundle has been selected, only properties along a \textit{single hierarchy} will be used.
+
+
+\subsection{Using Locales}
+
+    \begin{lstlisting}
+        Locale l2 = new Locale.Builder()
+            .setRegion("US")
+            .setLanguage("en")
+            .build();
+
+        // formatting with a Locale: withLocale
+        dtf.withLocale(locale).format(dateTime));
+
+    \end{lstlisting}
+
+\subsection{Formatting}
+\subsubsection{Formatting Dates}
+
+    Using DateTimeFormatter:
+
+    \begin{lstlisting}
+        LocalDate date = LocalDate.of(2022, Month.OCTOBER, 20);
+        LocalTime time = LocalTime.of(11, 12, 34);
+        LocalDateTime dt = LocalDateTime.of(date, time);
+
+        System.out.println(date.format(DateTimeFormatter.ISO_LOCAL_DATE));
+        System.out.println(time.format(DateTimeFormatter.ISO_LOCAL_TIME));
+        System.out.println(dt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+
+        // custom format
+        // a    a.m./p.m.           AM, PM
+        // z	Time zone name	    Eastern Standard Time, EST
+        // Z	Time zone offset    -0400
+        var f = DateTimeFormatter.ofPattern("MMMM dd, yyyy 'at' hh:mm");
+
+        // For formatting dates
+        DateTimeFormatter.ofLocalizedDate(FormatStyle dateStyle)
+        // For formatting times
+        DateTimeFormatter.ofLocalizedTime(FormatStyle timeStyle)
+        // For formatting dates and times
+        // FormatStyle: possible values are SHORT, MEDIUM, LONG, and FULL.
+        DateTimeFormatter.ofLocalizedDateTime(FormatStyle dateStyle, FormatStyle timeStyle)
+        DateTimeFormatter.ofLocalizedDateTime (FormatStyle dateTimeStyle)
+
+
+
+    \end{lstlisting}
+
+    To format, one can use both dates/time classes themselves and the formatter.
+
+    The date/time classes contain a format() method that will take a formatter, while the formatter classes contain a format() method that will take a date/time value:
+
+    \begin{lstlisting}
+       var dateTime = LocalDateTime.of(2022, Month.OCTOBER, 20, 6, 15, 30);
+       var formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm:ss");
+       System.out.println(dateTime.format(formatter));
+       System.out.println(formatter.format(dateTime));
+    \end{lstlisting}
+
+\subsubsection{Formatting Numbers and Currencies}
+
+    \begin{lstlisting}
+        // currency
+        String income = "$92,807.99";
+        var cf = NumberFormat.getCurrencyInstance();
+        double value = (Double) cf.parse(income);
+        System.out.println(value); // 92807.99
+
+        // number
+        // public DecimalFormat(String pattern)
+        // #	Omit position if no digit exists for it.		$2.2
+        // 0	Put 0 in position if no digit exists for it.	$002.20
+    \end{lstlisting}
+
 
 \section{Concurrency}
 \subsection{Thread states}
@@ -1989,6 +2108,105 @@
 
     Ensures that only one thread is modifying a variable at one time and that data read among multiple threads is consistent.
     But operations are not atomic!
+
+\section{Modules and services}
+\subsection{Modules}
+\subsubsection{Module types}
+
+    A \textit{named} module has the name inside the module-­info.java file and is on the module path
+
+    An \textit{automatic} module appears on the module path but does not contain a module-­info.java
+    file. Exports all files to other modules on module path.
+
+    A \textit{unnamed} module appears on the classpath. It exports no files to other modules.
+
+    Note: Code on the classpath can access the module path. By contrast, code on the module path is unable to read from the classpath.
+
+\subsubsection{Migration}
+
+\subsection{Services}
+
+    A service is composed of an interface, any classes the interface references, and a way of looking up implementations of the interface.
+    The implementations are not part of the service.
+
+    \begin{tabular}{|c|c|c|}
+        \hline
+        Artifact& Part of the service &  Directives required\\
+        \hline
+        Service provider interface& Yes & exports \\
+        \hline
+        Service provider& No & requires, provides \\
+        \hline
+        Service locator	&Yes  & exports, requires,uses \\
+        \hline
+        Consumer& No &  requires\\
+        \hline
+    \end{tabular}
+
+\subsubsection{Interface}
+
+    \begin{lstlisting}
+        public interface Tour {
+            String name();
+            int length();
+            Souvenir getSouvenir();
+        }
+
+        // module-info.java
+        module zoo.tours.api {
+            exports zoo.tours.api;
+        }
+
+    \end{lstlisting}
+
+\subsubsection{Service Locator}
+
+    A service locator can find any classes that implement a service provider interface.
+    Luckily, Java provides a ServiceLoader class to help with this task. You pass the service provider interface type to its load() method, and Java will return any implementation services it can find.
+
+    \begin{lstlisting}
+         public static List<Tour> findAllTours() {
+            List<Tour> tours = new ArrayList<>();
+            ServiceLoader<Tour> loader = ServiceLoader.load(Tour.class);
+            for (Tour tour : loader)
+            tours.add(tour);
+            return tours;
+        }
+
+        // module-info.java
+        module zoo.tours.reservations {
+            exports zoo.tours.reservations;
+            requires zoo.tours.api; // for compilation
+            uses zoo.tours.api.Tour; // to use service
+        }
+    \end{lstlisting}
+
+    ServiceLoader methods:
+
+    \begin{lstlisting}
+        public static <S> ServiceLoader<S> load(Class<S> service)
+        public Stream<Provider<S>> stream() { ... }
+
+        // see
+        ServiceLoader.load(Tour.class).stream().map(Provider::get)
+    \end{lstlisting}
+
+\subsubsection{Consumer}
+
+    \begin{lstlisting}
+        List<Tour> tours = TourFinder.findAllTours();
+    \end{lstlisting}
+
+
+\subsubsection{Service Provider}
+
+    \begin{lstlisting}
+        public class TourImpl implements Tour {...}
+
+        module zoo.tours.agency {
+            requires zoo.tours.api;
+            provides zoo.tours.api.Tour with zoo.tours.agency.TourImpl;
+    \end{lstlisting}
 
 \end{document}
 
