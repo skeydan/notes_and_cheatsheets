@@ -146,6 +146,16 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
         }
     \end{lstlisting}
 
+    This is an alternative to making explicit use of Spring's Environment bean. E.g.
+
+    \begin{lstlisting}
+       public DataSource dataSource(
+        @Value("${db.driver}") String driver,
+        ...
+        )
+        }
+    \end{lstlisting}
+
 \subsubsection{@DependsOn}
 
     We can use this annotation to make Spring initialize other beans before the annotated one. Usually, this behavior is automatic, based on the explicit dependencies between beans. We only need this annotation when the dependencies are implicit, for example, JDBC driver loading or static variable initialization. E.g.
@@ -187,17 +197,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
     @Scope is used to define the scope of a @Component class or a @Bean definition. It can be either singleton, prototype, request, session, globalSession or some cust@Component.
 
 \subsection{Context Configuration Annotations}
-\subsubsection{@Profile}
 
-    If we want Spring to use a @Component class or a @Bean method only when a specific profile is active, we can mark it with @Profile.
-
-    \begin{lstlisting}
-        @Component
-        @Profile("sportsDay")
-        class Bike implements Vehicle {}
-    \end{lstlisting}
-
-\subsection{Context Configuration Annotations}
 \subsubsection{@Import}
 
     We can use specific @Configuration classes without component scanning with this annotation. We can provide those classes with @Import‘s value argument.
@@ -228,15 +228,72 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
         class VehicleFactoryConfig {}
     \end{lstlisting}
 
+    These properties can be used by Spring's Environment bean, in addition to environment variables and Java system properties.
+
+    Allowed prefixes are classpath:, file:, and http:.
+
 \subsection{Bean annotations}
 
-    Three ways to configure beans:
+    There are three ways to configure beans:
 
     \begin{itemize}
         \item XML configuration
         \item Annotation-based, using @Bean
         \item Component scanning, using annotations from org.springframework.stereotype
     \end{itemize}
+
+\subsubsection{@Profile}
+
+    Profiles are a way to group bean definitions, for example:
+
+     \begin{itemize}
+        \item dev, test, prod environment
+        \item jdbc, jpa [implementations]
+    \end{itemize}
+
+   The @Profile annotation may be used in any of the following ways:
+
+   \begin{itemize}
+       \item At class level in @Configuration classes.
+       \item At class level in classes annotated with @Component or annotated with any other annotation that in turn is annotated with @Component.
+       \item On methods annotated with the @Bean annotation.
+   \end{itemize}
+
+    To define alternative beans with different profile conditions, use distinct Java method names pointing to the same bean name via the @Bean name attribute:
+
+    \begin{lstlisting}
+        @Bean("dataSource")
+        @Profile("development")
+        public DataSource standaloneDataSource(){
+
+        @Bean("dataSource")
+        @Profile("production")
+        public DataSource jndiDataSource() throws Exception {}
+
+    \end{lstlisting}
+
+   Spring uses two separate properties when determining which profiles are active, spring.profiles.active and spring.profiles.default:
+
+    \begin{itemize}
+       \item If spring.profiles.active is set,  then its value determines which profiles are active.
+       \item If spring.profiles.active isn’t set, then Spring looks to spring.profiles.default.
+       \item If neither spring.profiles.active nor spring.profiles.default is set, only those beans that aren’t defined as being in a profile are created.
+    \end{itemize}
+
+   These properties can be set on the command line:
+
+   \begin{lstlisting}[language=bash]
+       -Dspring.profiles.active=embedded.jpa
+   \end{lstlisting}
+
+   , programmatically:
+
+   \begin{lstlisting}
+       System.setProperty("spring.profiles.active", "embedded.jpa");
+   \end{lstlisting}
+
+   , or via an annotation (@ActiveProfiles; integration tests only).
+
 
 \subsubsection{@ComponentScan}
 
@@ -258,7 +315,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
     The @ComponentScan annotation is used together with @Configuration.
 
-\subsection{@ComponentScan Without Arguments}
+\subsubsection{@ComponentScan Without Arguments}
 
     @ComponentScan without arguments tells Spring to scan the current package and all of its sub-packages.
 
@@ -298,7 +355,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsubsection{@Component}
 
-    @Component is a class level annotation. During the component scan, Spring Framework automatically detects classes annotated with @Component.
+    @Component is a class-level annotation. During the component scan, Spring Framework automatically detects classes annotated with @Component.
 
     \begin{lstlisting}
         @Component
@@ -414,7 +471,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
         }
     \end{lstlisting}
 
-\subsection{@Autowired}
+\subsubsection{@Autowired}
 
 TBD
 
@@ -563,7 +620,7 @@ If a bean implements the DisposableBean interface, Spring calls its destroy() me
 \section{Bean Naming}
 \subsection{Default Bean Naming}
 \subsubsection{Class-level}
-For an annotation used at the class, Spring uses the class name and converts the first letter to lowercase.
+For an annotation used at the class level, Spring uses the class name and converts the first letter to lowercase.
 The same default naming strategy is applicable for all class-level annotations that are used to create a Spring bean, such as @Component, @Service, and @Controller.
 
     \begin{lstlisting}
