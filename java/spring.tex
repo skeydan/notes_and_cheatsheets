@@ -94,7 +94,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsection{Field-based}
 
-    In case of Field-Based DI, we can inject the dependencies by marking them with an @Autowired annotation:
+    In field-based DI, we can inject the dependencies by marking them with an @Autowired annotation:
 
     \begin{lstlisting}
         public class Store {
@@ -105,14 +105,14 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
     Drawbacks:
     \begin{itemize}
-        \item This method uses reflection to inject the dependencies, which is costlier than constructor-based or setter-based injection.
+        \item This uses reflection to inject the dependencies, which is costlier than constructor-based or setter-based injection.
         \item It’s easy to keep adding multiple dependencies using this approach. If we were using constructor injection, having multiple arguments would make us think that the class does more than one thing, which can violate the Single Responsibility Principle.
     \end{itemize}
 
 \section{Annotations}
 \subsection{Annotations for dependency injection}
 \subsubsection{@Autowired}
-    @Autowired marks a dependency which Spring is going to resolve and inject. We can use this annotation with a constructor, setter, or field injection. E.g.
+    @Autowired marks a dependency which Spring is going to resolve and inject. We can use this annotation with constructor, setter, or field injection. E.g.,
 
     \begin{lstlisting}
         class Car {
@@ -138,7 +138,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsubsection{@Value}
 
-    We can use @Value for injecting property values into beans. It’s compatible with constructor, setter, and field injection. E.g.
+    We can use @Value for injecting property values into beans. It’s compatible with constructor, setter, and field injection. E.g.,
 
     \begin{lstlisting}
         Engine(@Value("8") int cylinderCount) {
@@ -158,7 +158,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsubsection{@DependsOn}
 
-    We can use this annotation to make Spring initialize other beans before the annotated one. Usually, this behavior is automatic, based on the explicit dependencies between beans. We only need this annotation when the dependencies are implicit, for example, JDBC driver loading or static variable initialization. E.g.
+    We can use this annotation to make Spring initialize other beans before the annotated one. Usually, this behavior is automatic, based on the explicit dependencies between beans. We only need this annotation when the dependencies are implicit, for example, JDBC driver loading or static variable initialization. E.g.,
 
      \begin{lstlisting}
         @Bean
@@ -170,7 +170,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsubsection{@Lazy}
 
-    This annotation behaves differently depending on where we exactly place it.
+    This annotation behaves differently depending on where exactly we place it.
 
     \begin{itemize}
         \item In an @Bean-annotated bean factory method, it is used to delay the method call (hence the bean creation)
@@ -200,7 +200,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsubsection{@Import}
 
-    We can use specific @Configuration classes without component scanning with this annotation. We can provide those classes with @Import‘s value argument.
+    With @import, we can use specific @Configuration classes without component scanning.
 
     \begin{lstlisting}
         @Import(VehiclePartSupplier.class)
@@ -209,7 +209,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsubsection{@ImportResource}
 
-    We can import XML configurations with this annotation. We can specify the XML file locations with the locations argument, or with its alias, the value argument:
+    We can import XML configurations with @ImportResource. We can specify the XML file locations with the locations argument, or with its alias, the value argument:
 
     \begin{lstlisting}
         @Configuration
@@ -219,7 +219,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsubsection{@PropertySource}
 
-    With this annotation, we can define property files for application settings.
+    With this annotation, we define property files for application settings.
 
     \begin{lstlisting}
         @Configuration
@@ -233,14 +233,6 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
     Allowed prefixes are classpath:, file:, and http:.
 
 \subsection{Bean annotations}
-
-    There are three ways to configure beans:
-
-    \begin{itemize}
-        \item XML configuration
-        \item Annotation-based, using @Bean
-        \item Component scanning, using annotations from org.springframework.stereotype
-    \end{itemize}
 
 \subsubsection{@Profile}
 
@@ -297,7 +289,13 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsubsection{@ComponentScan}
 
-    @ComponentScan configures which packages to scan for classes with annotation configuration. E.g., specifying packages:
+    The @ComponentScan annotation is used together with @Configuration.
+
+    @ComponentScan can be used with and without arguments.
+
+    Without arguments, @ComponentScan  tells Spring to scan the current package and all of its sub-packages.
+
+    With arguments, @ComponentScan tells which packages or classes to scan. E.g., specifying packages:
 
     \begin{lstlisting}
         @Configuration
@@ -313,25 +311,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
         class VehicleFactoryConfig {}
     \end{lstlisting}
 
-    The @ComponentScan annotation is used together with @Configuration.
-
-\subsubsection{@ComponentScan Without Arguments}
-
-    @ComponentScan without arguments tells Spring to scan the current package and all of its sub-packages.
-
-\subsubsection{@ComponentScan With Arguments}
-
-    Passing basePackages, we can, for example, change the base package.
-
-    \begin{lstlisting}
-        @ComponentScan(basePackages = "com.baeldung.componentscan.springapp.animals")
-        @Configuration
-        public class SpringComponentScanApp {
-            // ...
-        }
-    \end{lstlisting}
-
-    Or we can specify multiple package names, using spaces, commas, or semicolons as a separator.
+    We can specify multiple package names, using spaces, commas, or semicolons as a separator.
 
     \begin{lstlisting}
         @ComponentScan(basePackages = "com.baeldung.componentscan.springapp.animals;com.baeldung.componentscan.springapp.flowers")
@@ -339,7 +319,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
         @ComponentScan(basePackages = "com.baeldung.componentscan.springapp.animals com.baeldung.componentscan.springapp.flowers")
     \end{lstlisting}
 
-    We can also apply a filter, choosing from a range of filter types. For example:
+    We could also apply a filter, choosing from a range of filter types. For example:
 
     \begin{lstlisting}
         @ComponentScan(excludeFilters =
@@ -355,7 +335,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsubsection{@Component}
 
-    @Component is a class-level annotation. During the component scan, Spring Framework automatically detects classes annotated with @Component.
+    @Component is a class-level annotation. During component scan, Spring automatically detects classes annotated with @Component.
 
     \begin{lstlisting}
         @Component
@@ -448,7 +428,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsubsection{@Inject}
 
-    The @Inject annotation matches by type, qualifier, or name (in this order). It is applicable to setter and field injection. With @Inject, the class reference variable name and the bean name don’t have to match.
+    The @Inject annotation matches by type, qualifier, or name (in this order). It is applicable to setter and field injection. With @Inject, the class reference variable's name and the bean name don’t have to match.
 
     To use the @Inject annotation, declare the javax.inject library as a Gradle or Maven dependency.
 
@@ -478,7 +458,7 @@ TBD
 \section{Aware Interfaces}
 
     Indicates that the bean is eligible to be notified by the Spring container through the callback methods.
-    The typical use case for BeanNameAware could be acquiring the bean name for logging or wiring purposes. For the BeanFactoryAware it could be the ability to use a spring bean from legacy code.
+    A typical use case for BeanNameAware could be acquiring the bean name for logging or wiring purposes. For the BeanFactoryAware it could be the ability to use a spring bean from legacy code.
     In most cases, we should avoid using any of the Aware interfaces, unless we need them. Implementing these interfaces will couple the code to the Spring framework.
 
 \subsection{BeanNameAware}
@@ -537,21 +517,39 @@ TBD
 \section{Bean Lifecycle}
 \subsection{Overview}
 
+    From a bird's eye, everything that happens before a bean is ready to use can be assigned to one of three phases (see fig. \ref{fig:bean-lifecycle-3}):
+
+    \begin{itemize}
+        \item Loading and maybe modifying bean definitions
+        \item Instantiating beans
+        \item Initializing beans
+    \end{itemize}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=1\linewidth]{bean-lifecycle-3}
+        \caption{Lifecycle overview}
+        \label{fig:bean-lifecycle-3}
+    \end{figure}
+
+    Figure \ref{fig:bean-lifecycle-2} focuses on pre-initialization.
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=1\linewidth]{bean-lifecycle-2}
+        \caption{Zooming in on pre-instantation}
+        \label{fig:bean-lifecycle-2}
+    \end{figure}
+
+    On the other hand, fig. \ref{fig:bean-lifecycle-1} zooms in on post-instantiation.
+
     \begin{figure}
         \centering
         \includegraphics[width=1\linewidth]{bean-lifecycle-1}
-        \caption{}
+        \caption{Zooming in on post-instantation}
         \label{fig:bean-lifecycle-1}
     \end{figure}
 
-    Zooming in on the pre-instantation changes:
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=1\linewidth]{bean-lifecycle-1}
-        \caption{}
-        \label{fig:bean-lifecycle-2}
-    \end{figure}
 
     See https://www.digitalocean.com/community/tutorials/spring-bean-life-cycle for code to display the order of invocations.
 
