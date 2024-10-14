@@ -91,41 +91,68 @@
 \subsection{Common Command Line Arguments}
 
     \begin{lstlisting}[language=bash]
-        # only check syntax
-        node --check app.js
-        node -c app.js
+    # only check syntax
+    node --check app.js
+    node -c app.js
 
-        # evaluate (but don't print)
-        node --eval "1+1"
+    # evaluate (but don't print)
+    node --eval "1+1"
+    node -e "console.log(1+1)"
+    2
+    node -e "console.log(1+1); 0"
+    2
 
-        node -e "console.log(1+1)"
-        2
-        node -e "console.log(1+1); 0"
-        2
+    # evaluate and print
+    node -e "console.log(1+1)"
+    2
+    undefined
 
-        # evaluate and print
-        node -e "console.log(1+1)"
-        2
-        undefined
-
-        node -p "console.log(1+1); 0"
-        2
-        0
+    node -p "console.log(1+1); 0"
+    2
+    0
     \end{lstlisting}
+
+
+\subsection{Module availability}
 
     All Node core modules can be accessed by their namespaces within the code evaluation context - no require required:
 
     \begin{lstlisting}[language=bash]
-        node -p "fs.readdirSync('.').filter((f) => /.js$/.test(f))"
-        []
+    node -p "fs.readdirSync('.').filter((f) => /.js$/.test(f))"
+    []
     \end{lstlisting}
 
-
-
+\subsection{Preloading files}
 
     \begin{lstlisting}[style=ES6]
+    // preload.js
+    console.log('preload.js: this is preloaded')
 
+    // app.js
+    console.log('app.js: this is the main file')
     \end{lstlisting}
+
+    \begin{lstlisting}[language=bash]
+    // CommonJS
+    node -r ./preload.js app.js
+    node --require ./preload.js app.js
+
+    // ES modules
+    node --loader ./preload.js app.js
+    \end{lstlisting}
+
+
+\subsection{Stack trace limit}
+
+    By default, only the first 10 stack frames are shown, which can lead to the root cause of the error not being shown.
+
+    In this case, modify the V8 option --stack-trace-limit:
+
+    \begin{lstlisting}[language=bash]
+    node --stack-trace-limit=20 file.js
+    \end{lstlisting}
+
+
 
 
 \end{document}
