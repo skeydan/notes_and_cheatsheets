@@ -703,6 +703,49 @@ When we use the @Bean annotation on a method, Spring uses the method name as a b
         }
         \end{lstlisting}
 
+\section{Spring Expression Language vs. Property Evaluation}
+
+    Expressions in @Value annotations are of two types:
+
+    \begin{itemize}
+        \item Expressions starting with \$. Such expressions reference a property name in the application’s environment. These expressions are evaluated by the PropertySourcesPlaceholderConfigurer Spring bean prior to bean creation and can only be used in @Value annnotations.
+        \item Expressions starting with \#.
+        These expressions are parsed by a SpEL expression parser, and are evaluated by a SpEL expression instance.
+    \end{itemize}
+
+    In some cases, both can be used. For example, property values by default are Strings, but may be converted to primitives implicitly. So, both of these work:
+
+    \begin{lstlisting}
+        @Value("${daily.limit}")
+        int limit;
+
+        @Value("#{environment['daily.limit']}")
+        int limit;
+    \end{lstlisting}
+
+    But if computations are to be performed, or object types are required, SpEL has to be used:
+
+    \begin{lstlisting}
+        // NO
+        @Value("${daily.limit} * 2")
+
+        // instead, do
+        @Value("#{new Integer(environment['daily.limit']}) * 2")
+    \end{lstlisting}
+
+    To provide defaults, use a colon with property evaluation, and ?: in SpEL.
+
+    \begin{lstlisting}
+        @Value("${daily.limit}: 1000")
+        int limit;
+
+        @Value("#{environment['daily.limit']} ?: 1000")
+        int limit;
+    \end{lstlisting}
+
+    In addition to application-defined beans, SpEL can make use of beans implicitly provided by Spring, namely environment, systemProperties, and systemEnvironment.
+
+
 \end{document}
 
 
