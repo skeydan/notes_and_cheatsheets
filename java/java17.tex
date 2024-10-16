@@ -121,12 +121,21 @@
 \subsubsection{\lstinline$ ChronoUnit $}
 
     \begin{lstlisting}
+
         // to obtain, e.g.
         static ChronoUnit valueOf(String name)
 
         // instance methods, e.g.
         <R extends Temporal> R addTo(R temporal, long amount) // returns a copy!
         long between(Temporal temporal1Inclusive, Temporal temporal2Exclusive)
+
+        // Usage example
+        // https://stackoverflow.com/questions/77587361/chronounit-months-inconsistency-between-addto-and-between
+        var d1 = OffsetDateTime.parse("2023-01-31T10:00:00Z");
+        var d2 = ChronoUnit.MONTHS.addTo(d1, 1);
+        d2 = ChronoUnit.HOURS.addTo(d2, 23);
+        System.out.println(ChronoUnit.MONTHS.between(d1, d2)); // 0
+        }
 \end{lstlisting}
 
 \subsubsection{\lstinline$ Instant $}
@@ -208,6 +217,15 @@
  \subsubsection{\lstinline$ String $}
 
     \begin{lstlisting}
+
+      // Instance methods e.g.
+     char charAt(itn index)
+     boolean contains(CharSequence s);
+     String concat(String str);
+     int indexOf(int ch);
+     String replace(char oldChar, char newChar);
+     String[] split(String regex);
+
      // strip()-related methods (these are the only ones)
      strip(), stripLeading(), stripTrailing(), stripIndent()
 
