@@ -43,10 +43,111 @@
 TBD
 https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
+\section{Bean Lifecycle}
+\subsection{Overview}
+
+From a bird's eye, everything that happens before a bean is ready to use can be assigned to one of three phases (see fig. \ref{fig:bean-lifecycle-3}):
+
+\begin{itemize}
+    \item Loading and maybe modifying bean definitions
+    \item Instantiating beans
+    \item Initializing beans
+\end{itemize}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{bean-lifecycle-3}
+    \caption{Lifecycle overview}
+    \label{fig:bean-lifecycle-3}
+\end{figure}
+
+Figure \ref{fig:bean-lifecycle-2} focuses on pre-initialization.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{bean-lifecycle-2}
+    \caption{Zooming in on pre-instantation}
+    \label{fig:bean-lifecycle-2}
+\end{figure}
+
+On the other hand, fig. \ref{fig:bean-lifecycle-1} zooms in on post-instantiation.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{bean-lifecycle-1}
+    \caption{Zooming in on post-instantation}
+    \label{fig:bean-lifecycle-1}
+\end{figure}
+
+
+See https://www.digitalocean.com/community/tutorials/spring-bean-life-cycle for code to display the order of invocations.
+
+\subsubsection{Load bean definitions, creating an ordered graph}
+In this step, all the configuration files – @Configuration classes or XML files – are processed. For annotation-based configuration, all the classes annotated with @Components are scanned to load the bean definitions.
+\subsubsection{Instantiate and run BeanFactoryPostProcessors}
+In a Spring application, a BeanFactoryPostProcessor can modify the definition of any bean.
+The BeanFactory object is passed as an argument to the postProcess() method of the BeanFactoryPostProcessor. BeanFactoryPostProcessor then works on the bean definitions or the configuration metadata of the bean before the beans are actually created.
+Spring provides several useful implementations of BeanFactoryPostProcessor, such as reading properties and registering a custom scope. We can write your own implementation of the BeanFactoryPostProcessor interface. To influence the order in which bean factory post processors are invoked, their bean definition methods may be annotated with the @Order annotation. If you are implementing your own bean factory post processor, the implementation class can also implement the Ordered interface.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{bean-lifecycle-3}
+    \caption{}
+    \label{fig:bean-lifecycle-1}
+\end{figure}
+
+\subsubsection{Instantiate beans}
+Injects values and bean references into beans’ properties.
+
+\subsubsection{Call BeanNameAware’s setBeanName() for each bean implementing it}
+
+\subsubsection{Call BeanFactoryAware’s setBeanFactory() passing the bean factory for each bean implementing it}
+
+\subsubsection{Call ApplicationContextAware’s setApplicationContext for each bean implementing it}
+
+\subsubsection{Run pre-initialization BeanPostProcessors}
+The Application context calls postProcessBeforeInitialization() for each bean implementing BeanPostProcessor.
+A bean implementing BeanFactoryPostProcessor is called when all bean definitions have been loaded, but no beans will have been instantiated yet. This allows for overriding or adding properties even to eager-initializing beans. This will let you have access to all the beans that you have defined in XML or that are annotated (scanned via component-scan).
+
+\subsubsection{Call InitializingBean’s afterPropertiesSet()}
+If a bean implements the InitializingBean interface, Spring calls its afterPropertiesSet() method. Used to initialize processes,  load resources, etc. This approach is simple to use but it’s not recommended because it will create tight coupling with the Spring framework in our bean implementations.
+
+\subsubsection{Init Method}
+Instead of implementing InitializingBean, you can use the init-method of the bean tag, the initMethod attribute of the @Bean annotation, and JSR 250's @PostConstruct  annotation.
+Here we use the init-method attribute:
+
+\begin{lstlisting}
+    <bean name="myEmployeeService" class="com.journaldev.spring.service.MyEmployeeService"
+    init-method="init" destroy-method="destroy">
+    <property name="employee" ref="employee"></property>
+    </bean>
+\end{lstlisting}
+
+
+And here, the @PostConstruct annotation.
+
+\begin{lstlisting}
+    @PostConstruct
+    public void init(){
+        System.out.println("MyService init method called");
+    }
+\end{lstlisting}
+
+
+\subsubsection{Run post-initialization BeanPostProcessors}
+The application context calls postProcessAfterInitialization() for each bean implementing BeanPostProcessor.
+
+\subsubsection{Bean ready to use}
+Your beans remain live in the application context until it is closed by calling the close() method of the application context.
+
+\subsubsection{Custom destruction}
+If a bean implements the DisposableBean interface, Spring calls its destroy() method to destroy any process or clean up the resources of your application. There are other methods to achieve this step-for example, you can use the destroy-method of the tag, the destroyMethod attribute of the `@Bean` annotation, and JSR 250's `@PreDestroy` annotation.
+
 \section{Dependency injection}
 \subsection{Constructor-based}
 
     In the case of constructor-based dependency injection, the container will invoke a constructor with arguments each representing a dependency we want to set.
+    This is the recommended way.
 
     \begin{lstlisting}
         @Configuration
@@ -71,7 +172,7 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
         </bean>
     \end{lstlisting}
 
-\subsection{Setter-based}
+\subsection{Method-based}
 
     For setter-based DI, the container will call setter methods of our class after invoking a no-argument constructor or no-argument static factory method to instantiate the bean.
 
@@ -94,7 +195,8 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
 \subsection{Field-based}
 
-    In field-based DI, we can inject the dependencies by marking them with an @Autowired annotation:
+    In field-based DI, we can inject the dependencies by marking them with an @Autowired annotation. (This even works for private fields.)
+    Field-based injection is not recommended - e.g., it makes testing harder.
 
     \begin{lstlisting}
         public class Store {
@@ -103,11 +205,38 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
         }
     \end{lstlisting}
 
-    Drawbacks:
-    \begin{itemize}
-        \item This uses reflection to inject the dependencies, which is costlier than constructor-based or setter-based injection.
-        \item It’s easy to keep adding multiple dependencies using this approach. If we were using constructor injection, having multiple arguments would make us think that the class does more than one thing, which can violate the Single Responsibility Principle.
-    \end{itemize}
+
+\section{Configuration: Implicit vs. Explicit}
+
+    Also referred to as Java-based (decoupled) and annotation-based.
+
+\subsection{Java-based}
+
+    Takes place completely in @Configuration classes. E.g.,
+
+    \begin{lstlisting}
+        @Configuration
+        public class MyConfig {
+        @Bean
+        public AccountRepo AccountRepo(){}
+        }
+    \end{lstlisting}
+
+\subsection{Java-based}
+
+    Bean definition and wiring take place completely in POJOs. For this to work, we need to enable component scanning.
+
+    \begin{lstlisting}
+        @Configuration
+        @ComponentScan
+        public class MyConfig {}
+
+        @Component
+       public class AccountRepo {}
+    \end{lstlisting}
+
+
+
 
 \section{Annotations}
 \subsection{Annotations for dependency injection}
@@ -123,6 +252,40 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
 
     Starting with version 4.3, we don’t need to annotate constructors with @Autowired explicitly unless we declare at least two constructors.
 
+    @Autowired matches by type. If there are several classes matching the required type (e.g., implementing the same interface), @Autowired needs to be supplemented by @Qualifier:
+
+    \begin{lstlisting}
+        @Component("Repo1")
+        class Repo1 implements Repo {}
+
+        @Component("Repo2")
+        class Repo2 implements Repo {}
+
+        @Component
+        public class Service1 implements ServiceX {
+            public Service1(@Qualifier("Repo2") Repo){}
+
+        }
+
+    \end{lstlisting}
+
+    If there is no @Qualifier given, @Autowired looks for a matching bean name ( = bean id).
+    Here, Spring will look for a bean named x:
+
+    \begin{lstlisting}
+        // constructor injection
+        @Autowired
+        public MyBean(X x){}
+
+       // method injection
+       @Autowired
+       public setX(X x){}
+
+       // field injection
+       @Autowired
+       private X x;
+    \end{lstlisting}
+
 \subsubsection{@Bean}
 
     @Bean marks a factory method which instantiates a Spring bean.
@@ -135,6 +298,56 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
     \end{lstlisting}
 
     Spring calls these methods when a new instance of the return type is required. All methods annotated with @Bean must be in @Configuration classes.
+
+
+\subsubsection{@Resource}
+
+The @Resource annotation matches by name, type, or qualifier (in this order). It is applicable to setter and field injection.
+Here’s an example injecting a field. Note that the bean id and the corresponding reference attribute value must match:
+
+\begin{lstlisting}
+    @Configuration
+    public class MyAppContext {
+        @Bean(name="namedFile")
+        public File namedFile() {
+            File namedFile = new File("namedFile.txt");
+            return namedFile;
+        }
+    }
+
+    @ContextConfiguration(
+    loader=AnnotationConfigContextLoader.class,
+    classes= MyAppContext.class)
+    public class Xxx {
+        @Resource(name="namedFile")
+        private File defaultFile;
+    }
+\end{lstlisting}
+
+\subsubsection{@Inject}
+
+The @Inject annotation matches by type, qualifier, or name (in this order). It is applicable to setter and field injection. With @Inject, the class reference variable's name and the bean name don’t have to match.
+
+To use the @Inject annotation, declare the javax.inject library as a Gradle or Maven dependency.
+
+\begin{lstlisting}
+    public class MyAppContext {
+        @Bean
+        // no bean name specified - method name is used
+        public File getSomeFile() {
+            File namedFile = new File("namedFile.txt");
+            return namedFile;
+        }
+    }
+
+    @ContextConfiguration(
+    loader=AnnotationConfigContextLoader.class,
+    classes= MyAppContext.class)
+    public class Xxx {
+        @Inject
+        private File defaultFile;
+    }
+\end{lstlisting}
 
 \subsubsection{@Value}
 
@@ -401,60 +614,6 @@ https://www.baeldung.com/spring-annotations-resource-inject-autowire
         @ComponentScan
     \end{lstlisting}
 
-\subsection{Comparing @Resource, @Autowired, and @Inject annotations}
-\subsubsection{@Resource}
-
-    The @Resource annotation matches by name, type, or qualifier (in this order). It is applicable to setter and field injection.
-    Here’s an example injecting a field. Note that the bean id and the corresponding reference attribute value must match:
-
-    \begin{lstlisting}
-        @Configuration
-        public class MyAppContext {
-            @Bean(name="namedFile")
-            public File namedFile() {
-                File namedFile = new File("namedFile.txt");
-                return namedFile;
-            }
-        }
-
-        @ContextConfiguration(
-        loader=AnnotationConfigContextLoader.class,
-        classes= MyAppContext.class)
-        public class Xxx {
-            @Resource(name="namedFile")
-            private File defaultFile;
-        }
-    \end{lstlisting}
-
-\subsubsection{@Inject}
-
-    The @Inject annotation matches by type, qualifier, or name (in this order). It is applicable to setter and field injection. With @Inject, the class reference variable's name and the bean name don’t have to match.
-
-    To use the @Inject annotation, declare the javax.inject library as a Gradle or Maven dependency.
-
-    \begin{lstlisting}
-        public class MyAppContext {
-            @Bean
-            // no bean name specified - method name is used
-            public File getSomeFile() {
-                File namedFile = new File("namedFile.txt");
-                return namedFile;
-            }
-        }
-
-        @ContextConfiguration(
-        loader=AnnotationConfigContextLoader.class,
-        classes= MyAppContext.class)
-        public class Xxx {
-            @Inject
-            private File defaultFile;
-        }
-    \end{lstlisting}
-
-\subsubsection{@Autowired}
-
-TBD
-
 \section{Aware Interfaces}
 
     Indicates that the bean is eligible to be notified by the Spring container through the callback methods.
@@ -513,106 +672,6 @@ TBD
                 User user = (User) applicationContext.getBean("user");
                 System.out.println("User Id: " + user.getUserId() + " User Name :" + user.getName());}}
     \end{lstlisting}
-
-\section{Bean Lifecycle}
-\subsection{Overview}
-
-    From a bird's eye, everything that happens before a bean is ready to use can be assigned to one of three phases (see fig. \ref{fig:bean-lifecycle-3}):
-
-    \begin{itemize}
-        \item Loading and maybe modifying bean definitions
-        \item Instantiating beans
-        \item Initializing beans
-    \end{itemize}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=1\linewidth]{bean-lifecycle-3}
-        \caption{Lifecycle overview}
-        \label{fig:bean-lifecycle-3}
-    \end{figure}
-
-    Figure \ref{fig:bean-lifecycle-2} focuses on pre-initialization.
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=1\linewidth]{bean-lifecycle-2}
-        \caption{Zooming in on pre-instantation}
-        \label{fig:bean-lifecycle-2}
-    \end{figure}
-
-    On the other hand, fig. \ref{fig:bean-lifecycle-1} zooms in on post-instantiation.
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=1\linewidth]{bean-lifecycle-1}
-        \caption{Zooming in on post-instantation}
-        \label{fig:bean-lifecycle-1}
-    \end{figure}
-
-
-    See https://www.digitalocean.com/community/tutorials/spring-bean-life-cycle for code to display the order of invocations.
-
-\subsubsection{Load bean definitions, creating an ordered graph}
-    In this step, all the configuration files – @Configuration classes or XML files – are processed. For annotation-based configuration, all the classes annotated with @Components are scanned to load the bean definitions.
-\subsubsection{Instantiate and run BeanFactoryPostProcessors}
-    In a Spring application, a BeanFactoryPostProcessor can modify the definition of any bean.
-    The BeanFactory object is passed as an argument to the postProcess() method of the BeanFactoryPostProcessor. BeanFactoryPostProcessor then works on the bean definitions or the configuration metadata of the bean before the beans are actually created.
-    Spring provides several useful implementations of BeanFactoryPostProcessor, such as reading properties and registering a custom scope. We can write your own implementation of the BeanFactoryPostProcessor interface. To influence the order in which bean factory post processors are invoked, their bean definition methods may be annotated with the @Order annotation. If you are implementing your own bean factory post processor, the implementation class can also implement the Ordered interface.
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=1\linewidth]{bean-lifecycle-3}
-        \caption{}
-        \label{fig:bean-lifecycle-1}
-    \end{figure}
-
-\subsubsection{Instantiate beans}
-    Injects values and bean references into beans’ properties.
-
-\subsubsection{Call BeanNameAware’s setBeanName() for each bean implementing it}
-
-\subsubsection{Call BeanFactoryAware’s setBeanFactory() passing the bean factory for each bean implementing it}
-
-\subsubsection{Call ApplicationContextAware’s setApplicationContext for each bean implementing it}
-
-\subsubsection{Run pre-initialization BeanPostProcessors}
-    The Application context calls postProcessBeforeInitialization() for each bean implementing BeanPostProcessor.
-    A bean implementing BeanFactoryPostProcessor is called when all bean definitions have been loaded, but no beans will have been instantiated yet. This allows for overriding or adding properties even to eager-initializing beans. This will let you have access to all the beans that you have defined in XML or that are annotated (scanned via component-scan).
-
-\subsubsection{Call InitializingBean’s afterPropertiesSet()}
-    If a bean implements the InitializingBean interface, Spring calls its afterPropertiesSet() method. Used to initialize processes,  load resources, etc. This approach is simple to use but it’s not recommended because it will create tight coupling with the Spring framework in our bean implementations.
-
-\subsubsection{Init Method}
-    Instead of implementing InitializingBean, you can use the init-method of the bean tag, the initMethod attribute of the @Bean annotation, and JSR 250's @PostConstruct  annotation.
-    Here we use the init-method attribute:
-
-    \begin{lstlisting}
-        <bean name="myEmployeeService" class="com.journaldev.spring.service.MyEmployeeService"
-        init-method="init" destroy-method="destroy">
-        <property name="employee" ref="employee"></property>
-        </bean>
-    \end{lstlisting}
-
-
-    And here, the @PostConstruct annotation.
-
-    \begin{lstlisting}
-        @PostConstruct
-        public void init(){
-            System.out.println("MyService init method called");
-        }
-    \end{lstlisting}
-
-
-\subsubsection{Run post-initialization BeanPostProcessors}
-The application context calls postProcessAfterInitialization() for each bean implementing BeanPostProcessor.
-
-\subsubsection{Bean ready to use}
-Your beans remain live in the application context until it is closed by calling the close() method of the application context.
-
-\subsubsection{Custom destruction}
-If a bean implements the DisposableBean interface, Spring calls its destroy() method to destroy any process or clean up the resources of your application. There are other methods to achieve this step-for example, you can use the destroy-method of the tag, the destroyMethod attribute of the `@Bean` annotation, and JSR 250's `@PreDestroy` annotation.
 
 
 \section{Bean Naming}
