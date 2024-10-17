@@ -242,12 +242,6 @@
      - this prints 1:
      System.out.println("cheetah\\ncub");
 
-     // format string
-     var quotes = """
-     \"The Quotes that Could\" // could remove both backslashes
-     \"\"\"                    // could remove 2 backslashes
-     """;
-
      // there is no reverse()
      \end{lstlisting}
 
@@ -338,24 +332,25 @@
         int result = ~6; // -7      0000 0110 -> 1111 1001 -> 0000 0110 + 1 -> 0000 0111
     \end{lstlisting}
 
-    The bitwise NOT or complement operator is equivalent to negation of each bit in the input value. This will result in a negative number one smaller, i.e., obtain -x-1 from x.
+    \subsubsection{Bitwise NOT, complements, etc.}
 
-    Steps: First we need to find its 2’s complement, and then convert the resultant binary number into a decimal number.
+    Ex. 1: Bitwise NOT computation steps:
 
     \begin{enumerate}
-        \item write 6 in binary: 0000 0110
-        \item take complement: 1111 1001 // this is the 1's complement
-        \item to get the 2's complement (since numbers are stored as 2’s complement), add 1: 1111
+        \item to compute ~6, first write 6 in binary: 0000 0110
+        \item negate each bit: 1111 1001 // this is the 1's complement
+        \item to get the 2's complement (since numbers are stored as 2’s complement), add 1: 1111 1010
     \end{enumerate}
 
-    To find the binary representation of -17, take the 2's complement of 17:
+    Ex. 2: To find the binary representation of -17, take the 2's complement of 17:
+
     \begin{enumerate}
         \item 17 = 0001 0001
         \item Take the bitwise complement: 1110 1110
         \item Add 1: 1110 1110 + 1 = 1110 1111
     \end{enumerate}
 
-    To take the 2's complement of negative number:
+    Ex. 3: Take the 2's complement of negative number:
     \begin{enumerate}
         \item Start from binary -17: 1110 1111
         \item     Take the the bitwise complement: 0001 0000
@@ -363,7 +358,7 @@
         \item     This gets back the 17!
     \end{enumerate}
 
-    To find the decimal representation of a number given in binary, reverse steps
+    Ex. 4: To find the decimal representation of a number given in binary, reverse steps
    \begin{enumerate}
        \item  Subtract 1: 1110 1111 - 1 = 1110 1110
        \item     Take the complement of the complement: 0001 0001
@@ -374,13 +369,14 @@
 \subsubsection{Bitwise operators: arithmetic}
     \begin{lstlisting}
 
-        << // shift left (signed)
-        >> shift right (signed)
-        >> shift right (unsigned)
+        // shift left (signed)
+        12  << 2: 48 // *2^n
 
-        12 << 2: 48 // *2^n
+        // shift right (signed)
         12 >> 2: 3 // 1100 -> 0011 (pos.: fill with 0)
-        -12 >> 2: -3 //               (neg..: fill with 1)
+        -12 >> 2: -3 // (neg..: fill with 1)
+
+        // shift right (unsigned)
         12 >>> 2: 3 // 1100 -> 0011
         -12 >>> 2: 1073741821 // fill with 0 too
     \end{lstlisting}
@@ -395,7 +391,7 @@
         \hline
         Pre-­unary operator& ++x, ++x &  \\
         \hline
-        Other unary operators& -­, !, ~, + &  Right-­to-­left \\
+        Other unary operators& -­, !,$\sim$, + &  Right-­to-­left \\
         \hline
         Cast(type)reference&  &  Right-­to-­left \\
         \hline
@@ -409,7 +405,7 @@
         \hline
         Equal to/not equal to& ==, != &\\
         \hline
-        Logical and& \& &  \\
+        Logical AND& \& &  \\
         \hline
         Logical exclusive OR& \textasciicircum \\
         \hline
@@ -417,12 +413,12 @@
         \hline
         Conditional OR& $||$ &  \\
         \hline
+        Conditional AND& \&\& &  \\
+        \hline
         Ternary operator& e1 ? e2 : e3 & Right-­to-­left\\
         \hline
         Assignment operators& =, +=, -­=, *=, /=, \%=, \&=, \textasciicircum, & Right-­to-­left\\
         & $|$, $<<=$ , $>>=$, $>>>=$ & \\
-        \hline
-        Ternary operator& e1 ? e2 : e3 & Right-­to-­left\\
         \hline
         Arrow operator& $->$ &  \\\\
         \hline
@@ -456,7 +452,7 @@
 
     Note:
     \begin{itemize}
-        \item \ at end of line -> no newline!
+        \item  \textbackslash at end of line means the line gets continued
         \item Space at end of line is ignored
         \item \textbackslash s yields two spaces
         \item  \textbackslash n yields additional line break
@@ -465,9 +461,16 @@
     Example:
 
     \begin{lstlisting}
-        String block = """              // on sep. line
+        // starting quotes on sep. line
+        String block = """
         doe \
-        doof""";                        // on same line
+         // ending quotes on same line
+        doof""";
+
+         var quotes = """
+        \"The Quotes that Could\" // could remove both backslashes here
+        \"\"\"                    // could remove 2 backslashes (otherwise end of format string)
+        """;
     \end{lstlisting}
 
 \subsection{var}
@@ -487,7 +490,7 @@
         \begin{itemize}
             \item Supports: enum, byte, Byte, short, Short, char, Character, int, Integer,
             String, var (if resolves to one of those types)
-            \item Does not support: boolean, Boolean, double, Double, float, Float
+            \item Does not support: boolean, Boolean, double, Double, float, Float, long, Long
          \end{itemize}
 
 \subsubsection{Statement}
