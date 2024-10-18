@@ -123,6 +123,7 @@ Here we use the init-method attribute:
     </bean>
 \end{lstlisting}
 
+Using init-method is a solution when you don't own the class (and so, can't annotate it).
 
 And here, the @PostConstruct annotation.
 
@@ -132,7 +133,6 @@ And here, the @PostConstruct annotation.
         System.out.println("MyService init method called");
     }
 \end{lstlisting}
-
 
 \subsubsection{Run post-initialization BeanPostProcessors}
 The application context calls postProcessAfterInitialization() for each bean implementing BeanPostProcessor.
@@ -557,7 +557,15 @@ To use the @Inject annotation, declare the javax.inject library as a Gradle or M
         }
     \end{lstlisting}
 
-    @Repository, @Service, @Configuration, and @Controller are all meta-annotations of @Component. Spring also automatically picks them up during the component scanning process.
+    @Repository, @Service, @Configuration, and @Controller are all meta-annotations of (i.e., themselves annotated with) @Component. E.g.,
+
+      \begin{lstlisting}
+        @Component
+        public @interface Service {}
+    \end{lstlisting}
+
+    Spring also automatically picks them up during the component scanning process.
+
 
 \subsubsection{@Repository}
 

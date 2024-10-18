@@ -591,39 +591,40 @@
 
     Types:
     \begin{itemize}
-        \item Itatic method
+        \item Static method
         \item Instance method called on object \textit{instance}
 
-            \begin{lstlisting}
-                // No need to specify parameters explicitly if will get as many arguments as needed              createBicyclesList()
-                    .stream()
-                    .sorted(bikeFrameSizeComparator::compare);
+        \begin{lstlisting}
+        // No need to specify parameters explicitly if will get as many arguments as needed
+        createBicyclesList()
+          .stream()
+          .sorted(bikeFrameSizeComparator::compare);
 
-                // equivalent to
-                createBicyclesList()
-                    .stream()
-                    .sorted((a, b) -> bikeFrameSizeComparator.compare(a, b));
-            \end{lstlisting}
+        // equivalent to
+        createBicyclesList()
+          .stream()
+          .sorted((a, b) -> bikeFrameSizeComparator.compare(a, b));
+        \end{lstlisting}
 
         \item Instance method called on object \textit{type}
 
-            \begin{lstlisting}
-                // lambda way
-                numbers.stream()
-                    .sorted((a, b) -> a.compareTo(b))
-                    .forEach(s -> System.out.print(s + " "));
+        \begin{lstlisting}
+        // lambda way
+        numbers.stream()
+          .sorted((a, b) -> a.compareTo(b))
+          .forEach(s -> System.out.print(s + " "));
 
-                // method ref way
-                numbers.stream()
-                    .sorted(Integer::compareTo)
-                    .forEach(s -> System.out.print(s + " "));
-            \end{lstlisting}
+        // method ref way
+        numbers.stream()
+          .sorted(Integer::compareTo)
+          .forEach(s -> System.out.print(s + " "));
+        \end{lstlisting}
 
         \item  constructor
 
-            \begin{lstlisting}
-                Bicycle[]::new
-            \end{lstlisting}
+        \begin{lstlisting}
+        Bicycle[]::new
+        \end{lstlisting}
 
     \end{itemize}
 
@@ -722,23 +723,11 @@
 
     \textit{Methods} can be either \textit{default} (these are always public), static (always public), private, or private and static. There are no protected members.
 
-    \textit{Non-­static} metho47.3 concatenation:
-    47.4 relativize():
+    There is no modifier that can prevent a default method from being overridden in a class implementing an interface!
 
-    47.5 normalize
+    If implementing two interfaces with conflicting signatures, \textit{default} methods have to override it explicitly. They  can then access the inherited ones by calling Interface.super.method().
 
-    47.6 : Resolves symbolic links. Normalizes path. Interacts with the file system - throws exception if not exists!
-    - we have a symbolic link from /zebra to /horse.
-    - current working directory is /horse/schedule
-    ds with a body must be explicitly marked \textit{private} or \textit{default}.
-
-    Note:
-
-    - There is no modifier that can prevent a default method from being overridden in a class implementing an interface!
-
-    - If implementing two interfaces with conflicting signatures, \textit{default} methods have to override it explicitly. They  can then access the inherited ones by calling Interface.super.method().
-
-    - \textit{Static} methods are only accessible with a qualifier.
+    \textit{Static} methods are only accessible with a qualifier.
 
 \subsection{Records}
 
