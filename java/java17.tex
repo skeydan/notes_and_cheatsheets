@@ -844,24 +844,38 @@
     Overridden and hidden methods can only have covariant return types.
     This also applies to implementing abstract methods.
 
-    When a parent method is private, no overriding takes place (so the child can do what it wants).
+    Methods and variables are considered separately.
 
-    Note:
+    \begin{itemize}
+        \item \textit{Variables}
 
-    - Overriding replaces the method \textit{regardless of the reference type}.
-    - There is no overriding of instance \textit{variables}! Instance variables are always determined based on the reference type!
+        Instance variables are never overridden. They are always determined by the reference type.
 
-    when parent defines a with-arg constructor only, child must call parent constructor
-    explicitly (not enough for both to take the same args!)
-    - instance variable with same name in child hides parent variable
-    - when parent method is static, child cannot "override" (nor complement) this
-    by same-arg instance method
+        \item \textit{Methods}
 
-\subsubsection{Method Hiding}
+        \begin{itemize}
+            \item
+            When an instance method is private, no overriding takes place (so the child can do what it wants). In other words, the parent variable is \textit{hidden}.
 
-    When a child class defines a \textit{static method with the same signature} as a static method in the parent class, then the child’s method hides the one in the parent class.
+             \item
+            Overriding replaces the method \textit{regardless of the reference type}.
 
-    This is determined at \textit{compile} time, as opposed to overriding of instance methods, which is resolved at runtime.
+             \item
+            When a parent defines a with-arg constructor only, the child must call the parent constructor
+            explicitly (it is not enough for both to take overridden the same arguments).
+
+            \item
+            When a child class defines a \textit{static method with the same signature} as a static method in the parent class, then the child’s method \textit{hides} the one in the parent class.
+
+            This is determined at \textit{compile} time, as opposed to overriding of instance methods, which is resolved at runtime.
+
+            The child \textit{cannot} complement the parent's static method
+            by a same-argument instance method.
+        \end{itemize}
+
+
+
+    \end{itemize}
 
 \subsection{Class loading and initialization}
 \subsubsection{Class}
@@ -939,8 +953,6 @@
 \subsection{List}
 
     \begin{lstlisting}
-        // Collections.binarySearch() returns index
-
         // remove() is overloaded!
         // boolean remove(Object obj) removes an object that matches the parameter.
         // E remove(int index) removes (and returns) the element at the specified index.
@@ -973,6 +985,8 @@
 
     Queue methods exists in two forms: one throws an exception if the operation fails, the other returns a special value (either null or false, depending on the operation).
 
+    \bigskip
+
     \begin{tabular}{|c|c|c|}
         \hline
         & Throws exception & Returns special value \\
@@ -984,6 +998,8 @@
         Examine & element() & peek() \\
         \hline
     \end{tabular}
+
+    \bigskip
 
     \begin{lstlisting}
         // --------------------- INSERTION ------------------------
@@ -1018,7 +1034,12 @@
 
     This interface defines methods to access the elements at both ends of the deque. Methods are provided to insert, remove, and examine the element. Each of these methods exists in two forms: one throws an exception if the operation fails, the other returns a special value (either null or false, depending on the operation).
 
+    \bigskip
+
     Methods overview:
+
+    \bigskip
+
     \begin{tabular}{|c|c|c|c|c|}
         \hline
         &  \multicolumn{2}{c}{First Element (Head)} & \multicolumn{2}{c}{Last Element (Tail)} \\
@@ -1033,7 +1054,12 @@
         \hline
     \end{tabular}
 
+    \bigskip
+    \bigskip
+
     This interface extends the Queue interface. When a deque is used as a queue, FIFO (First-In-First-Out) behavior results. Elements are added at the end of the deque and removed from the beginning. The methods inherited from the Queue interface are precisely equivalent to Deque methods as indicated in the following table:
+
+    \bigskip
 
     \begin{tabular}{|c|c|}
         \hline
@@ -1052,6 +1078,8 @@
         peek() &	peekFirst()  \\
         \hline
     \end{tabular}
+
+    \bigskip
 
     Deques can also be used as LIFO (Last-In-First-Out) stacks. This interface should be used in preference to the legacy Stack class. When a deque is used as a stack, elements are pushed and popped from the beginning of the deque.
 
@@ -1109,7 +1137,7 @@
         class Fur<? extends Mammal> {)
     \end{lstlisting}
 
-    Valid and invalid method declarations
+    Valid and invalid method declarations:
 
     \begin{lstlisting}
         // this is possible
@@ -1119,7 +1147,7 @@
 
         // here a wildcard cannot be used:
         private static <T extends Collection, U> U add(T list, U element)
-        // the return type is T!
+        // the return type is U!
 
         // can't use T here (couldn't add anything)
         public static void getExceptions(Collection<? extends Mammal)
@@ -1211,17 +1239,6 @@
         Consumer<Object> c2 = String::new; // there is no new String(object)
     \end{lstlisting}
 
-
-    28.2
-    28.3 the final modifier can only be used if a type or var is specified.
-    - ok: Predicate<String> pred3 = (final var s) -­> s.isEmpty();
-    - not ok: Predicate<String> pred2 = (final s) -­> s.isEmpty();
-    28.4 NO: BiFunction<Integer,Integer,Integer> l = (Object w, var c) -> 39; // var cannot be mixed with non-var parameters
-    28.5 (NO: a,b,c) -­> {int b = 3; return 2;} // cannot redeclare variable
-    --> does not work in function either!!!
-    void nothing(int g) {
-        int g = 0;
-    }
 \subsection{Stream characteristics}
 \subsubsection{Ordered}
 

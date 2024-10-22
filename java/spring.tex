@@ -66,7 +66,7 @@ Figure \ref{fig:bean-lifecycle-2} focuses on pre-initialization.
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{bean-lifecycle-2}
-    \caption{Zooming in on pre-instantation}
+    \caption{Zooming in on pre-instantiation}
     \label{fig:bean-lifecycle-2}
 \end{figure}
 
@@ -75,7 +75,7 @@ On the other hand, fig. \ref{fig:bean-lifecycle-1} zooms in on post-instantiatio
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{bean-lifecycle-1}
-    \caption{Zooming in on post-instantation}
+    \caption{Zooming in on post-instantiation}
     \label{fig:bean-lifecycle-1}
 \end{figure}
 
@@ -84,6 +84,11 @@ See https://www.digitalocean.com/community/tutorials/spring-bean-life-cycle for 
 
 \subsubsection{Load bean definitions, creating an ordered graph}
 In this step, all the configuration files – @Configuration classes or XML files – are processed. For annotation-based configuration, all the classes annotated with @Components are scanned to load the bean definitions.
+
+Bean definitions are passed to a BeanFactory, each under its id and type. For example, ApplicationContext is a BeanFactory.
+
+Then, BeanFactoryPostProcessors are run.
+
 \subsubsection{Instantiate and run BeanFactoryPostProcessors}
 In a Spring application, a BeanFactoryPostProcessor can modify the definition of any bean.
 The BeanFactory object is passed as an argument to the postProcess() method of the BeanFactoryPostProcessor. BeanFactoryPostProcessor then works on the bean definitions or the configuration metadata of the bean before the beans are actually created.
@@ -105,14 +110,59 @@ Injects values and bean references into beans’ properties.
 
 \subsubsection{Call ApplicationContextAware’s setApplicationContext for each bean implementing it}
 
-\subsubsection{Run pre-initialization BeanPostProcessors}
+\subsubsection{Before initialization: Run pre-initialization BeanPostProcessors}
 The Application context calls postProcessBeforeInitialization() for each bean implementing BeanPostProcessor.
-A bean implementing BeanFactoryPostProcessor is called when all bean definitions have been loaded, but no beans will have been instantiated yet. This allows for overriding or adding properties even to eager-initializing beans. This will let you have access to all the beans that you have defined in XML or that are annotated (scanned via component-scan).
 
-\subsubsection{Call InitializingBean’s afterPropertiesSet()}
+\begin{lstlisting}
+   public interface BeanPostProcessor {
+
+       /**
+       * Apply this {@code BeanPostProcessor} to the given new bean instance before any bean's initialization callbacks (like InitializingBean's afterPropertiesSet
+       * or a custom init-method).
+       **/
+       @Nullable
+       default Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+           return bean;
+       }
+
+       /**
+       * Apply this {@code BeanPostProcessor} to the given new bean instance after any bean initialization callbacks (like InitializingBean's afterPropertiesSet
+       * or a custom init-method).
+       */
+       @Nullable
+       default Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+           return bean;
+       }
+   }
+\end{lstlisting}
+
+In postProcessBeforeInitialization and postProcessAfterInitialization, a bean implementing BeanPostProcessor can return anything it wants - even something completely different!
+
+Figure \ref{fig:custom_bean_postprocessor} shows a no-op implementation.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{custom_bean_postprocessor}
+    \caption{Custom bean postprocessor}
+    \label{fig:custom_bean_postprocessor}
+\end{figure}
+
+\subsubsection{Initialization: Call InitializingBean’s afterPropertiesSet()}
 If a bean implements the InitializingBean interface, Spring calls its afterPropertiesSet() method. Used to initialize processes,  load resources, etc. This approach is simple to use but it’s not recommended because it will create tight coupling with the Spring framework in our bean implementations.
 
-\subsubsection{Init Method}
+\begin{lstlisting}
+public interface InitializingBean {
+
+    /**
+    * Invoked by the containing BeanFactory after it has set all bean properties.
+    * This method allows the bean instance to perform validation of its overall configuration and final initialization when all bean properties have been set.
+    */
+    void afterPropertiesSet() throws Exception;
+
+}
+\end{lstlisting}
+
+\subsubsection{Initialization: Init Method, @PostConstruct}
 Instead of implementing InitializingBean, you can use the init-method of the bean tag, the initMethod attribute of the @Bean annotation, and JSR 250's @PostConstruct  annotation.
 Here we use the init-method attribute:
 
@@ -134,7 +184,18 @@ And here, the @PostConstruct annotation.
     }
 \end{lstlisting}
 
-\subsubsection{Run post-initialization BeanPostProcessors}
+@PostConstruct and init-method are enabled by Spring's  CommonAnnotationBeanPostProcessor. This is a
+BeanPostProcessor implementation that supports common Java annotations out of the box, in particular the JSR-250 annotations in the javax.annotation package.
+
+It includes support for the javax.annotation.PostConstruct and javax.annotation.PreDestroy annotations - as init annotation and destroy annotation, respectively - through inheriting from InitDestroyAnnotationBeanPostProcessor with pre-configured annotation types.
+
+\begin{lstlisting}
+    public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBeanPostProcessor
+    implements InstantiationAwareBeanPostProcessor, BeanFactoryAware, Serializable {...}
+
+\end{lstlisting}
+
+\subsubsection{After initialization: Run post-initialization BeanPostProcessors}
 The application context calls postProcessAfterInitialization() for each bean implementing BeanPostProcessor.
 
 \subsubsection{Bean ready to use}
@@ -775,7 +836,7 @@ When we use the @Bean annotation on a method, Spring uses the method name as a b
     Expressions in @Value annotations are of two types:
 
     \begin{itemize}
-        \item Expressions starting with \$. Such expressions reference a property name in the application’s environment. These expressions are evaluated by the PropertySourcesPlaceholderConfigurer Spring bean prior to bean creation and can only be used in @Value annnotations.
+        \item Expressions starting with \$. Such expressions reference a property name in the application’s environment. These expressions are evaluated by the PropertySourcesPlaceholderConfigurer BeanFactoryPostProcessor prior to bean creation and can only be used in @Value annnotations.
         \item Expressions starting with \#.
         These expressions are parsed by a SpEL expression parser, and are evaluated by a SpEL expression instance.
     \end{itemize}
