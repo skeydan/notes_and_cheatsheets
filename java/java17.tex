@@ -1433,18 +1433,14 @@
 
     \begin{lstlisting}
         OptionalDouble opt = s.average()
-        opt.getAsDouble() (may throw NoSuchElementException)
-
-        27.5 IntSummaryStatistics etc.
-        - getMax() etc. -> has get(), in contrast to that op on stream!
-        27.6
+        opt.getAsDouble() // (may throw NoSuchElementException)
     \end{lstlisting}
 
 \subsubsection{Summary statistics}
 
     \begin{lstlisting}
        // note:
-       // methods like getMax(), as opposed to max() on streams
+       // methods like getMax(), as opposed to max() etc. on streams
     \end{lstlisting}
 
 \subsection{Mapping, reducing, filtering}

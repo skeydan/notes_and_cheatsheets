@@ -271,6 +271,8 @@ If a bean implements the DisposableBean interface, Spring calls its destroy() me
 
     Also referred to as Java-based (decoupled) and annotation-based.
 
+    with both types, bean naming works differently - see \ref{sec:bean-naming}.
+
 \subsection{Java-based}
 
     Takes place completely in @Configuration classes. E.g.,
@@ -283,7 +285,7 @@ If a bean implements the DisposableBean interface, Spring calls its destroy() me
         }
     \end{lstlisting}
 
-\subsection{Java-based}
+\subsection{Annotation-based}
 
     Bean definition and wiring take place completely in POJOs. For this to work, we need to enable component scanning.
 
@@ -744,10 +746,14 @@ To use the @Inject annotation, declare the javax.inject library as a Gradle or M
 
 
 \section{Bean Naming}
+\label{sec:bean-naming}
 \subsection{Default Bean Naming}
-\subsubsection{Class-level}
-For an annotation used at the class level, Spring uses the class name and converts the first letter to lowercase.
-The same default naming strategy is applicable for all class-level annotations that are used to create a Spring bean, such as @Component, @Service, and @Controller.
+\subsubsection{Class-level ("Annotation-based configuration")}
+For an annotation used at the class level (@Component, @Service, @Controller), Spring uses the class name and converts the first letter to lowercase.
+Custom names may be configured in the annotation's value attribute.
+
+The type is determined from the annotated class, typically resulting in the actual
+implementation class.
 
     \begin{lstlisting}
         @Service
@@ -756,8 +762,8 @@ The same default naming strategy is applicable for all class-level annotations t
         }
     \end{lstlisting}
 
-\subsubsection{Method-level}
-When we use the @Bean annotation on a method, Spring uses the method name as a bean name.
+\subsubsection{Method-level ("Java configuration")}
+When in a @Configuration class we use the @Bean annotation on a method, Spring uses the method name for the bean name.
 
     \begin{lstlisting}
         @Configuration
@@ -777,7 +783,9 @@ When we use the @Bean annotation on a method, Spring uses the method name as a b
         }
     \end{lstlisting}
 
-    Similar to @Component(“myBean”), we can specify the name using other annotations such as @Service(“myService”), @Controller(“myController”), and @Bean(“myCustomBean”).
+   Custom names may be configured in @Bean's value attribute.
+
+   The type is determined from the method return type, typically resulting in an interface.
 
 \subsection{Naming Beans With @Bean and @Qualifier}
 \subsubsection{@Bean With Value}
