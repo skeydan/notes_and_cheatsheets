@@ -881,6 +881,53 @@ When in a @Configuration class we use the @Bean annotation on a method, Spring u
 
     In addition to application-defined beans, SpEL can make use of beans implicitly provided by Spring, namely environment, systemProperties, and systemEnvironment.
 
+\section{AOP in Spring}
+
+\subsection{Core AOP concepts}
+
+\subsubsection{Join Point}
+
+A point during the execution of a program, such as the execution of a method or the handling of an exception.
+
+In Spring AOP, a join point always represents a method execution.
+
+
+\subsubsection{Point Cut}
+
+An expression that selects one or more join points.
+
+\subsubsection{Advice}
+
+Code to be executed at a particular join point.
+Types:
+
+\begin{itemize}
+    \item
+    Before-advice is executed before calling the target method.
+    \item
+    After-advice is executed after the target method, whatever its outcome.
+    \item
+    After-returning: executed after the target returns successfully. This advice will never execute if the target throws any exception.
+    \item
+    After-throwing: executed after the target throws an exception.
+    \item
+    Around: executed two times, before and after invocation of the target method.
+
+\end{itemize}
+
+\subsubsection{Aspect}
+
+The combination of point cut and advice. The @aspect annotation needs to be explicitly enabled by @EnableAspectJConfiguration set in the context (Config) class.
+
+An aspect can get context information by injecting the JoinPoint into the advice. See fig. \ref{fig:AOP-join-point}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{AOP-join-point}
+    \caption{Automatic JoinPoint injection}
+    \label{fig:AOP-join-point}
+\end{figure}
+
 
 \end{document}
 
