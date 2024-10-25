@@ -896,7 +896,94 @@ In Spring AOP, a join point always represents a method execution.
 
 An expression that selects one or more join points.
 
+Although Spring supports various AspectJ pointcut designators, the most commonly used one is \lstinline{execution}.
+
+For this designator, the syntax pattern is as follows:
+
+\begin{lstlisting}
+    execution(
+    modifiers-pattern?
+    ret-type-pattern
+    declaring-type-pattern.?name-pattern(param-pattern)
+    throws-pattern?
+    )
+\end{lstlisting}
+
+All parts except the returning type pattern (ret-type-pattern in the preceding snippet), the name pattern, and the parameters pattern are optional.
+
+\begin{itemize}
+    \item The returning type pattern determines what the return type of the method must be in order for a join point to be matched. * is most frequently used as the returning type pattern. It matches any return type. A fully-qualified type name matches only when the method returns the given type.
+    \item  The name pattern matches the method name. You can use the * wildcard as all or part of a name pattern. If you specify a declaring type pattern, include a trailing . to join it to the name pattern component.
+    \item The parameters pattern is slightly more complex: () matches a method that takes no parameters, whereas (..) matches any number (zero or more) of parameters. The (*) pattern matches a method that takes one parameter of any type. (*,String) matches a method that takes two parameters. The first can be of any type, while the second must be a String.
+
+\end{itemize}
+
+Examples:
+
+\begin{lstlisting}
+// The execution of any public method:
+execution(public * *(..))
+
+// The execution of any method with a name that begins with set:
+execution(* set*(..))
+
+// The execution of any method defined by the AccountService interface:
+execution(* com.xyz.service.AccountService.*(..))
+
+// The execution of any method defined in the service package:
+execution(* com.xyz.service.*.*(..))
+
+//The execution of any method defined in the service package or one of its sub-packages:
+execution(* com.xyz.service..*.*(..))
+
+// There is one directory between rewards and restaurant.
+execution(* rewards.*.restaurant.*.*(..))
+
+// There are 0 or more directories between rewards and restaurant.
+execution(* rewards..restaurant.*.*(..))
+
+// There must be at least 1 directory before restaurant.
+// omitting the star is not allowed
+execution(* *..restaurant.*.*(..))
+
+// Any join point (method execution only in Spring AOP) within the service package:
+within(com.xyz.service.*)
+
+// Any join point (method execution only in Spring AOP) within the service package or one of its sub-packages:
+within(com.xyz.service..*)
+
+// Any join point (method execution only in Spring AOP) where the proxy implements the AccountService interface:
+this(com.xyz.service.AccountService)
+
+// Any join point (method execution only in Spring AOP) where the target object implements the AccountService interface:
+target(com.xyz.service.AccountService)
+
+// Any join point (method execution only in Spring AOP) that takes a single parameter and where the argument passed at runtime is Serializable:
+args(java.io.Serializable)
+
+// Note that the pointcut given in this example is different from execution(* *(java.io.Serializable)). The args version matches if the argument passed at runtime is Serializable, and the execution version matches if the method signature declares a single parameter of type Serializable.
+
+// Any join point (method execution only in Spring AOP) where the target object has a @Transactional annotation:
+@target(org.springframework.transaction.annotation.Transactional)
+
+// Any join point (method execution only in Spring AOP) where the declared type of the target object has an @Transactional annotation:
+@within(org.springframework.transaction.annotation.Transactional)
+
+// Any join point (method execution only in Spring AOP) where the executing method has an @Transactional annotation:
+@annotation(org.springframework.transaction.annotation.Transactional)
+
+// Any join point (method execution only in Spring AOP) which takes a single parameter, and where the runtime type of the argument passed has the @Classified annotation:
+@args(com.xyz.security.Classified)
+
+// Any join point (method execution only in Spring AOP) on a Spring bean named tradeService:
+bean(tradeService)
+
+// Any join point (method execution only in Spring AOP) on Spring beans having names that match the wildcard expression *Service:
+bean(*Service)
+\end{lstlisting}
+
 \subsubsection{Advice}
+
 
 Code to be executed at a particular join point.
 Types:
