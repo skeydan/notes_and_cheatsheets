@@ -40,9 +40,6 @@
     \item \url{https://www.digitalocean.com/community/tutorials/spring-bean-life-cycle}
 \end{itemize}
 
-TBD
-https://www.baeldung.com/spring-annotations-resource-inject-autowire
-
 \section{Bean Lifecycle}
 \subsection{Overview}
 
@@ -989,22 +986,65 @@ Code to be executed at a particular join point.
 Types:
 
 \begin{itemize}
-    \item
-    Before-advice is executed before calling the target method.
+    \item Before-advice is executed before calling the target method.
+    \begin{lstlisting}
+        @Before("execution(void set*(*))    \end{lstlisting}
     \item
     After-advice is executed after the target method, whatever its outcome.
+    \begin{lstlisting}
+        @Before("execution(void set*(*))
+    \end{lstlisting}
     \item
     After-returning: executed after the target returns successfully. This advice will never execute if the target throws any exception.
+    The return parameter also gives access to the returned object.
+    \begin{lstlisting}
+        @AfterReturning(value="execution(* service..*(..))", return="reward")
+        public void audit(Join Point jp, Reward reward) {
+            auditService.logEvent(jp.getSignature() + ": " + reward.toString());
+        }
+    \end{lstlisting}
     \item
     After-throwing: executed after the target throws an exception.
+    Also gives access to the exception.
+    \begin{lstlisting}
+        // Repositories in any package
+        @AfterThrowing(value="execution(* *..Repository.*(..))", throwing="e")
+        // also have to match the type of the exception
+        public void report(JoinPoint jp, DataAccessException e) {
+        mailService.mailFailure(jp.getSignature(), e);
+        }
+    \end{lstlisting}
+    While this advice cannot prevent an exception to be thrown, it can throw a more user-friendly exception instead:
+    \begin{lstlisting}
+        @AfterThrowing(value="execution(* *..Repository.*(..))", throwing"e")
+        public void report(JoinPoint jp, DataAccessException e) {
+            mailService.mailFailure(jp.getSignature(), e);
+            throw new RewardsException();
+        }
+    \end{lstlisting}
     \item
-    Around: executed two times, before and after invocation of the target method.
+    Around: executed two times, before and after invocation of the target method. Must call proceed() to delegate to the target. See \ref{fig:around-advice}.
+    \begin{figure}
+        \centering
+        \includegraphics[width=1\linewidth]{around-advice}
+        \caption{Around Advice}
+        \label{fig:around-advice}
+    \end{figure}
 
 \end{itemize}
 
 \subsubsection{Aspect}
 
 The combination of point cut and advice. The @aspect annotation needs to be explicitly enabled by @EnableAspectJConfiguration set in the context (Config) class.
+
+This will cause an extension of AbstractAutoProxyCreator to run, a BeanPostProcessor that wraps a bean with an AOP proxy. See \ref{fig:autoproxycreator}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{autoproxycreator}
+    \caption{Proxy Creation.}
+    \label{fig:autoproxycreator}
+\end{figure}
 
 An aspect can get context information by injecting the JoinPoint into the advice. See fig. \ref{fig:AOP-join-point}.
 
@@ -1015,7 +1055,38 @@ An aspect can get context information by injecting the JoinPoint into the advice
     \label{fig:AOP-join-point}
 \end{figure}
 
+\begin{lstlisting}
+    public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
+    implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
+        //...
 
+        @Override
+        public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) {
+            Object cacheKey = getCacheKey(beanClass, beanName);
+
+            if (!StringUtils.hasLength(beanName) || !this.targetSourcedBeans.contains(beanName)) {
+                if (this.advisedBeans.containsKey(cacheKey)) {
+                    return null;
+                }
+                if (isInfrastructureClass(beanClass) || shouldSkip(beanClass, beanName)) {
+                    this.advisedBeans.put(cacheKey, Boolean.FALSE);
+                    return null;
+                }
+            }
+        }
+
+        @Override
+        public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
+            if (bean != null) {
+                Object cacheKey = getCacheKey(bean.getClass(), beanName);
+                if (this.earlyProxyReferences.remove(cacheKey) != bean) {
+                    return wrapIfNecessary(bean, beanName, cacheKey);
+                }
+            }
+            return bean;
+        }
+    }
+\end{lstlisting}
 \end{document}
 
 
