@@ -165,27 +165,29 @@
 \section{Core JavaScript Concepts}
 \subsection{Types}
 
-    Everything besides the following primitive types is an object - functions and array, too,s are objects, for example.
+    Everything besides the following primitive types is an object - functions and arrays, too, are objects.
+
+\subsubsection{Primitive Types}
 
     \begin{lstlisting}[style=ES6]
         // The null primitive is typically used to describe
-        the absence of an object...
+        // the absence of an object...
         // Null
         null
 
         // Undefined
         // ... whereas undefined is the absence
-        of a defined value.
+        // of a defined value.
         // Any variable initialized without a value will be undefined.
         // Any expression that attempts access of a non-existent
         property on an object will result in undefined.
         // A function without a return statement will return undefined.
-        undefined
+        // undefined
 
         // Number
         // The Number type is double-precision floating-point format.
         // It allows both integers and decimals but
-        // has an integer range of $-253^-1$ to $253^-1$.
+        // has an integer range of $-2^53-1$ to $2^53-1$.
         1, 1.5, -1e4, NaN
 
         // BigInt
@@ -200,16 +202,238 @@
 
         // Symbol
         // Symbols can be used as unique identifier keys in objects.
-        The Symbol.for method creates/gets a global symbol.
+        //The Symbol.for method creates/gets a global symbol.
         Symbol('description'), Symbol.for('namespace')...
 
     \end{lstlisting}
+
+\subsubsection{Object}
 
     An object is a set of key value pairs, where values can be any primitive type or an object (including functions, since functions are objects). Object keys are called properties.
 
     All JavaScript objects have prototypes.
     A prototype is an implicit reference to another object that is queried in property lookups.
     If an object doesn't have a particular property, the object's prototype is checked for that property. and so on. This is how inheritance in JavaScript works.
+
+\subsubsection{Functions}
+
+    \begin{lstlisting}[style=ES6]
+        // this refers to the object on which the function was called,
+        // not the object the function was assigned to
+        const obj = { id: 999, fn: function () { console.log(this.id) } }
+        const obj2 = { id: 2, fn: obj.fn }
+        obj2.fn() // prints 2
+        obj.fn() // prints 999
+
+        // Functions have a call method that can be used
+        // to set their this context. See
+        /**
+        * Calls a method of an object,
+        * substituting another object for the current object.
+        * @param thisArg The object to be used as the current object.
+        * @param argArray A list of arguments to be passed to the method.
+        */
+        call(this: Function, thisArg: any, ...argArray: any[]): any;
+
+        function fn() { console.log(this.id) }
+        const obj = { id: 999 }
+        const obj2 = { id: 2 }
+        fn.call(obj2) // prints 2
+        fn.call(obj) // prints 999
+
+        /*
+        *Lambda functions do not have their own this context.
+        * Wwhen this is *referenced inside a function,
+        * it refers to the this of the
+        *nearest parent non-lambda function.
+        */
+        function fn() {
+            return (offset) => {
+                console.log(this.id + offset)
+            }
+        }
+        const obj = { id: 999 }
+        const offsetter = fn.call(thisArg = obj)
+        console.log(typeof(offsetter)); // function
+        offsetter(1) // 1000
+    \end{lstlisting}
+
+
+    Lambda functions do not have a prototype.
+
+
+
+\subsection{Inheritance}
+\subsubsection{Prototypal inheritance - functional}
+    Create a prototype chain:
+\begin{lstlisting}[style=ES6]
+    const wolf = {
+        howl: function () { console.log(this.name + ': awoooooooo') }
+    }
+
+    const dog = Object.create(wolf, {
+        woof: { value: function() { console.log(this.name + ': woof') } }
+    })
+
+    const rufus = Object.create(dog, {
+        name: {value: 'Rufus the dog'}
+    })
+
+    rufus.woof() // prints "Rufus the dog: woof"
+    rufus.howl() // prints "Rufus the dog: awoooooooo"
+\end{lstlisting}
+
+
+A Property Descriptor is a JavaScript object that describes the characteristics of the properties on another object.
+
+\begin{lstlisting}[style=ES6]
+   const propdesc = Object.getOwnPropertyDescriptors(rufus);
+   console.log(propdesc);
+
+   // output
+   {
+       name: {
+           value: 'Rufus the dog',
+           writable: false,
+           enumerable: false,
+           configurable: false
+       }
+   }
+
+
+   const name = Object.getOwnPropertyDescriptor(rufus, "name");
+   console.log(name);
+
+   // output
+
+   {
+       value: 'Rufus the dog',
+       writable: false,
+       enumerable: false,
+       configurable: false
+   }
+
+\end{lstlisting}
+
+\subsubsection{Prototypal inheritance - using constructor}
+
+Creating an object with a specific prototype object can also be achieved by calling a function with the new keyword.
+
+The constructor approach to creating a prototype chain is to define properties on a function's prototype object and then call that function with new.
+
+Define how to create the parent object:
+
+\begin{lstlisting}[style=ES6]
+    function Wolf (name) {
+        this.name = name
+    }
+
+    Wolf.prototype.howl = function () {
+        console.log(this.name + ': awoooooooo')
+    }
+\end{lstlisting}
+
+Define a function to set up the inheritance chain:
+
+\begin{lstlisting}[style=ES6]
+    function inherit (proto) {
+        function ChainLink(){}
+        ChainLink.prototype = proto
+        return new ChainLink()
+    }
+\end{lstlisting}
+
+Define how to obtain a child object:
+
+\begin{lstlisting}[style=ES6]
+    function Dog (name) {
+        Wolf.call(this, name + ' the dog')
+    }
+
+    Dog.prototype = inherit(Wolf.prototype)
+
+    Dog.prototype.woof = function () {
+        console.log(this.name + ': woof')
+    }
+
+\end{lstlisting}
+
+Create a child object():
+
+\begin{lstlisting}[style=ES6]
+    const rufus = new Dog('Rufus')
+
+    rufus.woof() // prints "Rufus the dog: woof"
+    rufus.howl() // prints "Rufus the dog: awoooooooo"
+\end{lstlisting}
+
+ In JavaScript runtimes that support EcmaScript 5+ the Object.create function could be used to the same effect:
+
+
+\begin{lstlisting}[style=ES6]
+
+    function Dog (name) {
+        Wolf.call(this, name + ' the dog')
+    }
+
+    Dog.prototype = Object.create(Wolf.prototype)
+
+    Dog.prototype.woof = function () {
+        console.log(this.name + ': woof')
+    }
+\end{lstlisting}
+
+Node.js has a utility function: util.inherits that is often used in code bases using constructor functions.
+
+\begin{lstlisting}[style=ES6]
+
+    const util = require('util')
+
+    function Dog (name) {
+        Wolf.call(this, name + ' the dog')
+    }
+
+    Dog.prototype.woof = function () {
+        console.log(this.name + ': woof')
+    }
+
+    // sets the prototype of Dog.prototype to Wolf.prototype
+    util.inherits(Dog, Wolf)
+
+\end{lstlisting}
+
+In contemporary Node.js, util.inherits uses the EcmaScript 2015 (ES6) method Object.setPrototypeOf under the hood.
+
+\begin{lstlisting}[style=ES6]
+    Object.setPrototypeOf(Dog.prototype, Wolf.prototype)
+\end{lstlisting}
+
+
+\subsubsection{Prototypal inheritance - class-based}
+
+The class keyword is syntactic sugar that actually creates a function, new(), that is to be used as a constructor.
+Internally, it creates prototype chains.
+
+Usage:
+
+\begin{lstlisting}[style=ES6]
+    class Wolf {
+        constructor (name) {
+            this.name = name
+        }
+        howl () { console.log(this.name + ': awoooooooo') }
+    }
+
+    class Dog extends Wolf {
+        constructor(name) {
+            super(name + ' the dog')
+        }
+        woof () { console.log(this.name + ': woof') }
+    }
+
+    const rufus = new Dog('Rufus')
+\end{lstlisting}
+
 
 \end{document}
 
