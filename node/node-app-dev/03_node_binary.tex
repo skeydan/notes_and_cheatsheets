@@ -263,7 +263,7 @@
 
 
 
-\subsection{Inheritance}
+\subsection{Prototypal Inheritance}
 \subsubsection{Prototypal inheritance - functional}
     Create a prototype chain:
 \begin{lstlisting}[style=ES6]
@@ -432,6 +432,70 @@ Usage:
     }
 
     const rufus = new Dog('Rufus')
+\end{lstlisting}
+
+\subsection{Inheritance provided by closures}
+
+Below, the spread operator is used. The spread operator splits arrays into their members, and object into properties.
+When spreading objects, the properties are added as key-value pairs.
+
+\begin{lstlisting}[style=ES6]
+    function wolf (name) {
+        const howl = () => {
+            console.log(name + ': awoooooooo')
+        }
+        return { howl: howl }
+    }
+
+    function dog (name) {
+        name = name + ' the dog'
+        const woof = () => { console.log(name + ': woof') }
+        return {
+            ...wolf(name),
+            woof: woof
+        }
+    }
+    const rufus = dog('Rufus')
+
+    console.log(rufus)
+    // { howl: [Function: howl], woof: [Function: woof] }
+    rufus.woof()
+    // "Rufus the dog: woof"
+    rufus.howl()
+    // "Rufus the dog: awoooooooo"
+\end{lstlisting}
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
 \end{lstlisting}
 
 
