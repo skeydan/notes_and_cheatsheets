@@ -296,6 +296,20 @@ If a bean implements the DisposableBean interface, Spring calls its destroy() me
     \end{lstlisting}
 
 
+\subsection{Spring Boot Auto-Configuration}
+
+    When @EnableAutoConfiguration is present, beans annotated with @AutoConfiguration  will be configured.
+
+    In spring-boot-autoconfigure.jar, /META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports lists the classes by default autoconfigured by Spring.
+
+    Spring's DataSourceAutoConfiguration class is one example. See fig. \ref{fig:datasourceautoconfiguration}.
+
+    \begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{datasourceautoconfiguration}
+    \caption{Spring's DataSourceAutoConfiguration class.}
+    \label{fig:datasourceautoconfiguration}
+    \end{figure}
 
 
 \section{Annotations}
@@ -681,6 +695,59 @@ To use the @Inject annotation, declare the javax.inject library as a Gradle or M
         @EnableAutoConfiguration
         @ComponentScan
     \end{lstlisting}
+
+\subsubsection{@ConfigurationProperties}
+
+    Helps keep configuration clean (see \ref{fig:configurationproperties}).
+
+    This annotation has to be enabled via one of:
+    \begin{itemize}
+        \item @EnableConfigurationProperties on the application class
+
+        \begin{lstlisting}
+         @SpringBootApplication
+         @EnableConfigurationProperties(
+            ConnectionSettings.class)
+         public class App {
+             // ...
+         }
+        \end{lstlisting}
+
+        \item @ConfigurationPropertiesScan  on the application class
+
+        \begin{lstlisting}
+         @SpringBootApplication
+         @ConfigurationPropertiesScan
+         public class App {
+             // ...
+         }
+        \end{lstlisting}
+
+        \item @Component on the configuration class
+
+        \begin{lstlisting}
+         @Component
+         @ConfigurationProperties(prefix="...")
+         public class ConnectionSettings {
+             // ...
+         }
+        \end{lstlisting}
+
+    \end{itemize}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{configurationproperties}
+    \caption{}
+    \label{fig:configurationproperties}
+\end{figure}
+
+\subsubsection{@ConditionalOnX}
+
+Determine what auto configuration does. For example: @ConditionalOnBean, @ConditionalOnMissingBean, @ConditionalOnClass, @ConditionalOnMissingClass, @ConditionalOnProperty.
+
+For example, @Profile is such a condition.
+
 
 \section{Aware Interfaces}
 
