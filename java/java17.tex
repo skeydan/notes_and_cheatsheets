@@ -231,9 +231,38 @@
      strip(), stripLeading(), stripTrailing(), stripIndent()
 
      // indent():
-     // indent(n) splits into lines and then indents each; also adds newline if missing at end.
-     // indent(0) does not change the indentation, but still adds a normalizing line break
-     System.out.println(phrase.indent(0).length());
+     // indent(n) splits into lines and then indents each; also adds newline after the last line if there's none.
+     // indent(0) does not change the indentation, but still adds a newline after the last line
+     // indent(-n) removes indentation iff there is any, and also adds a newline after the last line
+
+     // indent() example
+     var phrase = "prickly \nporcupine";
+     System.out.println(phrase);
+     System.out.println(".........................................");
+     System.out.println(phrase.indent(1));
+     System.out.println(".........................................");
+     System.out.println(phrase.indent(0));
+     System.out.println(".........................................");
+     System.out.println(phrase.indent(-1));
+     System.out.println(".........................................");
+
+     // Output:
+     prickly
+     porcupine
+     .........................................
+      prickly
+      porcupine
+
+     .........................................
+     prickly
+     porcupine
+
+     .........................................
+     prickly
+     porcupine
+
+     .........................................
+
 
      // translateEscapes()
      // these print 2 lines:
@@ -260,6 +289,9 @@
 
         StringBuilder
         delete(int start, int end)
+
+        // beware: returns a new String!
+        String substring(start, end)
     \end{lstlisting}
 
 \subsection{Numbers}
@@ -295,9 +327,15 @@
 
     Examples:
     \begin{lstlisting}
+        // compiles - Boolean's being lenient
         Boolean.valueOf("8").booleanValue() // false
+
+        // Character has no byteValue()
         Character.valueOf('x').byteValue(); // does not compile
+
+        // cannot have underscore next to decimal point
         Double.valueOf("9_.3").byteValue(); // NumberFormatException
+
         Long.valueOf(128).byteValue(); // - 128
     \end{lstlisting}
 
