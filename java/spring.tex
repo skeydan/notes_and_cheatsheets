@@ -1,7 +1,6 @@
 \documentclass{scrartcl}
 \usepackage{listings}
 \usepackage{xcolor}
-
 \definecolor{lightcyan}{HTML}{E0FFFF}
 \usepackage[colorlinks=true, urlcolor=blue, linkcolor=red]{hyperref}
 \usepackage{graphicx}
@@ -617,7 +616,7 @@ To use the @Inject annotation, declare the javax.inject library as a Gradle or M
     Or:
     \begin{lstlisting}
         @ComponentScan(excludeFilters =
-        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = Rose.class))
+        @ComponentScan.Filter(type = FilterType.ASSIGNABLE\_TYPE, value = Rose.class))
     \end{lstlisting}
 
 \subsubsection{@Component}
@@ -1154,6 +1153,332 @@ An aspect can get context information by injecting the JoinPoint into the advice
         }
     }
 \end{lstlisting}
+
+\section{JPA}
+\subsection{Repository Query Language}
+
+Example (see \url{  https://docs.spring.io/spring-data/commons/reference/repositories/query-methods-details.html}):
+
+
+\begin{lstlisting}
+   interface PersonRepository extends Repository<Person, Long> {
+
+       List<Person> findByEmailAddressAndLastname(EmailAddress emailAddress, String lastname);
+
+       // Enables the distinct flag for the query
+       List<Person> findDistinctPeopleByLastnameOrFirstname(String lastname, String firstname);
+       List<Person> findPeopleDistinctByLastnameOrFirstname(String lastname, String firstname);
+
+       // Enabling ignoring case for an individual property
+       List<Person> findByLastnameIgnoreCase(String lastname);
+       // Enabling ignoring case for all suitable properties
+       List<Person> findByLastnameAndFirstnameAllIgnoreCase(String lastname, String firstname);
+
+       // Enabling static ORDER BY for a query
+       List<Person> findByLastnameOrderByFirstnameAsc(String lastname);
+       List<Person> findByLastnameOrderByFirstnameDesc(String lastname);
+   }
+\end{lstlisting}
+
+\subsection{Reserved Method Names}
+
+    Reserved methods like CrudRepository.findById (or just findById) are targeting the identifier property regardless of the actual property name used in the declared method.
+    Example:
+
+\begin{lstlisting}
+    class User {
+        //The identifier property (primary key).
+        @Id Long pk;
+
+        // A property named id, but not the identifier.
+        Long id;
+    }
+
+    interface UserRepository extends Repository<User, Long> {
+
+        // Targets the pk property (the one marked with @Id which is considered to be the identifier) as it refers to a CrudRepository base repository method.
+        Optional<User> findById(Long id);
+
+        // Targets the pk property by name as it is a derived query.
+        Optional<User> findByPk(Long pk);
+
+        // Targets the id property by using the descriptive token between find and by to avoid collisions with reserved methods.
+        Optional<User> findUserById(Long id);
+    }
+
+\end{lstlisting}
+
+\section{Paging, Iterating Large Results, Sorting and Limiting}
+
+    Spring recognizes certain specific types like Pageable, Sort and Limit, to apply pagination, sorting and limiting to your queries dynamically.
+    Example:
+
+\begin{lstlisting}
+    Page<User> findByLastname(String lastname, Pageable pageable);
+
+    Slice<User> findByLastname(String lastname, Pageable pageable);
+
+    List<User> findByLastname(String lastname, Sort sort);
+
+    List<User> findByLastname(String lastname, Sort sort, Limit limit);
+
+    List<User> findByLastname(String lastname, Pageable pageable);
+\end{lstlisting}
+
+\section{Repository Query Keywords}
+
+\begin{lstlisting}
+    // General query method returning typically the repository type, a Collection or Streamable subtype or a result wrapper such as Page, GeoResults or any other store-specific result wrapper. Can be used as findBy..., findMyDomainTypeBy... or in combination with additional keywords.
+    find...By, read...By, get...By, query...By, search...By, stream...By
+
+    // Exists projection, returning typically a boolean result.
+    exists...By
+
+    // Count projection returning a numeric result.
+    count...By
+
+    //  Delete query method returning either no result (void) or the delete count.
+    delete...By, remove...By
+
+    //  Limit the query results to the first <number> of results. This keyword can occur in any place of the subject between find (and the other keywords) and by.
+    ...First<number>..., ...Top<number>...
+
+    //  Use a distinct query to return only unique results. Consult the store-specific documentation whether that feature is supported. This keyword can occur in any place of the subject between find (and the other keywords) and by.
+    ...Distinct...
+\end{lstlisting}
+
+\section{Supported query method predicate keywords and modifiers}
+
+\begin{table}[ht]
+\begin{tabular}{ | r | r |}
+    \hline
+    Logical keyword &	Keyword expressions \\
+    \hline
+    AND & And \\
+    OR &  Or \\
+    AFTER & After, IsAfter \\
+    BEFORE & Before, IsBefore\\
+    CONTAINING&Containing, IsContaining, Contains\\
+    BETWEEN&Between, IsBetween\\
+    ENDING\_WITH&EndingWith, IsEndingWith, EndsWith\\
+    EXISTS&Exists\\
+    FALSE&False, IsFalse\\
+    GREATER\_THAN&GreaterThan, IsGreaterThan\\
+    GREATER\_THAN\_EQUALS&GreaterThanEqual, IsGreaterThanEqual\\
+    IN&In, IsIn\\
+    IS&Is, Equals, (or no keyword)\\
+    IS\_EMPTY&IsEmpty, Empty\\
+    IS\_NOT\_EMPTY&IsNotEmpty, NotEmpty\\
+    IS\_NOT\_NULL&NotNull, IsNotNull\\
+    IS\_NULL&Null, IsNull\\
+    LESS\_THAN&LessThan, IsLessThan\\
+    LESS\_THAN\_EQUAL&LessThanEqual, IsLessThanEqual\\
+    LIKE&Like, IsLike\\
+    NEAR&Near, IsNear\\
+    NOT&Not, IsNotNOT\_INNotIn, IsNotIn\\
+    NOT\_LIKE&NotLike, IsNotLike\\
+    REGEX&Regex, MatchesRegex, Matches\\
+    STARTING\_WITH&StartingWith, IsStartingWith, StartsWith\\
+    TRUE&True, IsTrue\\
+    WITHIN&Within, IsWithin\\
+    \hline
+\end{tabular}
+\end{table}
+
+    In addition to filter predicates, the following list of modifiers is supported:
+    \begin{itemize}
+        \item IgnoreCase, IgnoringCase
+        \item AllIgnoreCase, AllIgnoringCase
+        \item OrderBy... (e. g. OrderByFirstnameAscLastnameDesc).
+    \end{itemize}
+
+
+\section{Supported query method predicate keywords and modifiers}
+
+    \begin{table}[ht]
+    \begin{tabular}{ | r | r |}
+    \hline
+    Logical keyword& 	Keyword expressions \\
+
+    AND&
+
+
+    And\\
+
+    OR&
+
+
+    Or\\
+
+    AFTER&
+
+
+    After, IsAfter\\
+
+    BEFORE&
+
+
+    Before, IsBefore\\
+
+    CONTAINING&
+
+
+    Containing, IsContaining, Contains\\
+
+    BETWEEN&
+
+
+    Between, IsBetween\\
+
+    ENDING\_WITH&
+
+
+    EndingWith, IsEndingWith, EndsWith\\
+
+    EXISTS&
+
+
+    Exists\\
+
+    FALSE&
+
+
+    False, IsFalse\\
+
+    GREATER\_THAN&
+
+
+    GreaterThan, IsGreaterThan\\
+
+    GREATER\_THAN\_EQUALS&
+
+
+    GreaterThanEqual, IsGreaterThanEqual\\
+
+    IN&
+
+
+    In, IsIn\\
+
+    IS&
+
+
+    Is, Equals, (or no keyword)\\
+
+    IS\_EMPTY&
+
+
+    IsEmpty, Empty\\
+
+    IS\_NOT\_EMPTY&
+
+
+    IsNotEmpty, NotEmpty\\
+
+    IS\_NOT\_NULL&
+
+
+    NotNull, IsNotNull\\
+
+    IS\_NULL&
+
+
+    Null, IsNull\\
+
+    LESS\_THAN&
+
+
+    LessThan, IsLessThan\\
+
+    LESS\_THAN\_EQUAL&
+
+
+    LessThanEqual, IsLessThanEqual\\
+
+    LIKE&
+
+
+    Like, IsLike\\
+
+    NEAR&
+
+
+    Near, IsNear\\
+
+    NOT&
+
+
+    Not, IsNot\\
+
+    NOT\_IN&
+
+
+    NotIn, IsNotIn\\
+
+    NOT\_LIKE&
+
+
+    NotLike, IsNotLike\\
+
+    REGEX&
+
+
+    Regex, MatchesRegex, Matches\\
+
+    STARTING\_WITH&
+
+
+    StartingWith, IsStartingWith, StartsWith\\
+
+    TRUE&
+
+
+    True, IsTrue\\
+
+    WITH&
+
+
+    Within, IsWithin\\
+    \hline
+    \end{tabular}
+\end{table}
+
+
+\begin{lstlisting}
+
+\end{lstlisting}
+
+\begin{lstlisting}
+
+\end{lstlisting}
+
+\begin{lstlisting}
+
+\end{lstlisting}
+
+\begin{lstlisting}
+
+\end{lstlisting}
+
+\begin{lstlisting}
+
+\end{lstlisting}
+
+\begin{lstlisting}
+
+\end{lstlisting}
+
+\begin{lstlisting}
+
+\end{lstlisting}
+
+\begin{lstlisting}
+
+\end{lstlisting}
+
+
+
+
 \end{document}
 
 

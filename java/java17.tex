@@ -527,7 +527,7 @@
 \subsubsection{General}
 
         \begin{itemize}
-            \item Supports: enum, byte, Byte, short, Short, char, Character, int, Integer,
+            \item Supports the following data types as arguments to switch(): enum, byte, Byte, short, Short, char, Character, int, Integer,
             String, var (if resolves to one of those types)
             \item Does not support: boolean, Boolean, double, Double, float, Float, long, Long
          \end{itemize}
@@ -535,7 +535,7 @@
 \subsubsection{Statement}
 
     \begin{itemize}
-        \item The value of a case statement must be a constant, a literal value, or a final variable (not, e.g., \lstinline$ case red:  $)
+        \item The value passed to a \textit{case} (not switch!) statement must be a constant, a literal value, or a final variable (not, e.g., \lstinline$ case red:  $)
         \item May use comma to separate case constants in statements: e.g.,
             \begin{lstlisting}
                 public int getAverageTemperate(Season s) {
@@ -562,7 +562,8 @@
     \begin{lstlisting}
         case 10 -> {"Jane";} // yield implied
         case 20 -> {yield "Lisa";}
-        case 30 -> "Kelly";
+        // expression may also have multiple values passed to case
+        case 30, 40 -> "Kelly";
         default -> "Unassigned";
     \end{lstlisting}
 
@@ -773,6 +774,7 @@
     Minimal example:
 
     \begin{lstlisting}
+        // parentheses are required
         public record Crane(int numberEggs, String name) { }
     \end{lstlisting}
 
@@ -798,37 +800,39 @@
         }
     \end{lstlisting}
 
-    Constructors may be overloaded:
+    Records may:
 
+    \begin{itemize}
+    \item have overloaded constructors:
     \begin{lstlisting}
-        public record Crane(int numberEggs, String name) {
-            public Crane(String firstName, String lastName) {
-                // must be 1st call, must either call another constructor or the long constructor
-                this(0, firstName + " " + lastName);
-            }
+    public record Crane(int numberEggs, String name) {
+        public Crane(String firstName, String lastName) {
+        // must be first call, must either call another constructor or the long constructor
+    this(0, firstName + " " + lastName);
+    \end{lstlisting}
+
+    \item implement interfaces:
+    \begin{lstlisting}
+    public record Crane(int numberEggs, String name) implements Bird {}
+    \end{lstlisting}
+    \item override a method:
+    \begin{lstlisting}
+    public record BeardedDragon(boolean fun) {
+        // overriding generated accessor
+        @Override public boolean fun() { return false; }
         }
     \end{lstlisting}
+    \item be package access or public.
+    \item contain nested classes, interfaces, annotations, enums, and other records.
+    \item contain instance \textit{methods}.
+    \end{itemize}
 
-    They can also implement interfaces:
+    Records may not:
 
-    \begin{lstlisting}
-        public record Crane(int numberEggs, String name) implements Bird {}
-    \end{lstlisting}
-
-    Overriding a method:
-
-     \begin{lstlisting}
-        public record BeardedDragon(boolean fun) {
-            // overriding generated accessor
-            @Override public boolean fun() { return false; }
-        }
-    \end{lstlisting}
-
-    Records may be package access or public. They may contain methods, nested classes, interfaces, annotations, enums, and other records.
-
-    Records can't be subclassed, since they are implicitly final.
-
-    Records \textit{cannot} declare instance \textit{variables} (as opposed to instance \textit{methods}) or instance \textit{initializers}.
+    \begin{itemize}
+        \item be subclassed, since they are implicitly final.
+        \item  declare instance \textit{variables} or instance \textit{initializers}.
+    \end{itemize}
 
 \subsection{Enums}
 
@@ -837,6 +841,7 @@
         \begin{lstlisting}
         enum Flavors {
             VANILLA, CHOCOLATE, STRAWBERRY;
+            // must declare values before members
             static final Flavors DEFAULT = STRAWBERRY;
         }
     \end{lstlisting}
