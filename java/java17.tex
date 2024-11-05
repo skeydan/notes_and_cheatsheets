@@ -738,19 +738,29 @@
          sealed class Friendly extends Mandrill permits Silly {}
     \end{lstlisting}
 
-    Parent and child must be in same package. If they are in same file or the extension is nested, no permits are needed.
+    Parent and child must be in same package. If they are in same file or the extension is nested, no permits clause is needed (but the extends still is!).
 
     Every class that directly extends a sealed class must specify exactly one of the following three modifiers: final, sealed, or non-­sealed.
 
     Note:
 
-    - We can have sealed interfaces (permitting both extensions and implementations).
-    - While a sealed class is commonly extended by a subclass marked final, it can also be extended by a sealed or non-­sealed subclass marked abstract.
+
+    \begin{itemize}
+        \item   We can have sealed interfaces (permitting both extensions and implementations).
+        \item While a sealed class is commonly extended by a subclass marked final, it can also be extended by a sealed or non-­sealed subclass marked abstract.
+    \end{itemize}
 
     \begin{lstlisting}
-        // extends clause missing; it is Friendly that does not compile!
+        // MyClass.java:25: error: cannot find symbol
+        //sealed class Friendly extends Mandrill permits Silly {}
+        //                  ^
+        // symbol: class Mandrill
+        // MyClass.java:25: error: invalid permits clause
+        //
         sealed class Friendly extends Mandrill permits Silly {}
-        final class Silly {}
+        //                ^
+        // (subclass Silly must extend sealed class)
+        // 2 errors
     \end{lstlisting}
 \subsubsection{Final and Immutable Classes}
 
@@ -759,11 +769,12 @@
 
 \subsection{Interfaces}
 
-    \textit{Variables} are always publics, static, final.
+    \textit{Variables} are always public, static, final.
 
-    \textit{Methods} can be either \textit{default} (these are always public), static (always public), private, or private and static. There are no protected members.
+    \textit{Methods} can be either \textit{default} (these are always public), static (always public), private, or private and static.
+    Methods cannot be final nor protected. If there is no access modifier, a method is implicitly static.
 
-    There is no modifier that can prevent a default method from being overridden in a class implementing an interface!
+    There is no modifier that can prevent a default method from being overridden in a class implementing an interface.
 
     If implementing two interfaces with conflicting signatures, \textit{default} methods have to override it explicitly. They  can then access the inherited ones by calling Interface.super.method().
 
