@@ -749,12 +749,12 @@ For example, @Profile is such a condition.
 
 \subsubsection{RestController}
 
-Includes @Controller and @ResponseBody (view subsystem is automatically turned off).
+Includes @Controller and @ResponseBody.
 
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{restcontroller}
-    \caption{RestController conveniece annotation.}
+    \caption{RestController convenience annotation.}
     \label{fig:restcontroller}
 \end{figure}
 
@@ -796,6 +796,19 @@ Do implicit type conversion of arguments.
 \subsubsection{@ResponseBody}
 
 Causes Java objects returned by the Controller to be processed by HttpMessageConverters in order to return information to the client in the form requested in the Accept header.
+
+\subsubsection{@ResponseStatus}
+
+    Used to return a status other than 200.
+
+    \begin{lstlisting}
+        @ResponseStatus(HttpStatus.NO_CONTENT)
+        public void updateOrder(...){}
+    \end{lstlisting}
+
+\subsubsection{@RequestBody}
+
+    Used to extract the request body.
 
 \section{Aware Interfaces}
 

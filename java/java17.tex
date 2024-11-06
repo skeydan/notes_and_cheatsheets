@@ -796,6 +796,7 @@
     \begin{lstlisting}
         public Crane { // no parens
             if (numberEggs < 0) throw new IllegalArgumentException();
+            // could not be this.name in the compact constructor
             name = name.toUpperCase();
             // long form is automatically called here
         }
