@@ -769,16 +769,20 @@
 
 \subsection{Interfaces}
 
-    \textit{Variables} are always public, static, final.
+    \textit{Variables} are always public, static, final. No other modifiers are allowed.
 
     \textit{Methods} can be either \textit{default} (these are always public), static (always public), private, or private and static.
-    Methods cannot be final nor protected. If there is no access modifier, a method is implicitly static.
 
-    There is no modifier that can prevent a default method from being overridden in a class implementing an interface.
+    Methods cannot be final nor protected.
 
-    If implementing two interfaces with conflicting signatures, \textit{default} methods have to override it explicitly. They  can then access the inherited ones by calling Interface.super.method().
+    \textit{Default} methods are implicitly public. There is no modifier that can prevent a default method from being overridden in a class implementing an interface. If implementing two interfaces with conflicting signatures, \textit{default} methods have to override it explicitly. They  can then access the inherited ones by calling Interface.super.method().
 
-    \textit{Static} methods are only accessible with a qualifier.
+    \textit{Private} methods must contain a body.
+
+
+    \textit{Static} methods are only accessible with a qualifier. A static method can be invoked from other static or from default method. A static method cannot be overridden or changed in the implementation class. The static methods are implicitly public — there's no need to specify the public modifier.
+
+    Interfaces may contain member type declarations (nested type). A member type declaration in an interface is implicitly static and public. It is permitted to redundantly specify either or both of these modifiers.
 
 \subsection{Records}
 
@@ -802,7 +806,7 @@
         }
     \end{lstlisting}
 
-    A long constructor:
+    A long constructor (may have several):
 
     \begin{lstlisting}
         public Crane(int numberEggs, String name) {
@@ -834,14 +838,16 @@
         @Override public boolean fun() { return false; }
         }
     \end{lstlisting}
-    \item be package access or public.
+    \item have any access modifier.
     \item contain nested classes, interfaces, annotations, enums, and other records.
     \item contain instance \textit{methods}.
+    \item implement interfaces.
     \end{itemize}
 
     Records may not:
 
     \begin{itemize}
+        \item extend other classes.
         \item be subclassed, since they are implicitly final.
         \item  declare instance \textit{variables} or instance \textit{initializers}.
     \end{itemize}
