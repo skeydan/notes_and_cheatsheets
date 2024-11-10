@@ -1354,166 +1354,58 @@ Example (see \url{  https://docs.spring.io/spring-data/commons/reference/reposit
         \item OrderBy... (e. g. OrderByFirstnameAscLastnameDesc).
     \end{itemize}
 
-
-\section{Supported query method predicate keywords and modifiers}
-
-    \begin{table}[ht]
-    \begin{tabular}{ | r | r |}
-    \hline
-    Logical keyword& 	Keyword expressions \\
-
-    AND&
-
-
-    And\\
-
-    OR&
-
-
-    Or\\
-
-    AFTER&
-
-
-    After, IsAfter\\
-
-    BEFORE&
-
-
-    Before, IsBefore\\
-
-    CONTAINING&
-
-
-    Containing, IsContaining, Contains\\
-
-    BETWEEN&
-
-
-    Between, IsBetween\\
-
-    ENDING\_WITH&
-
-
-    EndingWith, IsEndingWith, EndsWith\\
-
-    EXISTS&
-
-
-    Exists\\
-
-    FALSE&
-
-
-    False, IsFalse\\
-
-    GREATER\_THAN&
-
-
-    GreaterThan, IsGreaterThan\\
-
-    GREATER\_THAN\_EQUALS&
-
-
-    GreaterThanEqual, IsGreaterThanEqual\\
-
-    IN&
-
-
-    In, IsIn\\
-
-    IS&
-
-
-    Is, Equals, (or no keyword)\\
-
-    IS\_EMPTY&
-
-
-    IsEmpty, Empty\\
-
-    IS\_NOT\_EMPTY&
-
-
-    IsNotEmpty, NotEmpty\\
-
-    IS\_NOT\_NULL&
-
-
-    NotNull, IsNotNull\\
-
-    IS\_NULL&
-
-
-    Null, IsNull\\
-
-    LESS\_THAN&
-
-
-    LessThan, IsLessThan\\
-
-    LESS\_THAN\_EQUAL&
-
-
-    LessThanEqual, IsLessThanEqual\\
-
-    LIKE&
-
-
-    Like, IsLike\\
-
-    NEAR&
-
-
-    Near, IsNear\\
-
-    NOT&
-
-
-    Not, IsNot\\
-
-    NOT\_IN&
-
-
-    NotIn, IsNotIn\\
-
-    NOT\_LIKE&
-
-
-    NotLike, IsNotLike\\
-
-    REGEX&
-
-
-    Regex, MatchesRegex, Matches\\
-
-    STARTING\_WITH&
-
-
-    StartingWith, IsStartingWith, StartsWith\\
-
-    TRUE&
-
-
-    True, IsTrue\\
-
-    WITH&
-
-
-    Within, IsWithin\\
-    \hline
-    \end{tabular}
-\end{table}
-
 \section{Spring Boot Web}
 
-Architecture Overview:
+Architecture Overview (see \ref{fig:spring-web}):
 
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{spring-web}
     \caption{Spring Boot Web Architecture Overview}
     \label{fig:spring-web}
+\end{figure}
+
+\section{Spring Security}
+\subsection{Overview}
+
+Architecture Overview (see \ref{fig:spring-security}):
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{spring-security}
+    \caption{Spring Security Architecture Overview}
+    \label{fig:spring-security}
+\end{figure}
+
+\subsection{Filter Chain}
+
+Overview (see \ref{fig:filter-chain}):
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{filter-chain}
+    \caption{Spring Security Filter Chain}
+    \label{fig:filter-chain}
+\end{figure}
+
+Example (see \ref{fig:filter-chain-example}):
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{filter-chain-example}
+    \caption{Example Filter Chain}
+    \label{fig:filter-chain-example}
+\end{figure}
+
+\subsection{Authentication}
+
+Overview (see \ref{fig:authentication}):
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{authentication}
+    \caption{Spring Security Filter Chain}
+    \label{fig:authentication}
 \end{figure}
 
 
