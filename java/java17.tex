@@ -479,6 +479,17 @@
 
     Names may contain: underscore, currency symbol, numbers, letters (first may not be a number)
 
+\subsection{Reserved Words}
+
+    See \ref{fig:reserved-words}.
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=1\linewidth]{reserved-words}
+        \caption{Reserved Words}
+        \label{fig:reserved-words}
+    \end{figure}
+
 \subsection{Variable declarations and initialization topics}
 
     For instance variables, on a single line only one type should be specified.
@@ -677,7 +688,22 @@
 \section{Classes, Interfaces, Records and Enums}
 \subsection{General notes on inheritance}
 
-    When a parent defines a with-arg constructor only, the child must call the parent constructor explicitly - it is not enough for both to take the same arguments.
+    When a parent defines a with-argument constructor only, the child must call the parent constructor explicitly. It is not enough for both to take the same arguments. See:
+
+    \begin{lstlisting}
+        class Cinema {
+            private String name = "Sequel";
+            public Cinema(String name) {
+                this.name = name;
+            }
+        }
+        public class Movie extends Cinema {
+            private String name = "adaptation";
+            public Movie(String movie) {
+                this.name = "Remake";
+            }
+        }
+    \end{lstlisting}
 
     An instance variable with same name in the child hides the parent variable.
 
@@ -768,23 +794,42 @@
     - Immutable classes do not include setter methods. They must be marked final \textit{or} contain only private constructors.
 
 \subsection{Interfaces}
+\begin{itemize}
 
-    \textit{Variables} are always public, static, final. No other modifiers are allowed.
+    \item     \textit{Variables} are always public, static, final. No other modifiers are allowed.
 
-    \textit{Methods} can be either \textit{default} (these are always public), static (always public), private, or private and static.
+    \item     \textit{Methods} can be either \textit{default} (these are always public), static (always public), private, or private and static. Methods cannot be final nor protected. If there is no modifier, a method is implicitly public.
 
-    Methods cannot be final nor protected.
+    \item     \textit{Default} methods are implicitly public. There is no modifier that can prevent a default method from being overridden in a class implementing an interface.
 
-    \textit{Default} methods are implicitly public. There is no modifier that can prevent a default method from being overridden in a class implementing an interface. If implementing two interfaces with conflicting signatures, \textit{default} methods have to override it explicitly. They  can then access the inherited ones by calling Interface.super.method().
+    \item     If implementing two interfaces that define a default method with the same signature, classes (incl. abstract classes) have to override it explicitly, or their declaration will not compile. (I.e., this fails on compilation already, not on call. See example.)
 
-    \textit{Private} methods must contain a body.
+    They can then access the inherited ones by calling Interface.super.method() - provided this happens in an instance method, since otherwise super() is not available.
 
+    \begin{lstlisting}
+        public class App {
+            interface Building {
+                default Double getHeight() {
+                    return 1.0;
+                }
+            }
+            interface Office {
+                public default String getHeight() {
+                    return null;
+            }
+            // does not compile
+            abstract class Tower implements Building, Office {}
 
-    \textit{Static} methods are only accessible with a qualifier. A static method can be invoked from other static or from default method. A static method cannot be overridden or changed in the implementation class. The static methods are implicitly public — there's no need to specify the public modifier.
+    \end{lstlisting}
 
-    Interfaces may contain member type declarations (nested type). A member type declaration in an interface is implicitly static and public. It is permitted to redundantly specify either or both of these modifiers.
+    \item     \textit{Private} methods must contain a body.
 
-\subsection{Records}
+    \item     \textit{Static} methods are only accessible with a qualifier. A static method can be invoked from other static or from default method. A static method cannot be overridden or changed in the implementation class. The static methods are implicitly public — there's no need to specify the public modifier.
+
+    \item     Interfaces may contain member type declarations (nested type). A member type declaration in an interface is implicitly static and public. It is permitted to redundantly specify either or both of these modifiers.
+
+    \item
+\end{itemize}\subsection{Records}
 
     Minimal example:
 
@@ -824,9 +869,30 @@
     public record Crane(int numberEggs, String name) {
         public Crane(String firstName, String lastName) {
         // must be first call, must either call another constructor or the long constructor
-    this(0, firstName + " " + lastName);
+        this(0, firstName + " " + lastName);
+    }}
     \end{lstlisting}
 
+    An example where both are present:
+
+    \begin{lstlisting}
+    public record Disco(int beats) {
+        public Disco(String beats) {
+            this(20);
+        }
+        public Disco {
+            beats = 10;
+        }
+        public int getBeats() {
+            return beats;
+        }
+        public static void main(String[] args) {
+            // beats() is provided by default
+            // calls default constructor
+            System.out.print(new Disco(30).beats());
+        }
+    }
+    \end{lstlisting}
     \item implement interfaces:
     \begin{lstlisting}
     public record Crane(int numberEggs, String name) implements Bird {}
@@ -841,7 +907,6 @@
     \item have any access modifier.
     \item contain nested classes, interfaces, annotations, enums, and other records.
     \item contain instance \textit{methods}.
-    \item implement interfaces.
     \end{itemize}
 
     Records may not:
@@ -854,7 +919,9 @@
 
 \subsection{Enums}
 
-    Enums can have constructors, methods, and fields. Example:
+    Enums can have constructors, methods, and fields. Methods may be abstract, while enum classes may not.
+
+    Example:
 
         \begin{lstlisting}
         enum Flavors {
@@ -879,6 +946,17 @@
             public boolean hasHair() { return hasHair; }
             public int swim() { return 0; }
         }
+
+    \end{lstlisting}
+
+    Methods:
+
+    \begin{lstlisting}
+        // to obtain:
+        static <T extends Enum<T>> T valueOf(Class<T> enumClass, String name)
+
+        // instance method to get the ordinal (starts with 0)
+        final int ordinal()
 
     \end{lstlisting}
 
