@@ -1270,7 +1270,7 @@ Example (see \url{  https://docs.spring.io/spring-data/commons/reference/reposit
 
 \end{lstlisting}
 
-\section{Paging, Iterating Large Results, Sorting and Limiting}
+\subsection{Paging, Iterating Large Results, Sorting and Limiting}
 
     Spring recognizes certain specific types like Pageable, Sort and Limit, to apply pagination, sorting and limiting to your queries dynamically.
     Example:
@@ -1287,7 +1287,7 @@ Example (see \url{  https://docs.spring.io/spring-data/commons/reference/reposit
     List<User> findByLastname(String lastname, Pageable pageable);
 \end{lstlisting}
 
-\section{Repository Query Keywords}
+\subsection{Repository Query Keywords}
 
 \begin{lstlisting}
     // General query method returning typically the repository type, a Collection or Streamable subtype or a result wrapper such as Page, GeoResults or any other store-specific result wrapper. Can be used as findBy..., findMyDomainTypeBy... or in combination with additional keywords.
@@ -1309,7 +1309,7 @@ Example (see \url{  https://docs.spring.io/spring-data/commons/reference/reposit
     ...Distinct...
 \end{lstlisting}
 
-\section{Supported query method predicate keywords and modifiers}
+\subsection{Supported query method predicate keywords and modifiers}
 
 \begin{table}[ht]
 \begin{tabular}{ | r | r |}
@@ -1353,6 +1353,42 @@ Example (see \url{  https://docs.spring.io/spring-data/commons/reference/reposit
         \item AllIgnoreCase, AllIgnoringCase
         \item OrderBy... (e. g. OrderByFirstnameAscLastnameDesc).
     \end{itemize}
+
+\section{Programmatic Transaction Management}
+
+Instead of using the @Transaction annotation, transactions can be managed programmatically using TransactionTemplate.
+
+To be used, it needs to be initialized it with a PlatformTransactionManager.
+
+Example:
+
+\begin{lstlisting}
+    class ManualTransactionIntegrationTest {
+
+        @Autowired
+        private PlatformTransactionManager transactionManager;
+
+        private TransactionTemplate transactionTemplate;
+
+        @BeforeEach
+        void setUp() {
+            transactionTemplate = new TransactionTemplate(transactionManager);
+        }
+
+        // omitted
+    }
+\end{lstlisting}
+
+When using Spring Boot, an appropriate bean of type PlatformTransactionManager will be automatically registered, so we just need to inject it. Otherwise, we have to manually register a PlatformTransactionManager bean.
+
+The correct order of operations when using TransactionTemplate in programmatic transaction management is:
+
+\begin{itemize}
+    \item begin transaction
+    \item execute callback (which contains the transactional code)
+    \item commit transaction if the callback executes successfully
+    \item rollback transaction if an exception occurs during callback execution
+\end{itemize}
 
 \section{Spring Boot Web}
 
@@ -1408,33 +1444,269 @@ Overview (see \ref{fig:authentication}):
     \label{fig:authentication}
 \end{figure}
 
+\section{Spring Testing: MockMvc}
+
+The Spring MVC Test framework, also known as MockMvc, aims to provide more complete testing for Spring MVC controllers without a running server. It does that by invoking the DispatcherServlet and passing “mock” implementations of the Servlet API from the spring-test module which replicates the full Spring MVC request handling without a running server.
+
+\subsection{Implications}
+
+As opposed to @SpringBootTest, MockMvc is built on Servlet API mock implementations from the spring-test module and does not rely on a running container.
+
+MockMvc starts out with a blank MockHttpServletRequest. Whatever is added to it is what the request becomes. There is no jsessionid cookie; no forwarding, error, or async dispatches; and no JSP rendering. Instead, “forwarded” and “redirected” URLs are saved in the MockHttpServletResponse and can be \textit{asserted with expectations}.
+
+This means that, if you use JSPs, you can verify the JSP page to which the request was forwarded, but no HTML is rendered. In other words, the JSP is not invoked. Note, however, that all other rendering technologies that do not rely on forwarding, such as Thymeleaf and Freemarker, render HTML to the response body as expected. The same is true for rendering JSON, XML, and other formats through @ResponseBody methods.
+
+\subsection{Static imports}
+
+When using MockMvc directly to perform requests, the following static imports are needed:
+
+\begin{itemize}
+    \item MockMvcBuilders.*
+
+    \item MockMvcRequestBuilders.*
+
+    \item MockMvcResultMatchers.*
+
+    \item MockMvcResultHandlers.*
+\end{itemize}
+
+\subsection{Setup}
+
+MockMvc can be setup in one of two ways. One is to point directly to the controllers you want to test and programmatically configure Spring MVC infrastructure. Example:
 
 \begin{lstlisting}
+    class MyWebTests {
+
+        MockMvc mockMvc;
+
+        @BeforeEach
+        void setup() {
+            this.mockMvc = MockMvcBuilders.standaloneSetup(new AccountController()).build();
+        }
+
+        // ...
+
+    }
+\end{lstlisting}
+
+The second is to point to Spring configuration with Spring MVC and controller infrastructure in it.
+
+\begin{lstlisting}
+    @SpringJUnitWebConfig(locations = "my-servlet-context.xml")
+    class MyWebTests {
+
+        MockMvc mockMvc;
+
+        @BeforeEach
+        void setup(WebApplicationContext wac) {
+            this.mockMvc = MockMvcBuilders.webAppContextSetup(wac).build();
+        }
+
+        // ...
+
+    }
+\end{lstlisting}
+
+\subsection{Queries with MockMvc}
+
+Example queries using MockMvc:
+
+\begin{lstlisting}
+    mockMvc.perform(post("/hotels/{id}", 42).accept(MediaType.APPLICATION_JSON));
+
+    // a file upload request that internally uses MockMultipartHttpServletRequest
+    mockMvc.perform(multipart("/doc").file("a1", "ABC".getBytes("UTF-8")));
+
+    // specifying query parameters in URI template style
+    mockMvc.perform(get("/hotels?thing={thing}", "somewhere"));
+
+    // adding Servlet request parameters that represent either query or form parameters
+    mockMvc.perform(get("/hotels").param("thing", "somewhere"));
+
 
 \end{lstlisting}
 
+
+\section{Testing with Spring Boot}
+
+Test support is provided by two modules: spring-boot-test contains core items, and spring-boot-test-autoconfigure supports auto-configuration for tests.
+
+spring-boot-starter-test imports both Spring Boot test modules as well as JUnit Jupiter, AssertJ, Hamcrest, and a number of other useful libraries. Precisely:
+
+
+
+\begin{itemize}
+    \item JUnit 5: The de-facto standard for unit testing Java applications.
+
+    \item Spring Test and Spring Boot Test: Utilities and integration test support for Spring Boot applications.
+
+    \item AssertJ: A fluent assertion library.
+
+    \item Hamcrest: A library of matcher objects (also known as constraints or predicates).
+
+    \item Mockito: A Java mocking framework.
+
+    \item JSONassert: An assertion library for JSON.
+
+    \item JsonPath: XPath for JSON.
+
+    \item Awaitility: A library for testing asynchronous systems.
+
+\end{itemize}
+
+
+
+By default, @SpringBootTest will not start a server. You can use the webEnvironment attribute of @SpringBootTest to further refine how your tests run:
+
+\begin{itemize}
+    \item MOCK(Default) : Loads a web ApplicationContext and provides a mock web environment. Embedded servers are not started when using this annotation. If a web environment is not available on your classpath, this mode transparently falls back to creating a regular non-web ApplicationContext. It can be used in conjunction with @AutoConfigureMockMvc or @AutoConfigureWebTestClient for mock-based testing of your web application.
+
+    \item RANDOM\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a random port.
+
+    \item DEFINED\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a defined port (from your application.properties) or on the default port of 8080.
+
+    \item NONE: Loads an ApplicationContext by using SpringApplication but does not provide any web environment (mock or otherwise).
+\end{itemize}
+
+\subsection{Test Configuration}
+
+In Spring testing in general, we use @ContextConfiguration(classes=...) in order to specify which Spring @Configuration to load.
+When testing Spring Boot applications, this is often not required. Spring Boot’s @*Test annotations search for the primary configuration automatically.
+
+The search algorithm works up from the package that contains the test until it finds a class annotated with @SpringBootApplication or @SpringBootConfiguration.
+
+To customize the primary configuration, one can use a nested @TestConfiguration class. Unlike a nested @Configuration class, which would be used instead of the application’s primary configuration, a nested @TestConfiguration class is used in addition to the primary configuration.
+
+\subsection{Testing With a Mock Environment}
+
+By default, @SpringBootTest does not start the server but instead sets up a mock environment for testing web endpoints.
+
+With Spring MVC, we can query our web endpoints using MockMvc or WebTestClient, as shown in the following example:
+
 \begin{lstlisting}
+    @SpringBootTest
+    @AutoConfigureMockMvc
+    class MyMockMvcTests {
+
+        @Test
+        void testWithMockMvc(@Autowired MockMvc mvc) throws Exception {
+            mvc.perform(get("/")).andExpect(status().isOk()).andExpect(content().string("Hello World"));
+        }
+
+        // If Spring WebFlux is on the classpath, you can drive MVC tests with a WebTestClient
+        @Test
+        void testWithWebTestClient(@Autowired WebTestClient webClient) {
+            webClient
+            .get().uri("/")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(String.class).isEqualTo("Hello World");
+        }
+
+    }
 
 \end{lstlisting}
 
-\begin{lstlisting}
+\subsection{Auto-configured Spring MVC Tests}
 
+To test whether Spring MVC controllers are working as expected, use the @WebMvcTest annotation.
+
+@WebMvcTest auto-configures the Spring MVC infrastructure and limits scanned beans to @Controller, @ControllerAdvice, @JsonComponent, Converter, GenericConverter, Filter, HandlerInterceptor, WebMvcConfigurer, WebMvcRegistrations, and HandlerMethodArgumentResolver.
+
+Regular @Component and @ConfigurationProperties beans are not scanned when the @WebMvcTest annotation is used. @EnableConfigurationProperties can be used to include @ConfigurationProperties beans.
+
+Often, @WebMvcTest is limited to a single controller and is used in combination with @MockBean to provide mock implementations for required collaborators.
+
+@WebMvcTest also auto-configures MockMvc.
+
+
+\section{Mocking in detail: @Mock vs. @MockBean}
+
+@Mock is an annotation provided by the Mockito library. It is used to create mock objects for dependencies that are not part of the Spring context.
+
+The @Mock annotation is typically used in conjunction with the MockitoJUnitRunner or MockitoExtension to initialize the mock objects.
+
+Example:
+
+\begin{lstlisting}
+    import static org.mockito.Mockito.*;
+
+    @RunWith(MockitoJUnitRunner.class)
+    public class UserServiceTest {
+
+        @Mock
+        private UserRepository userRepository;
+
+        // inject mock objects into UserService
+        @InjectMocks
+        private UserService userService;
+
+        @Test
+        public void testGetUserById() {
+            // Given
+            User mockedUser = new User("John", "Doe", 25);
+            when(userRepository.findById(1L)).thenReturn(
+                Optional.of(mockedUser));
+
+            // When
+            User result = userService.getUserById(1L);
+
+            // Then
+            assertNotNull(result);
+            assertEquals("John", result.getFirstName());
+
+            // Verify that the findById method was called
+            verify(userRepository).findById(1L);
+        }
+    }
 \end{lstlisting}
 
-\begin{lstlisting}
+In contrast, @MockBean is a Spring Boot-specific annotation provided by the Spring Boot Test module. It is used to create mock objects for dependencies that are part of the Spring context.
+Example:
 
+\begin{lstlisting}
+    @SpringBootTest
+    public class UserServiceIntegrationTest {
+
+        @Autowired
+        private UserService userService;
+
+        @MockBean
+        private UserRepository userRepository;
+
+        @Test
+        public void testGetUserById() {
+            // same as above
+        }
+    }
 \end{lstlisting}
 
+
+Key differences:
+
+\begin{itemize}
+    \item @Mock can only be applied to fields and parameters, whereas @MockBean can only be applied to classes and fields.
+    \item @Mock can be used to mock any Java class or interface while @MockBean only allows for mocking of Spring beans or creation of mock Spring beans. It can be used to mock existing beans, but also to create new beans that will belong to the Spring application context.
+    \item To be able to use the @MockBean annotation, the Spring runner (@RunWith(SpringRunner.class) ) is used, whereas @Mock is used with MockitoJUnitRunner.
+    \item @MockBean can be used to create custom annotations for specific, reoccurring, needs.
+\end{itemize}
+
+Both @Mock and @MockBean are included in spring-boot-starter-test.
+
+\section{Spring Boot Actuator}
+
+\subsection{Configuration}
+
+
+
 \begin{lstlisting}
+    // base for all endpoints
+    management.endpoints.web.base-path=
 
-\end{lstlisting}
-
-\begin{lstlisting}
-
-\end{lstlisting}
-
-\begin{lstlisting}
-
+    // for a specific endpoint
+    management.endpoints.web.path-mapping.<actuator>
+    // e.g.
+    management.endpoints.web.path-mapping.health=custom-health
 \end{lstlisting}
 
 

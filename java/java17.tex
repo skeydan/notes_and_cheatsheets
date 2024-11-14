@@ -800,6 +800,8 @@
 
     \item     \textit{Methods} can be either \textit{default} (these are always public), static (always public), private, or private and static. Methods cannot be final nor protected. If there is no modifier, a method is implicitly public.
 
+    \item Methods \textit{with a body} must be declared \textit{default, static or private}.
+
     \item     \textit{Default} methods are implicitly public. There is no modifier that can prevent a default method from being overridden in a class implementing an interface.
 
     \item     If implementing two interfaces that define a default method with the same signature, classes (incl. abstract classes) have to override it explicitly, or their declaration will not compile. (I.e., this fails on compilation already, not on call. See example.)
@@ -828,8 +830,9 @@
 
     \item     Interfaces may contain member type declarations (nested type). A member type declaration in an interface is implicitly static and public. It is permitted to redundantly specify either or both of these modifiers.
 
-    \item
-\end{itemize}\subsection{Records}
+
+\end{itemize}
+\subsection{Records}
 
     Minimal example:
 
@@ -907,6 +910,7 @@
     \item have any access modifier.
     \item contain nested classes, interfaces, annotations, enums, and other records.
     \item contain instance \textit{methods}.
+    \item contain \textit{static} initializers and static methods.
     \end{itemize}
 
     Records may not:
@@ -914,7 +918,7 @@
     \begin{itemize}
         \item extend other classes.
         \item be subclassed, since they are implicitly final.
-        \item  declare instance \textit{variables} or instance \textit{initializers}.
+        \item  declare instance \textit{variables} or instance \textit{initializers}. (This would break immutability.)
     \end{itemize}
 
 \subsection{Enums}
@@ -1347,6 +1351,10 @@
         var dragon = s -> "dragon".equals(animal);
         var combined = dino.or(dragon); // because var
     \end{lstlisting}
+
+    Lambdas can reference any instance or static variable, as well as any lambda parameter. Local variables and method parameters must be final to be accessible.
+
+
 
     Lambda expressions cannot redeclare any local variable defined in an enclosing scope.
 
