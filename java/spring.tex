@@ -21,6 +21,7 @@
         breaklines=true,
         breakatwhitespace=true,
         title=\lstname,
+        basicstyle=\ttfamily
     }
 
 \section{Sources}
@@ -201,6 +202,13 @@ Your beans remain live in the application context until it is closed by calling 
 If a bean implements the DisposableBean interface, Spring calls its destroy() method to destroy any process or clean up the resources of your application. There are other methods to achieve this step-for example, you can use the destroy-method of the tag, the destroyMethod attribute of the `@Bean` annotation, and JSR 250's `@PreDestroy` annotation.
 
 \section{Dependency injection}
+
+Note: In addition to bean definitions that contain information on how to create a specific bean, the ApplicationContext implementations also permit the registration of existing objects that are created outside the container (by users).
+
+This is done by accessing the ApplicationContext’s BeanFactory through the \lstinline{getBeanFactory()} method, which returns the \lstinline{DefaultListableBeanFactory} implementation.
+
+DefaultListableBeanFactory supports this registration through the \lstinline{registerSingleton(..)} and \lstinline{registerBeanDefinition(..)} methods.
+
 \subsection{Constructor-based}
 
     In the case of constructor-based dependency injection, the container will invoke a constructor with arguments each representing a dependency we want to set.
@@ -342,7 +350,8 @@ If a bean implements the DisposableBean interface, Spring calls its destroy() me
 
     \end{lstlisting}
 
-    If there is no @Qualifier given, @Autowired looks for a matching bean name ( = bean id).
+    If there is no @Qualifier given, @Autowired looks for a bean annotated with @Primary. If none exists, Spring will match by bean name ( = bean id).
+
     Here, Spring will look for a bean named x:
 
     \begin{lstlisting}
@@ -600,9 +609,9 @@ To use the @Inject annotation, declare the javax.inject library as a Gradle or M
     We can specify multiple package names, using spaces, commas, or semicolons as a separator.
 
     \begin{lstlisting}
-        @ComponentScan(basePackages = "com.baeldung.componentscan.springapp.animals;com.baeldung.componentscan.springapp.flowers")
-        @ComponentScan(basePackages = "com.baeldung.componentscan.springapp.animals,com.baeldung.componentscan.springapp.flowers")
-        @ComponentScan(basePackages = "com.baeldung.componentscan.springapp.animals com.baeldung.componentscan.springapp.flowers")
+        @ComponentScan(basePackages = "springapp.animals;springapp.flowers")
+        @ComponentScan(basePackages = "animals,springapp.flowers")
+        @ComponentScan(basePackages = "springapp.animals springapp.flowers")
     \end{lstlisting}
 
     We could also apply a filter, choosing from a range of filter types. For example:
@@ -1008,7 +1017,7 @@ When in a @Configuration class we use the @Bean annotation on a method, Spring u
 
 \section{AOP in Spring}
 
-\subsection{Core AOP concepts}
+\subsection{Core AOP Concepts}
 
 \subsubsection{Join Point}
 
@@ -1215,6 +1224,96 @@ An aspect can get context information by injecting the JoinPoint into the advice
         }
     }
 \end{lstlisting}
+
+\subsubsection{More Terminology}
+
+\textit{Introduction}
+Declaring additional methods or fields on behalf of a type. Spring AOP lets you introduce new interfaces (and a corresponding implementation) to any advised object. For example, you could use an introduction to make a bean implement an IsModified interface, to simplify caching. (An introduction is known as an inter-type declaration in the AspectJ community.)
+
+\textit{Target object}
+An object being advised by one or more aspects. Also referred to as the "advised object". Since Spring AOP is implemented by using runtime proxies, this object is always a proxied object.
+
+\textit{AOP proxy}
+An object created by the AOP framework in order to implement the aspect contracts (advice method executions and so on). In the Spring Framework, an AOP proxy is a JDK dynamic proxy or a CGLIB proxy.
+
+\textit{Weaving}
+Linking aspects with other application types or objects to create an advised object. This can be done at compile time (using the AspectJ compiler, for example), load time, or at runtime. \textit{Spring AOP, like other pure Java AOP frameworks}, performs weaving at \textit{runtime}.
+
+\subsection{AOP Proxies}
+
+Spring AOP defaults to using standard\textit{ JDK dynamic proxies} for AOP proxies. This enables any interface (or set of interfaces) to be proxied.
+
+Spring AOP can also use CGLIB proxies. This is necessary to proxy classes rather than interfaces. By default, CGLIB is used if a business object does not implement an interface.
+
+If the target object to be proxied implements at least one interface, a JDK dynamic proxy is used, and all of the interfaces implemented by the target type are proxied. If the target object does not implement any interfaces, a CGLIB proxy is created which is a runtime-generated subclass of the target type.
+
+\subsection{Implications of Using a Proxy}
+
+Here, we create an object instance that calls a method on itself (using this).
+
+\begin{lstlisting}
+    public class SimplePojo implements Pojo {
+
+        public void foo() {
+            // this next method invocation is a direct call on the 'this' reference
+            this.bar();
+        }
+
+        public void bar() {
+            // some logic...
+        }
+    }
+
+    public class Main {
+
+        public static void main(String[] args) {
+            Pojo pojo = new SimplePojo();
+            // this is a direct method call on the 'pojo' reference
+            pojo.foo();
+        }
+    }
+\end{lstlisting}
+
+When SimplePojo is proxied, the same call will not result in bar() being intercepted, since bar() is not called on the proxy, but the \lstinline[]|this| reference the object has to itself.
+
+\begin{lstlisting}
+    public class Main {
+
+        public static void main(String[] args) {
+            ProxyFactory factory = new ProxyFactory(new SimplePojo());
+            factory.addInterface(Pojo.class);
+            factory.addAdvice(new RetryAdvice());
+
+            Pojo pojo = (Pojo) factory.getProxy();
+            // this is a method call on the proxy!
+            pojo.foo();
+        }
+    }
+\end{lstlisting}
+
+\subsection{Programmatic Creation of @AspectJ Proxies}
+
+In addition to declaring aspects in your xml configuration by using either aop:config or aop:aspectj-autoproxy, it is also possible to programmatically create proxies that advise target objects.
+
+You can use the org.springframework.aop.aspectj.annotation.AspectJProxyFactory class to create a proxy for a target object that is advised by one or more @AspectJ aspects.
+
+\begin{lstlisting}
+    // create a factory that can generate a proxy for the given target object
+    AspectJProxyFactory factory = new AspectJProxyFactory(targetObject);
+
+    // add an aspect, the class must be an @AspectJ aspect
+    // you can call this as many times as you need with different aspects
+    factory.addAspect(SecurityManager.class);
+
+    // you can also add existing aspect instances, the type of the object supplied
+    // must be an @AspectJ aspect
+    factory.addAspect(usageTracker);
+
+    // now get the proxy object...
+    MyInterfaceType proxy = factory.getProxy();
+\end{lstlisting}
+
+
 
 \section{JPA}
 \subsection{Repository Query Language}
@@ -1443,6 +1542,93 @@ Overview (see \ref{fig:authentication}):
     \caption{Spring Security Filter Chain}
     \label{fig:authentication}
 \end{figure}
+\subsection{Authorization}
+
+All Authentication implementations store a list of GrantedAuthority objects. These represent the authorities that have been granted to the principal. The GrantedAuthority objects are inserted into the Authentication object by the AuthenticationManager and are later read by AuthorizationManager instances when making authorization decisions.
+
+The GrantedAuthority interface has only one method:
+
+\begin{lstlisting}
+    String getAuthority();
+\end{lstlisting}
+
+String getAuthority();
+
+This method is used by an AuthorizationManager instance to obtain a precise String representation of the GrantedAuthority.
+
+Spring Security includes one concrete GrantedAuthority implementation: SimpleGrantedAuthority. All AuthenticationProvider instances included with the security architecture use SimpleGrantedAuthority to populate the Authentication object.
+
+By default, role-based authorization rules include ROLE\_ as a prefix. You can customize this with GrantedAuthorityDefaults.
+
+You can configure the authorization rules to use a different prefix by exposing a GrantedAuthorityDefaults bean, like so:
+
+\begin{lstlisting}
+   @Bean
+   static GrantedAuthorityDefaults grantedAuthorityDefaults() {
+       return new GrantedAuthorityDefaults("MYPREFIX_");
+   }
+\end{lstlisting}
+
+You expose GrantedAuthorityDefaults using a static method to ensure that Spring publishes it before it initializes Spring Security’s method security @Configuration classes.
+
+\subsubsection{Invocation Handling}
+
+Spring Security provides interceptors that control access to secure objects, such as method invocations or web requests. A pre-invocation decision on whether the invocation is allowed to proceed is made by AuthorizationManager instances. Also post-invocation decisions on whether a given value may be returned is made by AuthorizationManager instances.
+
+AuthorizationManagers are called by Spring Security’s request-based, method-based, and message-based authorization components and are responsible for making final access control decisions.
+
+The AuthorizationManager interface contains two methods:
+
+\begin{lstlisting}
+    AuthorizationDecision check(Supplier<Authentication> authentication, Object secureObject);
+
+    default void verify(Supplier<Authentication> authentication, Object secureObject)
+    throws AccessDeniedException {
+        // ...
+    }
+\end{lstlisting}
+
+The AuthorizationManager's check method is passed all the relevant information it needs in order to make an authorization decision. In particular, passing the secure Object enables those arguments contained in the actual secure object invocation to be inspected. For example, let’s assume the secure object was a MethodInvocation. It would be easy to query the MethodInvocation for any Customer argument, and then implement some sort of security logic in the AuthorizationManager to ensure the principal is permitted to operate on that customer. Implementations are expected to return a positive AuthorizationDecision if access is granted, negative AuthorizationDecision if access is denied, and a null AuthorizationDecision when abstaining from making a decision.
+
+verify calls check and subsequently throws an AccessDeniedException in the case of a negative AuthorizationDecision.
+
+Here is an overview of AuthorizationManager implementations: see \ref{fig:auth-manag-impl}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{auth-manag-impl}
+    \caption{Spring Security Filter Chain}
+    \label{fig:auth-manag-impl}
+\end{figure}
+
+\subsubsection{Method Security}
+
+Spring Security also supports modeling at the method level.
+
+You can activate it in your application by annotating any @Configuration class with @EnableMethodSecurity or adding <method-security> to any XML configuration file. (Note: Spring Boot Starter Security does not activate method-level authorization by default.)
+
+Then, you are immediately able to annotate any Spring-managed class or method with @PreAuthorize, @PostAuthorize, @PreFilter, and @PostFilter to authorize method invocations, including the input parameters and return values.
+
+Spring Security’s method authorization support is handy for:
+
+\begin{itemize}
+    \item Extracting fine-grained authorization logic; for example, when the method parameters and return values contribute to the authorization decision.
+    \item Enforcing security at the service layer.
+    \item Stylistically favoring annotation-based over HttpSecurity-based configuration.
+\end{itemize}
+
+And since Method Security is built using Spring AOP, you have access to all its expressive power to override Spring Security’s defaults as needed.
+
+Example:
+
+\begin{lstlisting}
+   @Service
+   public class MyCustomerService {
+       @PreAuthorize("hasAuthority('permission:read')")
+       @PostAuthorize("returnObject.owner == authentication.name")
+       public Customer readCustomer(String id) { ... }
+   }
+\end{lstlisting}
 
 \section{Spring Testing: MockMvc}
 
@@ -1695,9 +1881,54 @@ Both @Mock and @MockBean are included in spring-boot-starter-test.
 
 \section{Spring Boot Actuator}
 
+The recommended way to enable the features is to add a dependency on the spring-boot-starter-actuator starter.
+
+\subsection{Endpoints}
+
+Actuator endpoints let you monitor and interact with your application. Spring Boot includes a number of built-in endpoints and lets you add your own. For example, the health endpoint provides basic application health information.
+
+You can enable or disable each individual endpoint and expose them (make them remotely accessible) over HTTP or JMX. An endpoint is considered to be available when it is \textit{both enabled and exposed}.
+
+The built-in endpoints are auto-configured only when they are available. Most applications choose exposure over HTTP, where the ID of the endpoint and a prefix of /actuator is mapped to a URL. For example, by default, the health endpoint is mapped to /actuator/health.
+
+By default, \textit{all endpoints except for shutdown are enabled}. To configure the enablement of an endpoint, use its management.endpoint.<id>.enabled property. The following example enables the shutdown endpoint:
+
+\begin{lstlisting}
+   management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+
+If you prefer endpoint enablement to be opt-in rather than opt-out, set the management.endpoints.enabled-by-default property to false and use individual endpoint enabled properties to opt back in. The following example enables the info endpoint and disables all other endpoints:
+
+\begin{lstlisting}
+    management.endpoints.enabled-by-default=false
+    management.endpoint.info.enabled=true
+\end{lstlisting}
+
+Disabled endpoints are removed entirely from the application context. If you want to change only the technologies over which an endpoint is exposed, use the include and exclude properties instead.
+
+By default, only the health endpoint is \textit{exposed} over HTTP and JMX.
+
+To change which endpoints are exposed, use the following technology-specific include and exclude properties: management.endpoints.jmx.exposure.exclude,
+management.endpoints.jmx.exposure.include; management.endpoints.web.exposure.exclude, management.endpoints.web.exposure.include.
+
+The include property lists the IDs of the endpoints that are exposed. The exclude property lists the IDs of the endpoints that should not be exposed. The exclude property takes precedence over the include property. You can configure both the include and the exclude properties with a list of endpoint IDs.
+
+For example, to only expose the health and info endpoints over JMX, use the following property:
+
+\begin{lstlisting}
+    management.endpoints.jmx.exposure.include=health,info
+\end{lstlisting}
+
+* can be used to select all endpoints. For example, to expose everything over HTTP except the env and beans endpoints, use the following properties:
+
+\begin{lstlisting}
+    management.endpoints.web.exposure.include=*
+    management.endpoints.web.exposure.exclude=env,beans
+
+\end{lstlisting}
+
+
 \subsection{Configuration}
-
-
 
 \begin{lstlisting}
     // base for all endpoints
@@ -1709,8 +1940,63 @@ Both @Mock and @MockBean are included in spring-boot-starter-test.
     management.endpoints.web.path-mapping.health=custom-health
 \end{lstlisting}
 
-
-
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
 
 
 
