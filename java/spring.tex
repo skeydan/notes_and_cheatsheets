@@ -303,22 +303,6 @@ DefaultListableBeanFactory supports this registration through the \lstinline{reg
     \end{lstlisting}
 
 
-\subsection{Spring Boot Auto-Configuration}
-
-    When @EnableAutoConfiguration is present, beans annotated with @AutoConfiguration  will be configured.
-
-    In spring-boot-autoconfigure.jar, /META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports lists the classes by default autoconfigured by Spring.
-
-    Spring's DataSourceAutoConfiguration class is one example. See fig. \ref{fig:datasourceautoconfiguration}.
-
-    \begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{datasourceautoconfiguration}
-    \caption{Spring's DataSourceAutoConfiguration class.}
-    \label{fig:datasourceautoconfiguration}
-    \end{figure}
-
-
 \section{Annotations}
 \subsection{Annotations for dependency injection}
 \subsubsection{@Autowired}
@@ -1489,23 +1473,65 @@ The correct order of operations when using TransactionTemplate in programmatic t
     \item rollback transaction if an exception occurs during callback execution
 \end{itemize}
 
-\section{Spring Boot Web}
 
-Architecture Overview (see \ref{fig:spring-web}):
+\section{Spring MVC}
+\subsection{MVC Config}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{spring-web}
-    \caption{Spring Boot Web Architecture Overview}
-    \label{fig:spring-web}
-\end{figure}
+The MVC Java configuration and the MVC XML namespace provide default configuration suitable for most applications and a configuration API to customize it.
+
+You can use the @EnableWebMvc annotation to enable MVC configuration with programmatic configuration, or <mvc:annotation-driven> with XML configuration:
+
+\begin{lstlisting}
+    @Configuration
+    @EnableWebMvc
+    public class WebConfiguration {
+    }
+\end{lstlisting}
+
+The preceding example registers a number of Spring MVC infrastructure beans and adapts to dependencies available on the classpath (for example, payload converters for JSON, XML, and others).
+
+\subsection{MVC Config API}
+
+    In Java configuration, you can implement the WebMvcConfigurer interface:
+
+\begin{lstlisting}@Configuration
+   public class WebConfiguration implements WebMvcConfigurer {
+
+       // Implement configuration methods...
+   }
+\end{lstlisting}
+
+\subsection{Type Conversion}
+
+By default, formatters for various number and date types are installed, along with support for customization via @NumberFormat, @DurationFormat, and @DateTimeFormat on fields and parameters.
+
+To register custom formatters and converters, use the following:
+
+\begin{lstlisting}
+    @Configuration
+    public class WebConfiguration implements WebMvcConfigurer {
+
+        @Override
+        public void addFormatters(FormatterRegistry registry) {
+            // ...
+        }
+    }
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+
 
 \section{Spring Security}
 \subsection{Overview}
 
 Architecture Overview (see \ref{fig:spring-security}):
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=1\linewidth]{spring-security}
     \caption{Spring Security Architecture Overview}
@@ -1713,7 +1739,216 @@ Example queries using MockMvc:
 \end{lstlisting}
 
 
-\section{Testing with Spring Boot}
+\section{Mocking in detail: @Mock vs. @MockBean}
+
+@Mock is an annotation provided by the Mockito library. It is used to create mock objects for dependencies that are not part of the Spring context.
+
+The @Mock annotation is typically used in conjunction with the MockitoJUnitRunner or MockitoExtension to initialize the mock objects.
+
+Example:
+
+\begin{lstlisting}
+    import static org.mockito.Mockito.*;
+
+    @RunWith(MockitoJUnitRunner.class)
+    public class UserServiceTest {
+
+        @Mock
+        private UserRepository userRepository;
+
+        // inject mock objects into UserService
+        @InjectMocks
+        private UserService userService;
+
+        @Test
+        public void testGetUserById() {
+            // Given
+            User mockedUser = new User("John", "Doe", 25);
+            when(userRepository.findById(1L)).thenReturn(
+            Optional.of(mockedUser));
+
+            // When
+            User result = userService.getUserById(1L);
+
+            // Then
+            assertNotNull(result);
+            assertEquals("John", result.getFirstName());
+
+            // Verify that the findById method was called
+            verify(userRepository).findById(1L);
+        }
+    }
+\end{lstlisting}
+
+In contrast, @MockBean is a Spring Boot-specific annotation provided by the Spring Boot Test module. It is used to create mock objects for dependencies that are part of the Spring context.
+Example:
+
+\begin{lstlisting}
+    @SpringBootTest
+    public class UserServiceIntegrationTest {
+
+        @Autowired
+        private UserService userService;
+
+        @MockBean
+        private UserRepository userRepository;
+
+        @Test
+        public void testGetUserById() {
+            // same as above
+        }
+    }
+\end{lstlisting}
+
+
+Key differences:
+
+\begin{itemize}
+    \item @Mock can only be applied to fields and parameters, whereas @MockBean can only be applied to classes and fields.
+    \item @Mock can be used to mock any Java class or interface while @MockBean only allows for mocking of Spring beans or creation of mock Spring beans. It can be used to mock existing beans, but also to create new beans that will belong to the Spring application context.
+    \item To be able to use the @MockBean annotation, the Spring runner (@RunWith(SpringRunner.class) ) is used, whereas @Mock is used with MockitoJUnitRunner.
+    \item @MockBean can be used to create custom annotations for specific, reoccurring, needs.
+\end{itemize}
+
+Both @Mock and @MockBean are included in spring-boot-starter-test.
+
+
+\section{Spring Boot (Web): Servlet Web Applications}
+
+If you want to build servlet-based web applications, you can take advantage of Spring Boot’s auto-configuration for Spring MVC or Jersey.
+
+The \textit{Spring Web MVC framework} (often referred to as “Spring MVC”) is a rich “model view controller” web framework. Spring MVC lets you create special @Controller or @RestController beans to handle incoming HTTP requests. Methods in your controller are mapped to HTTP by using @RequestMapping annotations.
+
+Architecture Overview (see \ref{fig:spring-web}):
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{spring-web}
+    \caption{Spring Boot Web Architecture Overview}
+    \label{fig:spring-web}
+\end{figure}
+
+\subsection{Externalized Configuration}
+
+Spring Boot lets you externalize your configuration so that you can work with the same application code in different environments. You can use a variety of external configuration sources including Java properties files, YAML files, environment variables, and command-line arguments.
+
+Property values can be injected directly into your beans by using the \lstinline |@Value| annotation, accessed through Spring’s Environment abstraction, or be bound to structured objects through \lstinline[]|@ConfigurationProperties|.
+
+Differences between both are:
+
+\begin{itemize}
+    \item @ConfigurationProperties does support relaxed binding, allowing for more flexibility in property names and values. On the other hand, @Value does not have this feature, requiring an exact match between the property name and the field.
+    \item @ConfigurationProperties can be validated using JSR-303 bean validation, providing a way to enforce constraints on the properties being bound. In contrast, @Value does not have built-in support for bean validation.
+    \item @ConfigurationProperties is designed to bind properties to entire classes, allowing for a more structured and organized approach to configuration. On the other hand, @Value is typically used to bind specific properties to individual fields within a class.
+\end{itemize}
+
+Spring Boot uses a very particular PropertySource order that is designed to allow sensible overriding of values. Sources are considered in the following order:
+
+\begin{itemize}
+    \item Default properties (specified by setting SpringApplication.setDefaultProperties).
+    \item @PropertySource annotations on your @Configuration classes. Please note that such property sources are not added to the Environment until the application context is being refreshed. This is too late to configure certain properties such as logging.* and spring.main.* which are read before refresh begins.
+    \item Config data (such as application.properties files).
+    \item A RandomValuePropertySource that has properties only in random.*.
+    \item OS environment variables.
+    \item Java System properties (System.getProperties()).
+    \item JNDI attributes from java:comp/env.
+    \item ServletContext init parameters.
+    \item ServletConfig init parameters.
+    \item Properties from SPRING\_APPLICATION\_JSON (inline JSON embedded in an environment variable or system property).
+    \item Command line arguments.
+    \item properties attribute on your tests. Available on @SpringBootTest and the test annotations for testing a particular slice of your application.
+    \item @DynamicPropertySource annotations in your tests.
+    \item @TestPropertySource annotations on your tests.
+    \item Devtools global settings properties in the \$HOME/.config/spring-boot directory when devtools is active.
+\end{itemize}
+
+\subsection{ApplicationContext in Boot}
+
+A SpringApplication attempts to create the right type of ApplicationContext on your behalf. The algorithm used to determine a WebApplicationType is the following:
+
+\begin{itemize}
+    \item If Spring MVC is present, an AnnotationConfigServletWebServerApplicationContext is used.
+    \item If Spring MVC is not present and Spring WebFlux is present, an AnnotationConfigReactiveWebServerApplicationContext is used.
+    \item Otherwise, AnnotationConfigApplicationContext is used.
+\end{itemize}
+
+It is also possible to take complete control of the ApplicationContext type that is used by calling setApplicationContextFactory(...).
+
+
+Architecture Overview (see \ref{fig:spring-web}):
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{spring-web}
+    \caption{Spring Boot Web Architecture Overview}
+    \label{fig:spring-web}
+\end{figure}
+
+\subsection{Spring Boot Auto-Configuration}
+
+When @EnableAutoConfiguration is present, beans annotated with @AutoConfiguration  will be configured.
+
+In spring-boot-autoconfigure.jar, /META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports lists the classes by default autoconfigured by Spring.
+
+Spring's DataSourceAutoConfiguration class is one example. See fig. \ref{fig:datasourceautoconfiguration}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{datasourceautoconfiguration}
+    \caption{Spring's DataSourceAutoConfiguration class.}
+    \label{fig:datasourceautoconfiguration}
+\end{figure}
+
+
+\subsection{Externalized Configuration}
+
+Spring Boot lets you externalize your configuration so that you can work with the same application code in different environments. You can use a variety of external configuration sources including Java properties files, YAML files, environment variables, and command-line arguments.
+
+Property values can be injected directly into your beans by using the \lstinline |@Value| annotation, accessed through Spring’s Environment abstraction, or be bound to structured objects through \lstinline[]|@ConfigurationProperties|.
+
+Differences between both are:
+
+\begin{itemize}
+    \item @ConfigurationProperties does support relaxed binding, allowing for more flexibility in property names and values. On the other hand, @Value does not have this feature, requiring an exact match between the property name and the field.
+    \item @ConfigurationProperties can be validated using JSR-303 bean validation, providing a way to enforce constraints on the properties being bound. In contrast, @Value does not have built-in support for bean validation.
+    \item @ConfigurationProperties is designed to bind properties to entire classes, allowing for a more structured and organized approach to configuration. On the other hand, @Value is typically used to bind specific properties to individual fields within a class.
+\end{itemize}
+
+Spring Boot uses a very particular PropertySource order that is designed to allow sensible overriding of values. Sources are considered in the following order:
+
+\begin{itemize}
+    \item Default properties (specified by setting SpringApplication.setDefaultProperties).
+    \item @PropertySource annotations on your @Configuration classes. Please note that such property sources are not added to the Environment until the application context is being refreshed. This is too late to configure certain properties such as logging.* and spring.main.* which are read before refresh begins.
+    \item Config data (such as application.properties files).
+    \item A RandomValuePropertySource that has properties only in random.*.
+    \item OS environment variables.
+    \item Java System properties (System.getProperties()).
+    \item JNDI attributes from java:comp/env.
+    \item ServletContext init parameters.
+    \item ServletConfig init parameters.
+    \item Properties from SPRING\_APPLICATION\_JSON (inline JSON embedded in an environment variable or system property).
+    \item Command line arguments.
+    \item properties attribute on your tests. Available on @SpringBootTest and the test annotations for testing a particular slice of your application.
+    \item @DynamicPropertySource annotations in your tests.
+    \item @TestPropertySource annotations on your tests.
+    \item Devtools global settings properties in the \$HOME/.config/spring-boot directory when devtools is active.
+\end{itemize}
+
+\subsection{ApplicationContext in Boot}
+
+A SpringApplication attempts to create the right type of ApplicationContext on your behalf. The algorithm used to determine a WebApplicationType is the following:
+
+\begin{itemize}
+    \item If Spring MVC is present, an AnnotationConfigServletWebServerApplicationContext is used.
+    \item If Spring MVC is not present and Spring WebFlux is present, an AnnotationConfigReactiveWebServerApplicationContext is used.
+    \item Otherwise, AnnotationConfigApplicationContext is used.
+\end{itemize}
+
+It is also possible to take complete control of the ApplicationContext type that is used by calling setApplicationContextFactory(...).
+
+
+
+\subsection{Testing with Spring Boot}
 
 Test support is provided by two modules: spring-boot-test contains core items, and spring-boot-test-autoconfigure supports auto-configuration for tests.
 
@@ -1805,79 +2040,6 @@ Often, @WebMvcTest is limited to a single controller and is used in combination 
 
 @WebMvcTest also auto-configures MockMvc.
 
-
-\section{Mocking in detail: @Mock vs. @MockBean}
-
-@Mock is an annotation provided by the Mockito library. It is used to create mock objects for dependencies that are not part of the Spring context.
-
-The @Mock annotation is typically used in conjunction with the MockitoJUnitRunner or MockitoExtension to initialize the mock objects.
-
-Example:
-
-\begin{lstlisting}
-    import static org.mockito.Mockito.*;
-
-    @RunWith(MockitoJUnitRunner.class)
-    public class UserServiceTest {
-
-        @Mock
-        private UserRepository userRepository;
-
-        // inject mock objects into UserService
-        @InjectMocks
-        private UserService userService;
-
-        @Test
-        public void testGetUserById() {
-            // Given
-            User mockedUser = new User("John", "Doe", 25);
-            when(userRepository.findById(1L)).thenReturn(
-                Optional.of(mockedUser));
-
-            // When
-            User result = userService.getUserById(1L);
-
-            // Then
-            assertNotNull(result);
-            assertEquals("John", result.getFirstName());
-
-            // Verify that the findById method was called
-            verify(userRepository).findById(1L);
-        }
-    }
-\end{lstlisting}
-
-In contrast, @MockBean is a Spring Boot-specific annotation provided by the Spring Boot Test module. It is used to create mock objects for dependencies that are part of the Spring context.
-Example:
-
-\begin{lstlisting}
-    @SpringBootTest
-    public class UserServiceIntegrationTest {
-
-        @Autowired
-        private UserService userService;
-
-        @MockBean
-        private UserRepository userRepository;
-
-        @Test
-        public void testGetUserById() {
-            // same as above
-        }
-    }
-\end{lstlisting}
-
-
-Key differences:
-
-\begin{itemize}
-    \item @Mock can only be applied to fields and parameters, whereas @MockBean can only be applied to classes and fields.
-    \item @Mock can be used to mock any Java class or interface while @MockBean only allows for mocking of Spring beans or creation of mock Spring beans. It can be used to mock existing beans, but also to create new beans that will belong to the Spring application context.
-    \item To be able to use the @MockBean annotation, the Spring runner (@RunWith(SpringRunner.class) ) is used, whereas @Mock is used with MockitoJUnitRunner.
-    \item @MockBean can be used to create custom annotations for specific, reoccurring, needs.
-\end{itemize}
-
-Both @Mock and @MockBean are included in spring-boot-starter-test.
 
 \section{Spring Boot Actuator}
 
