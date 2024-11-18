@@ -270,6 +270,40 @@ DefaultListableBeanFactory supports this registration through the \lstinline{reg
         }
     \end{lstlisting}
 
+\section{Application Context}
+
+The org.springframework.context.ApplicationContext interface represents the Spring IoC container and is responsible for instantiating, configuring, and assembling the beans. The container gets its instructions on the components to instantiate, configure, and assemble by reading configuration metadata. The configuration metadata can be represented as annotated component classes, configuration classes with factory methods, or external XML files or Groovy scripts.
+
+Several implementations of the ApplicationContext interface are part of core Spring. In stand-alone applications, it is common to create an instance of AnnotationConfigApplicationContext or ClassPathXmlApplicationContext.
+
+In most application scenarios, explicit user code is not required to instantiate one or more instances of a Spring IoC container. For example, in a plain web application scenario, a simple boilerplate web descriptor XML in the web.xml file of the application suffices (see Convenient ApplicationContext Instantiation for Web Applications). In a Spring Boot scenario, the application context is implicitly bootstrapped for you based on common setup conventions.
+
+Implementing interfaces are:
+
+\begin{lstlisting}
+       // and abstract subclasses
+       AbstractApplicationContext
+
+       AnnotationConfigApplicationContext
+
+       AnnotationConfigWebApplicationContext
+
+       ClassPathXmlApplicationContext
+
+       FileSystemXmlApplicationContext
+
+       // incl. GenericGroovyApplicationContext, GenericWebApplicationContext,          GenericXmlApplicationContext
+       GenericApplicationContext
+
+       GroovyWebApplicationContext
+
+       ResourceAdapterApplicationContext
+
+       StaticApplicationContext
+       StaticWebApplicationContext
+
+       XmlWebApplicationContext
+\end{lstlisting}
 
 \section{Configuration: Implicit vs. Explicit}
 
@@ -1761,32 +1795,107 @@ Key differences:
 
 Both @Mock and @MockBean are included in spring-boot-starter-test.
 
-\section{Spring MVC}
-\subsection{MVC Config}
+\section{Spring Web MVC}
 
-The MVC Java configuration and the MVC XML namespace provide default configuration suitable for most applications and a configuration API to customize it.
+Spring Web MVC is the original web framework built on the Servlet API and has been included in the Spring Framework from the very beginning.
 
-You can use the @EnableWebMvc annotation to enable MVC configuration with programmatic configuration, or <mvc:annotation-driven> with XML configuration:
+\subsection{Controllers}
 
-\begin{lstlisting}
-    @Configuration
-    @EnableWebMvc
-    public class WebConfiguration {
-    }
-\end{lstlisting}
+    @RequestMapping handler methods have a flexible signature and can choose from a range of supported controller method arguments and return values.
 
-The preceding example registers a number of Spring MVC infrastructure beans and adapts to dependencies available on the classpath (for example, payload converters for JSON, XML, and others).
+    Supported controller method arguments are:
 
-\subsection{MVC Config API}
+    \begin{lstlisting}
+    // Generic access to request parameters and request and session attributes, without direct use of the Servlet API.
+    WebRequest
 
-In Java configuration, you can implement the WebMvcConfigurer interface:
+    // Choose any specific request or response type -for example, ServletRequest, HttpServletRequest, or Spring's MultipartRequest, MultipartHttpServletRequest.
+    jakarta.servlet.ServletRequest, jakarta.servlet.ServletResponse
 
-\begin{lstlisting}@Configuration
-    public class WebConfiguration implements WebMvcConfigurer {
+    jakarta.servlet.http.HttpSession
 
-        // Implement configuration methods...
-    }
-\end{lstlisting}
+    java.security.Principal
+
+    HttpMethod
+
+    // Java
+    java.util.Locale
+
+    java.util.TimeZone + java.time.ZoneId
+
+
+
+    // For access to the raw request body as exposed by the Servlet API.
+    java.io.InputStream, java.io.Reader
+
+    // For access to the raw response body as exposed by the Servlet API.
+    java.io.OutputStream, java.io.Writer
+
+    @PathVariable
+    //For access to name-value pairs in URI path segments.
+    @MatrixVariable
+
+    @RequestParam
+    // For access to the Servlet request parameters, including multipart files. Parameter values are converted to the declared method argument type.
+
+    // For access to request headers. Header values are converted to the declared method argument type,
+    @RequestHeader
+
+    @CookieValue
+
+    // For access to the HTTP request body. Body content is converted to the declared method argument type by using HttpMessageConverter implementations.
+    @RequestBody
+
+    // For access to request headers and body. The body is converted with an HttpMessageConverter.
+    HttpEntity<B>
+
+    // For access to a part in a multipart/form-data request, converting the part's body with an HttpMessageConverter.
+    @RequestPart
+
+    // For access to the model that is used in HTML controllers and exposed to templates as part of view rendering.
+    java.util.Map, org.springframework.ui.Model, org.springframework.ui.ModelMap
+
+    // Attributes to use in case of a redirect (that is, to be appended to the query string) and flash attributes to be stored temporarily until the request after redirect.
+    RedirectAttributes
+
+    // For access to an existing attribute in the model (instantiated if not present) with data binding and validation applied. See @ModelAttribute as well as Model and DataBinder.
+    @ModelAttribute
+    the end of this table.
+
+    // For access to errors from validation and data binding for a command object (that is, a @ModelAttribute argument) or errors from the validation of a @RequestBody or @RequestPart arguments.
+    Errors, BindingResult
+
+    // For preparing a URL relative to the current request's host, port, scheme, context path, and the literal part of the servlet mapping. See URI Links.
+    UriComponentsBuilder
+
+    // For access to any session attribute, in contrast to model attributes stored in the session as a result of a class-level @SessionAttributes declaration.
+    @SessionAttribute
+
+    @RequestAttribute
+
+    // If a method argument is not matched to any of the earlier values in this table and it is a simple type (as determined by BeanUtils#isSimpleProperty), it is resolved as a @RequestParam. Otherwise, it is resolved as a @ModelAttribute.
+    \end{lstlisting}
+
+    Supported return values \textit{include}:
+
+    \begin{lstlisting}
+    @ResponseBody
+    HttpEntity<B>, ResponseEntity<B>
+
+    HttpHeaders
+
+    ErrorResponse
+
+    // A view name to be resolved with ViewResolver implementations and used together with the implicit model
+    String
+
+    //  A View instance to use for rendering together with the implicit model
+    View
+
+    // Attributes to be added to the implicit model, with the view name implicitly determined through a RequestToViewNameTranslator.
+
+    java.util.Map, org.springframework.ui.Model
+    \end{lstlisting}
 
 \subsection{Type Conversion}
 
@@ -2058,15 +2167,90 @@ The following example configures content negotiation view resolution by using JS
 \end{lstlisting}
 
 
+\subsection{MVC Config}
 
+The MVC Java configuration and the MVC XML namespace provide default configuration suitable for most applications and a configuration API to customize it.
+
+You can use the @EnableWebMvc annotation to enable MVC configuration with programmatic configuration, or <mvc:annotation-driven> with XML configuration:
+
+\begin{lstlisting}
+    @Configuration
+    @EnableWebMvc
+    public class WebConfiguration {
+    }
+\end{lstlisting}
+
+The preceding example registers a number of Spring MVC infrastructure beans and adapts to dependencies available on the classpath (for example, payload converters for JSON, XML, and others).
+
+\subsection{MVC Config API}
+
+In Java configuration, you can implement the WebMvcConfigurer interface:
+
+\begin{lstlisting}@Configuration
+    public class WebConfiguration implements WebMvcConfigurer {
+
+        // Implement configuration methods...
+    }
+\end{lstlisting}
+
+\section{REST Clients}
+
+\begin{itemize}
+    \item RestClient is a synchronous HTTP client that exposes a modern, fluent API.
+    \item WebClient is a reactive client to perform HTTP requests with a fluent API.
+    \item RestTemplate is a synchronous client to perform HTTP requests. It is the original Spring REST client and exposes a simple, template-method API over underlying HTTP client libraries.
+    \item HTTP Interface: The Spring Frameworks lets you define an HTTP service as a Java interface with HTTP exchange methods. You can then generate a proxy that implements this interface and performs the exchanges. This helps to simplify HTTP remote access and provides additional flexibility for to choose an API style such as synchronous or reactive.
+\end{itemize}
+
+Here, we zoom in on RestTemplate.
+
+The RestTemplate provides a high-level API over HTTP client libraries in the form of a classic Spring Template class. It exposes the following groups of overloaded methods:
+
+\begin{lstlisting}
+// Retrieves a representation via GET.
+getForObject
+
+// Retrieves a ResponseEntity (that is, status, headers, and body) by using GET.
+getForEntity
+
+headForHeaders
+
+// Creates a new resource by using POST and returns the Location header from the response.
+postForLocation
+
+// Creates a new resource by using POST and returns the representation from the response.
+postForObject
+
+// Creates a new resource by using POST and returns the representation from the response.
+postForEntity
+
+put
+
+patchForObject
+
+delete
+
+optionsForAllow
+
+// More generalized (and less opinionated) version of the preceding methods that provides extra flexibility when needed. It accepts a RequestEntity (including HTTP method, URL, headers, and body as input) and returns a ResponseEntity.
+exchange
+
+// The most generalized way to perform a request, with full control over request preparation and response extraction through callback interfaces.
+execute
+\end{lstlisting}
+
+RestTemplate uses the same HTTP library abstraction as RestClient. By default, it uses the SimpleClientHttpRequestFactory, but this can be changed via the constructor.
+
+RestTemplate can be instrumented for observability, in order to produce metrics and traces.
+
+Objects passed into and returned from RestTemplate methods are converted to and from HTTP messages with the help of an HttpMessageConverter.
 
 \section{Spring Boot (Web): Servlet Web Applications}
 
 If you want to build servlet-based web applications, you can take advantage of Spring Boot’s auto-configuration for Spring MVC or Jersey.
 
-The \textit{Spring Web MVC framework} (often referred to as “Spring MVC”) is a rich “model view controller” web framework. Spring MVC lets you create special @Controller or @RestController beans to handle incoming HTTP requests. Methods in your controller are mapped to HTTP by using @RequestMapping annotations.
-
-Architecture Overview (see \ref{fig:spring-web}):
+The \textit{Spring Web MVC framework} (cf. fig. \ref{fig:spring-web}) is a rich “model view controller” web framework.
+Spring MVC lets you create special @Controller or @RestController beans to handle incoming HTTP requests. Methods in your controller are mapped to HTTP by using @RequestMapping annotations.
 
 \begin{figure}[h]
     \centering
@@ -2074,6 +2258,18 @@ Architecture Overview (see \ref{fig:spring-web}):
     \caption{Spring Boot Web Architecture Overview}
     \label{fig:spring-web}
 \end{figure}
+
+Spring Boot provides auto-configuration for Spring MVC that works well with most applications. It replaces the need for @EnableWebMvc, and the two cannot be used together. In addition to Spring MVC’s defaults, the auto-configuration provides the following features:
+
+\begin{itemize}
+    \item \lstinline|ContentNegotiatingViewResolver| and \lstinline|BeanNameViewResolver| beans.
+    \item Support for serving static resources, including support for WebJars (covered later in this document).
+    \item Automatic registration of Converter, GenericConverter, and Formatter beans.
+    \item Support for HttpMessageConverters (covered later in this document).
+    \item Automatic registration of \lstinline|MessageCodesResolver|.
+    \item Static index.html support.
+    \item Automatic use of a \lstinline|ConfigurableWebBindingInitializer| bean
+\end{itemize}
 
 \subsection{Externalized Configuration}
 
@@ -2297,11 +2493,11 @@ Often, @WebMvcTest is limited to a single controller and is used in combination 
 @WebMvcTest also auto-configures MockMvc.
 
 
-\section{Spring Boot Actuator}
+\subsection{Spring Boot Actuator}
 
 The recommended way to enable the features is to add a dependency on the spring-boot-starter-actuator starter.
 
-\subsection{Endpoints}
+\subsubsection{Endpoints}
 
 Actuator endpoints let you monitor and interact with your application. Spring Boot includes a number of built-in endpoints and lets you add your own. For example, the health endpoint provides basic application health information.
 
@@ -2345,7 +2541,7 @@ For example, to only expose the health and info endpoints over JMX, use the foll
 
 \end{lstlisting}
 
-\subsubsection{Health information}
+\paragraph{Health information}
 
 Information exposed by the health endpoint depends on the \lstinline|management.endpoint.health.show-details| and \lstinline|management.endpoint.health.show-components| properties, which can be configured with one of the following values: never, when-authorized, always
 .
@@ -2409,8 +2605,7 @@ To provide custom health information, you can register Spring beans that impleme
 
 The identifier for a given HealthIndicator is the name of the bean without the HealthIndicator suffix, if it exists. In the preceding example, the health information is available in an entry named my.
 
-\subsubsection{Info Endpoint}
-\paragraph{Application Information}
+\paragraph{Info Endpoint: Application Information}
 
 Application information exposes various information collected from all \lstinline|InfoContributor| beans defined in your ApplicationContext. Spring Boot includes a number of auto-configured InfoContributor beans, and you can write your own.
 
@@ -2470,9 +2665,9 @@ When the env contributor is enabled, you can customize the data exposed by the i
 
 
 
-\subsection{Monitoring and Management Over HTTP}
+\subsubsection{Monitoring and Management Over HTTP}
 
-\subsubsection{Configuration}
+Customization:
 
 \begin{lstlisting}
     // base for all endpoints
