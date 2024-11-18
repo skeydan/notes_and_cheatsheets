@@ -1474,57 +1474,6 @@ The correct order of operations when using TransactionTemplate in programmatic t
 \end{itemize}
 
 
-\section{Spring MVC}
-\subsection{MVC Config}
-
-The MVC Java configuration and the MVC XML namespace provide default configuration suitable for most applications and a configuration API to customize it.
-
-You can use the @EnableWebMvc annotation to enable MVC configuration with programmatic configuration, or <mvc:annotation-driven> with XML configuration:
-
-\begin{lstlisting}
-    @Configuration
-    @EnableWebMvc
-    public class WebConfiguration {
-    }
-\end{lstlisting}
-
-The preceding example registers a number of Spring MVC infrastructure beans and adapts to dependencies available on the classpath (for example, payload converters for JSON, XML, and others).
-
-\subsection{MVC Config API}
-
-    In Java configuration, you can implement the WebMvcConfigurer interface:
-
-\begin{lstlisting}@Configuration
-   public class WebConfiguration implements WebMvcConfigurer {
-
-       // Implement configuration methods...
-   }
-\end{lstlisting}
-
-\subsection{Type Conversion}
-
-By default, formatters for various number and date types are installed, along with support for customization via @NumberFormat, @DurationFormat, and @DateTimeFormat on fields and parameters.
-
-To register custom formatters and converters, use the following:
-
-\begin{lstlisting}
-    @Configuration
-    public class WebConfiguration implements WebMvcConfigurer {
-
-        @Override
-        public void addFormatters(FormatterRegistry registry) {
-            // ...
-        }
-    }
-\end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-\begin{lstlisting}
-\end{lstlisting}
-
-
 
 \section{Spring Security}
 \subsection{Overview}
@@ -1812,6 +1761,304 @@ Key differences:
 
 Both @Mock and @MockBean are included in spring-boot-starter-test.
 
+\section{Spring MVC}
+\subsection{MVC Config}
+
+The MVC Java configuration and the MVC XML namespace provide default configuration suitable for most applications and a configuration API to customize it.
+
+You can use the @EnableWebMvc annotation to enable MVC configuration with programmatic configuration, or <mvc:annotation-driven> with XML configuration:
+
+\begin{lstlisting}
+    @Configuration
+    @EnableWebMvc
+    public class WebConfiguration {
+    }
+\end{lstlisting}
+
+The preceding example registers a number of Spring MVC infrastructure beans and adapts to dependencies available on the classpath (for example, payload converters for JSON, XML, and others).
+
+\subsection{MVC Config API}
+
+In Java configuration, you can implement the WebMvcConfigurer interface:
+
+\begin{lstlisting}@Configuration
+    public class WebConfiguration implements WebMvcConfigurer {
+
+        // Implement configuration methods...
+    }
+\end{lstlisting}
+
+\subsection{Type Conversion}
+
+By default, formatters for various number and date types are installed, along with support for customization via @NumberFormat, @DurationFormat, and @DateTimeFormat on fields and parameters.
+
+To register custom formatters and converters, use the following:
+
+\begin{lstlisting}
+    @Configuration
+    public class WebConfiguration implements WebMvcConfigurer {
+
+        @Override
+        public void addFormatters(FormatterRegistry registry) {
+            // ...
+        }
+    }
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\begin{lstlisting}
+\end{lstlisting}
+
+\subsection{Validation}
+
+By default, if Bean Validation is present on the classpath (for example, Hibernate Validator), the LocalValidatorFactoryBean is registered as a global Validator for use with @Valid and @Validated on controller method arguments.
+
+You can customize the global Validator instance, as the following example shows:
+
+\begin{lstlisting}
+    @Configuration
+    public class WebConfiguration implements WebMvcConfigurer {
+
+        @Override
+        public Validator getValidator() {
+            Validator validator = new OptionalValidatorFactoryBean();
+            // ...
+            return validator;
+        }
+    }
+\end{lstlisting}
+
+Note that you can also register Validator implementations locally, as the following example shows:
+
+\begin{lstlisting}
+    @Controller
+    public class MyController {
+
+        @InitBinder
+        public void initBinder(WebDataBinder binder) {
+            binder.addValidators(new FooValidator());
+        }
+    }
+
+\end{lstlisting}
+
+\subsection{Interceptors}
+
+You can register interceptors to apply to incoming requests, as the following example shows:
+@Configuration
+public class WebConfiguration implements WebMvcConfigurer {
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new LocaleChangeInterceptor());
+    }
+}
+
+\begin{lstlisting}
+    @Configuration
+    public class WebConfiguration implements WebMvcConfigurer {
+
+        @Override
+        public void addInterceptors(InterceptorRegistry registry) {
+            registry.addInterceptor(new LocaleChangeInterceptor());
+        }
+    }
+\end{lstlisting}
+
+\subsection{Content Types}
+
+You can configure how Spring MVC determines the requested media types from the request (for example, Accept header, URL path extension, query parameter, and others).
+
+By default, only the Accept header is checked.
+
+You can customize requested content type resolution, as the following example shows:
+
+\begin{lstlisting}
+    @Configuration
+    public class WebConfiguration implements WebMvcConfigurer {
+
+        @Override
+        public void configureContentNegotiation(
+        ContentNegotiationConfigurer configurer) {
+            configurer.mediaType("json", MediaType.APPLICATION_JSON);
+            configurer.mediaType("xml", MediaType.APPLICATION_XML);
+        }
+    }
+\end{lstlisting}
+
+\subsection{Message Converters}
+
+You can set the HttpMessageConverter instances to use in Java configuration, replacing the ones used by default, by overriding configureMessageConverters(). You can also customize the list of configured message converters at the end by overriding extendMessageConverters().
+
+In a Spring Boot application, the WebMvcAutoConfiguration adds any HttpMessageConverter beans it detects, in addition to default converters. Hence, in a Boot application, prefer to use the HttpMessageConverters mechanism.
+
+Or alternatively, use extendMessageConverters to modify message converters at the end.
+
+The following example adds XML and Jackson JSON converters with a customized ObjectMapper instead of the default ones:
+
+\begin{lstlisting}
+    @Configuration
+    public class WebConfiguration implements WebMvcConfigurer {
+
+        @Override
+        public void configureMessageConverters(
+        List<HttpMessageConverter<?>> converters) {
+            Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder()
+            .indentOutput(true)
+            .dateFormat(new SimpleDateFormat("yyyy-MM-dd"))
+            .modulesToInstall(new ParameterNamesModule());
+            converters.add(new MappingJackson2HttpMessageConverter(
+            builder.build()));
+            converters.add(new MappingJackson2XmlHttpMessageConverter(
+            builder.createXmlMapper(true).build()));
+        }
+    }
+\end{lstlisting}
+
+\subsection{HTTP Message Conversion}
+
+The spring-web module contains the HttpMessageConverter interface for reading and writing the body of HTTP requests and responses through InputStream and OutputStream. HttpMessageConverter instances are used on the client side (for example, in the RestClient) and on the server side (for example, in Spring MVC REST controllers).
+
+Concrete implementations for the main media (MIME) types are provided in the framework and are, by default, registered with the RestClient and RestTemplate on the client side and with RequestMappingHandlerAdapter on the server side (see Configuring Message Converters).
+
+Some implementations of HttpMessageConverter are:
+
+    \begin{lstlisting}
+    StringHttpMessageConverter
+    FormHttpMessageConverter
+    ByteArrayHttpMessageConverter
+    MarshallingHttpMessageConverter
+    JsonbHttpMessageConverter
+    ProtobufHttpMessageConverter
+    ProtobufJsonFormatHttpMessageConverter
+    \end{lstlisting}
+
+\subsection{URI Links}
+
+\subsubsection{UriComponents}
+
+UriComponentsBuilder helps to build URI’s from URI templates with variables.
+
+\begin{lstlisting}
+    UriComponents uriComponents = UriComponentsBuilder
+    .fromUriString("https://example.com/hotels/{hotel}")
+    .queryParam("q", "{q}")
+    .encode()
+    .build();
+
+    URI uri = uriComponents.expand("Westin", "123").toUri();
+
+    Static factory method with a URI template.
+    Add or replace URI components.
+    Request to have the URI template and URI variables encoded.
+    Build a UriComponents.
+    Expand variables and obtain the URI.
+
+\end{lstlisting}
+
+The preceding example can be consolidated into one chain and shortened with buildAndExpand:
+
+\begin{lstlisting}
+    URI uri = UriComponentsBuilder
+    .fromUriString("https://example.com/hotels/{hotel}")
+    .queryParam("q", "{q}")
+    .encode()
+    .buildAndExpand("Westin", "123")
+    .toUri();
+
+\end{lstlisting}
+
+You can shorten it further by going directly to a URI (which implies encoding):
+
+\begin{lstlisting}
+    URI uri = UriComponentsBuilder
+    .fromUriString("https://example.com/hotels/{hotel}")
+    .queryParam("q", "{q}")
+    .build("Westin", "123");
+
+\end{lstlisting}
+
+You can shorten it further still with a full URI template:
+
+\begin{lstlisting}
+    URI uri = UriComponentsBuilder
+    .fromUriString("https://example.com/hotels/{hotel}?q={q}")
+    .build("Westin", "123");
+\end{lstlisting}
+
+\subsubsection{UriBuilder}
+
+UriComponentsBuilder implements UriBuilder. You can create a UriBuilder, in turn, with a UriBuilderFactory. Together, UriBuilderFactory and UriBuilder provide a pluggable mechanism to build URIs from URI templates, based on shared configuration, such as a base URL, encoding preferences, and other details.
+
+You can configure RestTemplate and WebClient with a UriBuilderFactory to customize the preparation of URIs. DefaultUriBuilderFactory is a default implementation of UriBuilderFactory that uses UriComponentsBuilder internally and exposes shared configuration options.
+
+The following example shows how to configure a RestTemplate:
+\begin{lstlisting}
+    // import org.springframework.web.util.
+        DefaultUriBuilderFactory.EncodingMode;
+
+    String baseUrl = "https://example.org";
+    DefaultUriBuilderFactory factory = new DefaultUriBuilderFactory(baseUrl);
+    factory.setEncodingMode(EncodingMode.TEMPLATE_AND_VALUES);
+
+    RestTemplate restTemplate = new RestTemplate();
+    restTemplate.setUriTemplateHandler(factory);
+
+    In addition, you can also use DefaultUriBuilderFactory directly. It is similar to using UriComponentsBuilder but, instead of static factory methods, it is an actual instance that holds configuration and preferences.
+
+    String baseUrl = "https://example.com";
+    DefaultUriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory(baseUrl);
+
+    URI uri = uriBuilderFactory.uriString("/hotels/{hotel}")
+    .queryParam("q", "{q}")
+    .build("Westin", "123");
+
+
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+
+\subsection{View Controllers}
+
+This is a shortcut for defining a ParameterizableViewController that immediately forwards to a view when invoked. You can use it in static cases when there is no Java controller logic to run before the view generates the response.
+
+The following example forwards a request for / to a view called home:
+
+\begin{lstlisting}
+    @Configuration
+    public class WebConfiguration implements WebMvcConfigurer {
+
+        @Override
+        public void addViewControllers(ViewControllerRegistry registry) {
+            registry
+            .addViewController("/")
+            .setViewName("home");
+        }
+    }
+\end{lstlisting}
+
+\subsection{View Resolvers}
+
+The MVC configuration simplifies the registration of view resolvers.
+
+The following example configures content negotiation view resolution by using JSP and Jackson as a default View for JSON rendering:
+
+\begin{lstlisting}
+    @Configuration
+    public class WebConfiguration implements WebMvcConfigurer {
+
+        @Override
+        public void configureViewResolvers(ViewResolverRegistry registry) {
+            registry.enableContentNegotiation(new MappingJackson2JsonView());
+            registry.jsp();
+        }
+    }
+\end{lstlisting}
+
+
+
 
 \section{Spring Boot (Web): Servlet Web Applications}
 
@@ -1947,6 +2194,15 @@ A SpringApplication attempts to create the right type of ApplicationContext on y
 It is also possible to take complete control of the ApplicationContext type that is used by calling setApplicationContextFactory(...).
 
 
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
+\begin{lstlisting}
+    management.endpoint.shutdown.enabled=true
+\end{lstlisting}
 
 \subsection{Testing with Spring Boot}
 
@@ -2089,8 +2345,134 @@ For example, to only expose the health and info endpoints over JMX, use the foll
 
 \end{lstlisting}
 
+\subsubsection{Health information}
 
-\subsection{Configuration}
+Information exposed by the health endpoint depends on the \lstinline|management.endpoint.health.show-details| and \lstinline|management.endpoint.health.show-components| properties, which can be configured with one of the following values: never, when-authorized, always
+.
+
+The default value is never. A user is considered to be authorized when they are in one or more of the endpoint’s roles. If the endpoint has no configured roles (the default), all authenticated users are considered to be authorized. You can configure the roles by using the management.endpoint.health.roles property.
+
+Health information is collected from the content of a HealthContributorRegistry (by default, all HealthContributor instances defined in your ApplicationContext). Spring Boot includes a number of auto-configured HealthContributors, and you can also write your own.
+
+A \lstinline|HealthContributor| can be either a \lstinline|HealthIndicator| or a \lstinline|CompositeHealthContributor|.
+
+By default, the final system health is derived by a StatusAggregator, which sorts the statuses from each HealthIndicator based on an ordered list of statuses. The first status in the sorted list is used as the overall health status. If no HealthIndicator returns a status that is known to the StatusAggregator, an UNKNOWN status is used.
+
+\paragraph{Auto-configured HealthIndicators}
+
+\begin{lstlisting}
+    cassandra
+    couchbase
+    db
+    diskspace
+    elasticsearch
+    hazelcast
+    influxdb
+    jms
+    ldap
+    mail
+    mongo
+    neo4j
+    ping
+    rabbit
+    redis
+\end{lstlisting}
+
+\paragraph{Writing Custom HealthIndicators}
+
+To provide custom health information, you can register Spring beans that implement the HealthIndicator interface. You need to provide an implementation of the \lstinline|health()| method and return a \lstinline|Health| response. The Health response should include a status and can optionally include additional details to be displayed. The following code shows a sample HealthIndicator implementation:
+
+    \begin{lstlisting}
+    import org.springframework.boot.actuate.health.Health;
+    import org.springframework.boot.actuate.health.HealthIndicator;
+    import org.springframework.stereotype.Component;
+
+    @Component
+    public class MyHealthIndicator implements HealthIndicator {
+
+        @Override
+        public Health health() {
+            int errorCode = check();
+            if (errorCode != 0) {
+                return Health.down().withDetail("Error Code", errorCode).build();
+            }
+            return Health.up().build();
+        }
+
+        private int check() {
+            // perform some specific health check
+            return ...
+        }
+
+    }
+    \end{lstlisting}
+
+The identifier for a given HealthIndicator is the name of the bean without the HealthIndicator suffix, if it exists. In the preceding example, the health information is available in an entry named my.
+
+\subsubsection{Info Endpoint}
+\paragraph{Application Information}
+
+Application information exposes various information collected from all \lstinline|InfoContributor| beans defined in your ApplicationContext. Spring Boot includes a number of auto-configured InfoContributor beans, and you can write your own.
+
+Auto-configured InfoContributors may be:
+
+\begin{lstlisting}
+    // if there's a META-INF/build-info.properties resource
+    build
+    //  Exposes any property from the Environment whose name starts with info
+    env
+    // git.properties resource exists
+    git
+    java
+    os
+    process
+\end{lstlisting}
+
+Whether an individual contributor is enabled is controlled by its management.info.someid.enabled property.
+Different contributors have different defaults for this property, depending on their prerequisites and the nature of the information that they expose.
+
+With no prerequisites to indicate that they should be enabled, the env, java, os, and process contributors are disabled by default.
+
+The build and git info contributors are enabled by default.
+
+\paragraph{Custom Application Information}
+
+When the env contributor is enabled, you can customize the data exposed by the info endpoint by setting info.* Spring properties. \textit{All Environment properties under the info key are automatically exposed.} For example, you could add the following settings to your application.properties file:
+
+    \begin{lstlisting}
+    info.app.encoding=UTF-8
+    info.app.java.source=17
+    info.app.java.target=17
+
+    \end{lstlisting}
+
+\paragraph{Writing Custom InfoContributors}
+
+    To provide custom application information, you can register Spring beans that implement the InfoContributor interface.
+
+\begin{lstlisting}
+    import java.util.Collections;
+
+    import org.springframework.boot.actuate.info.Info;
+    import org.springframework.boot.actuate.info.InfoContributor;
+    import org.springframework.stereotype.Component;
+
+    @Component
+    public class MyInfoContributor implements InfoContributor {
+
+        @Override
+        public void contribute(Info.Builder builder) {
+            builder.withDetail("example", Collections.singletonMap("key", "value"));
+        }
+
+    }
+\end{lstlisting}
+
+
+
+\subsection{Monitoring and Management Over HTTP}
+
+\subsubsection{Configuration}
 
 \begin{lstlisting}
     // base for all endpoints
@@ -2100,56 +2482,11 @@ For example, to only expose the health and info endpoints over JMX, use the foll
     management.endpoints.web.path-mapping.<actuator>
     // e.g.
     management.endpoints.web.path-mapping.health=custom-health
+
+    // prt
+    management.server.port=8081
 \end{lstlisting}
 
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
 \begin{lstlisting}
     management.endpoint.shutdown.enabled=true
 \end{lstlisting}
