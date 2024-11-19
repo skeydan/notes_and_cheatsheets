@@ -89,7 +89,7 @@ Then, BeanFactoryPostProcessors are run.
 \subsubsection{Instantiate and run BeanFactoryPostProcessors}
 In a Spring application, a BeanFactoryPostProcessor can modify the definition of any bean.
 The BeanFactory object is passed as an argument to the postProcess() method of the BeanFactoryPostProcessor. BeanFactoryPostProcessor then works on the bean definitions or the configuration metadata of the bean before the beans are actually created.
-Spring provides several useful implementations of BeanFactoryPostProcessor, such as reading properties and registering a custom scope. We can write your own implementation of the BeanFactoryPostProcessor interface. To influence the order in which bean factory post processors are invoked, their bean definition methods may be annotated with the @Order annotation. If you are implementing your own bean factory post processor, the implementation class can also implement the Ordered interface.
+Spring provides several useful implementations of BeanFactoryPostProcessor, such as reading properties and registering a custom scope. We can write our own implementation of the BeanFactoryPostProcessor interface. To influence the order in which bean factory post processors are invoked, their bean definition methods may be annotated with the @Order annotation. If you are implementing your own bean factory post processor, the implementation class can also implement the Ordered interface.
 
 \begin{figure}
     \centering
@@ -532,7 +532,7 @@ To use the @Inject annotation, declare the javax.inject library as a Gradle or M
 
 \subsubsection{@PropertySource}
 
-    With this annotation, we define property files for application settings.
+    With this annotation, we define property \textit{files} for application settings.
 
     \begin{lstlisting}
         @Configuration
@@ -1386,6 +1386,26 @@ Example (see \url{  https://docs.spring.io/spring-data/commons/reference/reposit
     }
 
 \end{lstlisting}
+
+\subsection{Using explicitly defined queries}
+
+To explicitly define queries, the annotation @Query can be used.
+
+The queries themselves are tied to the Java method that executes them, you can actually bind them directly by using the Spring Data JPA @Query annotation rather than annotating them to the domain class. This frees the domain class from persistence specific information and co-locates the query to the repository interface.
+
+Queries annotated to the query method take precedence over queries defined using @NamedQuery or named queries declared in orm.xml.
+
+Example:
+
+\begin{lstlisting}
+    public interface UserRepository extends JpaRepository<User, Long> {
+
+    @Query("select u from User u where u.emailAddress = ?1")
+    User findByEmailAddress(String emailAddress);
+}
+
+\end{lstlisting}
+
 
 \subsection{Paging, Iterating Large Results, Sorting and Limiting}
 
@@ -2271,11 +2291,112 @@ Spring Boot provides auto-configuration for Spring MVC that works well with most
     \item Automatic use of a \lstinline|ConfigurableWebBindingInitializer| bean
 \end{itemize}
 
+\subsection{Spring Boot Starters}
+
+Main starter:
+
+\begin{lstlisting}
+    // spring-boot-starter/build.gradle
+
+    plugins {
+        id "org.springframework.boot.starter"
+    }
+
+    description = "Core starter, including auto-configuration support, logging and YAML"
+
+    dependencies {
+        api(project(":spring-boot-project:spring-boot"))
+        api(project(":spring-boot-project:
+        spring-boot-autoconfigure"))
+        api(project(":spring-boot-project:
+        spring-boot-starters:spring-boot-starter-logging"))
+        api("jakarta.annotation:jakarta.annotation-api")
+        api("org.springframework:spring-core")
+        api("org.yaml:snakeyaml")
+    }
+\end{lstlisting}
+
+Examples:
+
+\begin{lstlisting}
+    // spring-boot-starter-test/build.gradle
+
+    plugins {
+        id "org.springframework.boot.starter"
+    }
+
+    description = "Starter for testing Spring Boot applications with libraries including JUnit Jupiter, Hamcrest and Mockito"
+
+    dependencies {
+        api(project(":spring-boot-project:spring-boot-starters:
+        spring-boot-starter"))
+        api(project(":spring-boot-project:spring-boot-test"))
+        api(project(":spring-boot-project:
+        spring-boot-test-autoconfigure"))
+        api("com.jayway.jsonpath:json-path")
+        api("jakarta.xml.bind:jakarta.xml.bind-api")
+        api("net.minidev:json-smart")
+        api("org.assertj:assertj-core")
+        api("org.awaitility:awaitility")
+        api("org.hamcrest:hamcrest")
+        api("org.junit.jupiter:junit-jupiter")
+        api("org.mockito:mockito-core")
+        api("org.mockito:mockito-junit-jupiter")
+        api("org.skyscreamer:jsonassert")
+        api("org.springframework:spring-core")
+        api("org.springframework:spring-test")
+        api("org.xmlunit:xmlunit-core") {
+            exclude group: "javax.xml.bind", module: "jaxb-api"
+        }
+    }
+
+    checkRuntimeClasspathForConflicts {
+        ignore { name -> name.startsWith("mockito-extensions/") }
+    }
+\end{lstlisting}
+\begin{lstlisting}
+    // spring-boot-starter-data-jpa/build.gradle
+
+    plugins {
+        id "org.springframework.boot.starter"
+    }
+
+    description = "Starter for using Spring Data JPA with Hibernate"
+
+    dependencies {
+        api(project(":spring-boot-project:spring-boot-starters:
+        spring-boot-starter"))
+        api(project(":spring-boot-project:spring-boot-starters:
+
+        spring-boot-starter-jdbc"))
+        api("org.hibernate.orm:hibernate-core")
+        api("org.springframework.data:spring-data-jpa")
+        api("org.springframework:spring-aspects")
+    }
+\end{lstlisting}
+\begin{lstlisting}
+    // spring-boot-starter-aop/build.gradle
+
+    plugins {
+        id "org.springframework.boot.starter"
+    }
+
+    description = "Starter for aspect-oriented programming with Spring AOP and AspectJ"
+
+    dependencies {
+        api(project(":spring-boot-project:spring-boot-starters:
+        spring-boot-starter"))
+        api("org.springframework:spring-aop")
+        api("org.aspectj:aspectjweaver")
+    }
+\end{lstlisting}
+
+
 \subsection{Externalized Configuration}
 
 Spring Boot lets you externalize your configuration so that you can work with the same application code in different environments. You can use a variety of external configuration sources including Java properties files, YAML files, environment variables, and command-line arguments.
 
-Property values can be injected directly into your beans by using the \lstinline |@Value| annotation, accessed through Spring’s Environment abstraction, or be bound to structured objects through \lstinline[]|@ConfigurationProperties|.
+Property values can be injected directly into your beans by using the \lstinline |@Value| annotation, accessed through Spring’s Environment abstraction, or be bound to \textit{structured objects} through \lstinline[]|@ConfigurationProperties|.
 
 Differences between both are:
 
@@ -2390,16 +2511,6 @@ A SpringApplication attempts to create the right type of ApplicationContext on y
 It is also possible to take complete control of the ApplicationContext type that is used by calling setApplicationContextFactory(...).
 
 
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-
 \subsection{Testing with Spring Boot}
 
 Test support is provided by two modules: spring-boot-test contains core items, and spring-boot-test-autoconfigure supports auto-configuration for tests.
@@ -2448,7 +2559,29 @@ When testing Spring Boot applications, this is often not required. Spring Boot�
 
 The search algorithm works up from the package that contains the test until it finds a class annotated with @SpringBootApplication or @SpringBootConfiguration.
 
-To customize the primary configuration, one can use a nested @TestConfiguration class. Unlike a nested @Configuration class, which would be used instead of the application’s primary configuration, a nested @TestConfiguration class is used in addition to the primary configuration.
+To customize the primary configuration, one can use a \textit{nested} \lstinline|@TestConfiguration| class. Unlike a nested @Configuration class, which would be used instead of the application’s primary configuration, a nested @TestConfiguration class is used \textit{in addition to the primary configuration}.
+
+@TestConfiguration can also be used on an \textit{inner} class of a test or the \textit{top-level} class to customize the primary configuration. Doing so indicates that the class should not be picked up by scanning. You can then import the class explicitly where it is required, as shown in the following example:
+
+\begin{lstlisting}
+    import org.junit.jupiter.api.Test;
+
+    import org.springframework.boot.test.context.SpringBootTest;
+    import org.springframework.context.annotation.Import;
+
+    @SpringBootTest
+    @Import(MyTestsConfiguration.class)
+    class MyTests {
+
+        @Test
+        void exampleTest() {
+            // ...
+        }
+
+    }
+\end{lstlisting}
+
+Note: An imported @TestConfiguration is processed earlier than an inner-class @TestConfiguration and an imported @TestConfiguration will be processed before any configuration found through component scanning.
 
 \subsection{Testing With a Mock Environment}
 
@@ -2491,6 +2624,83 @@ Regular @Component and @ConfigurationProperties beans are not scanned when the @
 Often, @WebMvcTest is limited to a single controller and is used in combination with @MockBean to provide mock implementations for required collaborators.
 
 @WebMvcTest also auto-configures MockMvc.
+
+\subsection{TestRestTemplate}
+
+Spring Boot also includes a TestRestTemplate that is useful in integration tests. You can get a vanilla template or one that sends Basic HTTP authentication (with a username and password). In either case, the template is fault tolerant. This means that it behaves in a test-friendly way by not throwing exceptions on 4xx and 5xx errors. Instead, such errors can be detected through the returned ResponseEntity and its status code.
+
+TestRestTemplate can be instantiated directly in your integration tests:
+
+\begin{lstlisting}
+    import org.junit.jupiter.api.Test;
+
+    import org.springframework.boot.test.web.client.
+    TestRestTemplate;
+    import org.springframework.http.ResponseEntity;
+
+    import static org.assertj.core.api.Assertions.assertThat;
+
+    class MyTests {
+
+        private final TestRestTemplate template = new TestRestTemplate();
+
+        @Test
+        void testRequest() {
+            ResponseEntity<String> headers = this.template.getForEntity(
+                "https://myhost.example.com/example", String.class);
+            assertThat(
+            headers.getHeaders().getLocation()).hasHost(
+                "other.example.com");
+        }
+    }
+\end{lstlisting}
+
+Alternatively, if you use the @SpringBootTest annotation with WebEnvironment.RANDOM\_PORT or WebEnvironment.DEFINED\_PORT, you can inject a fully configured TestRestTemplate and start using it. If necessary, additional customizations can be applied through the RestTemplateBuilder bean. Any URLs that do not specify a host and port automatically connect to the embedded server:
+
+\begin{lstlisting}
+    import java.time.Duration;
+
+import org.junit.jupiter.api.Test;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.
+    WebEnvironment;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpHeaders;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+class MySpringBootTests {
+
+    @Autowired
+    private TestRestTemplate template;
+
+    @Test
+    void testRequest() {
+        HttpHeaders headers = this.template.getForEntity("/example", String.class).getHeaders();
+        assertThat(headers.getLocation())
+            .hasHost("other.example.com");
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class RestTemplateBuilderConfiguration {
+
+        @Bean
+        RestTemplateBuilder restTemplateBuilder() {
+            return new RestTemplateBuilder().setConnectTimeout(
+                Duration.ofSeconds(1))
+            .setReadTimeout(Duration.ofSeconds(1));
+        }
+
+    }
+
+}
+\end{lstlisting}
 
 
 \subsection{Spring Boot Actuator}
