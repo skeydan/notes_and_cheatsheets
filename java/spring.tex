@@ -1110,10 +1110,9 @@ this(com.xyz.service.AccountService)
 // Any join point (method execution only in Spring AOP) where the target object implements the AccountService interface:
 target(com.xyz.service.AccountService)
 
-// Any join point (method execution only in Spring AOP) that takes a single parameter and where the argument passed at runtime is Serializable:
-args(java.io.Serializable)
-
+// Any join point (method execution only in Spring AOP) that takes a single parameter and where the argument passed at runtime is Serializable.
 // Note that the pointcut given in this example is different from execution(* *(java.io.Serializable)). The args version matches if the argument passed at runtime is Serializable, and the execution version matches if the method signature declares a single parameter of type Serializable.
+args(java.io.Serializable)
 
 // Any join point (method execution only in Spring AOP) where the target object has a @Transactional annotation:
 @target(org.springframework.transaction.annotation.Transactional)
@@ -2391,6 +2390,95 @@ Examples:
     }
 \end{lstlisting}
 
+\subsection{Profiles in Spring Boot}
+
+In Spring Boot, the additional annotation @ConfigurationProperties is available. This results in an additional way to use profiles.
+
+In Spring Boot, any @Component, @Configuration or @ConfigurationProperties can be marked with @Profile to limit when it is loaded, as shown in the following example:
+
+\begin{lstlisting}
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.context.annotation.Profile;
+
+    @Configuration(proxyBeanMethods = false)
+    @Profile("production")
+    public class ProductionConfiguration {
+        // ...
+    }
+\end{lstlisting}
+
+Note:
+
+If @ConfigurationProperties beans are registered through @EnableConfigurationProperties instead of automatic scanning, the @Profile annotation needs to be specified on the @Configuration class that has the @EnableConfigurationProperties annotation. In the case where @ConfigurationProperties are scanned, @Profile can be specified on the @ConfigurationProperties class itself.
+
+\subsubsection{Specifying which profiles are active}
+
+You can use a spring.profiles.active Environment property to specify which profiles are active. You can specify the property in any of the ways described earlier in this chapter. For example, you could include it in your application.properties, as shown in the following example:
+
+\begin{lstlisting}
+    spring.profiles.active=dev,hsqldb
+\end{lstlisting}
+
+
+You could also specify it on the command line by using the following switch: \lstinline|--spring.profiles.active=dev,hsqldb|.
+
+If no profile is active, a default profile is enabled. The name of the default profile is default and it can be tuned using the \lstinline|spring.profiles.default| Environment property, as shown in the following example:
+
+
+\begin{lstlisting}
+    spring.profiles.default=none
+\end{lstlisting}
+
+spring.profiles.active and spring.profiles.default can only be used in non-profile-specific documents. This means they cannot be included in profile specific files or documents activated by spring.config.activate.on-profile.
+
+For example, the second document configuration is invalid:
+
+\begin{lstlisting}
+    spring.profiles.active=prod
+    spring.config.activate.on-profile=prod
+    spring.profiles.active=metrics
+\end{lstlisting}
+
+\subsubsection{Adding Active Profiles}
+
+The spring.profiles.active property follows the same ordering rules as other properties: The highest PropertySource wins. This means that you can specify active profiles in application.properties and then replace them by using the command line switch.
+
+Sometimes, it is useful to have properties that add to the active profiles rather than replace them. The \lstinline|spring.profiles.include| property can be used to add active profiles on top of those activated by the spring.profiles.active property. The SpringApplication entry point also has a Java API for setting additional profiles. See the setAdditionalProfiles() method in SpringApplication.
+
+For example, when an application with the following properties is run, the common and local profiles will be activated even when it runs using the --spring.profiles.active switch:
+
+\begin{lstlisting}
+    spring.profiles.include[0]=common
+    spring.profiles.include[1]=local
+\end{lstlisting}
+
+Similar to spring.profiles.active, spring.profiles.include can only be used in non-profile-specific documents. This means it cannot be included in profile specific files or documents activated by spring.config.activate.on-profile.
+
+Profile groups, which are described in the next section can also be used to add active profiles if a given profile is active.
+
+\subsubsection{Profile Groups}
+
+Occasionally the profiles that you define and use in your application are too fine-grained and become cumbersome to use. For example, you might have proddb and prodmq profiles that you use to enable database and messaging features independently.
+
+To help with this, Spring Boot lets you define profile groups. A profile group allows you to define a logical name for a related group of profiles.
+
+For example, we can create a production group that consists of our proddb and prodmq profiles.
+\begin{lstlisting}
+    spring.profiles.group.production[0]=proddb
+    spring.profiles.group.production[1]=prodmq
+\end{lstlisting}
+
+Our application can now be started using --spring.profiles.active=production to activate the production, proddb and prodmq profiles in one hit.
+
+Similar to spring.profiles.active and spring.profiles.include, spring.profiles.group can only be used in non-profile-specific documents. This means it cannot be included in profile specific files or documents activated by spring.config.activate.on-profile.
+
+\subsubsection{Programmatically Setting Profiles}
+
+You can programmatically set active profiles by calling SpringApplication.setAdditionalProfiles(...)) before your application runs. It is also possible to activate profiles by using Spring’s ConfigurableEnvironment interface.
+
+\subsubsection{Profile-specific Configuration Files}
+
+Profile-specific variants of both application.properties (or application.yaml) and files referenced through @ConfigurationProperties are considered as files and loaded.
 
 \subsection{Externalized Configuration}
 
@@ -2425,6 +2513,54 @@ Spring Boot uses a very particular PropertySource order that is designed to allo
     \item @TestPropertySource annotations on your tests.
     \item Devtools global settings properties in the \$HOME/.config/spring-boot directory when devtools is active.
 \end{itemize}
+
+Config data files are considered in the following order:
+
+\begin{itemize}
+    \item Application properties packaged inside your jar (application.properties and YAML variants).
+    \item Profile-specific application properties packaged inside your jar (application-{profile}.properties and YAML variants).
+    \item Application properties outside of your packaged jar (application.properties and YAML variants).
+    \item Profile-specific application properties outside of your packaged jar (application-{profile}.properties and YAML variants).
+    \item By default, SpringApplication converts any command line option arguments (that is, arguments starting with --, such as --server.port=9000) to a property and adds them to the Spring Environment. As mentioned previously, command line properties always take precedence over file-based property sources.
+\end{itemize}
+
+Spring Boot will automatically find and load application.properties and application.yaml files from the following locations when your application starts:
+
+\begin{itemize}
+    \item From the classpath
+    \item The classpath root
+    \item The classpath /config package
+    \item From the current directory
+    \item The current directory
+    \item The config/ subdirectory in the current directory
+    \item Immediate child directories of the config/ subdirectory
+\end{itemize}
+
+The list is ordered by precedence (with values from lower items overriding earlier ones). Documents from the loaded files are added as PropertySources to the Spring Environment.
+
+If you do not like application as the configuration file name, you can switch to another file name by specifying a spring.config.name environment property. For example, to look for myproject.properties and myproject.yaml files you can run your application as follows:
+
+\begin{lstlisting}
+    java -jar myproject.jar --spring.config.name=myproject
+\end{lstlisting}
+
+You can also refer to an explicit location by using the spring.config.location environment property. This property accepts a comma-separated list of one or more locations to check.
+
+The following example shows how to specify two distinct files:
+
+\begin{lstlisting}
+    java -jar myproject.jar --spring.config.location=\
+    optional:classpath:/default.properties,\
+    optional:classpath:/override.properties
+\end{lstlisting}
+
+spring.config.name, spring.config.location, and spring.config.additional-location are used very early to determine which files have to be loaded. They must be defined as an environment property (typically an OS environment variable, a system property, or a command-line argument).
+
+\subsubsection{Profile Specific Files}
+
+As well as application property files, Spring Boot will also attempt to load profile-specific files using the naming convention application-{profile}. For example, if your application activates a profile named prod and uses YAML files, then both application.yaml and application-prod.yaml will be considered.
+
+Profile-specific properties are loaded from the same locations as standard application.properties, with profile-specific files always overriding the non-specific ones. If several profiles are specified, a last-wins strategy applies. For example, if profiles prod,live are specified by the spring.profiles.active property, values in application-prod.properties can be overridden by those in application-live.properties.
 
 \subsection{ApplicationContext in Boot}
 
