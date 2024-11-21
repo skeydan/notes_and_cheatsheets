@@ -1330,9 +1330,193 @@ You can use the org.springframework.aop.aspectj.annotation.AspectJProxyFactory c
     MyInterfaceType proxy = factory.getProxy();
 \end{lstlisting}
 
+\section{Transaction Management}
+
+\subsection{Declarative}
+
+\subsection{Manual}
+
+Instead of using the @Transaction annotation, transactions can be managed programmatically using TransactionTemplate.
+
+To be used, it needs to be initialized it with a PlatformTransactionManager.
+
+Example:
+
+\begin{lstlisting}
+    class ManualTransactionIntegrationTest {
+
+        @Autowired
+        private PlatformTransactionManager transactionManager;
+
+        private TransactionTemplate transactionTemplate;
+
+        @BeforeEach
+        void setUp() {
+            transactionTemplate = new TransactionTemplate(transactionManager);
+        }
+
+        // omitted
+    }
+\end{lstlisting}
+
+When using Spring Boot, an appropriate bean of type PlatformTransactionManager will be automatically registered, so we just need to inject it. Otherwise, we have to manually register a PlatformTransactionManager bean.
+
+The correct order of operations when using TransactionTemplate in programmatic transaction management is:
+
+\begin{itemize}
+    \item begin transaction
+    \item execute callback (which contains the transactional code)
+    \item commit transaction if the callback executes successfully
+    \item rollback transaction if an exception occurs during callback execution
+\end{itemize}
+
+\section{Data Access with JDBC}
+
+The following table shows which actions Spring takes care of and which actions are your responsibility.
+
+\begin{table}[h!]
+\begin{tabular}{|r|c|c|}
+    \hline
+    Action&  Spring&  You\\
+    \hline
+    Define connection parameters&  &  x\\
+    \hline
+    Open the connection.&  x&  \\
+    \hline
+    Specify the SQL statement.&  &  x\\
+    \hline
+    Declare parameters and provide parameter values&  &  x\\
+    \hline
+    Prepare and run the statement.&  x&  \\
+    \hline
+    Set up the loop to iterate through the results (if any).&  x&  \\
+    \hline
+    Do the work for each iteration.&  &  x\\
+    \hline
+    Process any exception.&  x&  \\
+    \hline
+    Handle transactions.&  x&  \\
+    \hline
+    Close the connection, the statement, and the resultset.&  x&  \\
+    \hline
+\end{tabular}
+\end{table}
+
+\subsection{Package Hierarchy}
+
+The Spring Framework’s JDBC abstraction framework consists of four different packages:
+
+\begin{itemize}
+    \item core: The org.springframework.jdbc.core package contains the JdbcTemplate class and its various callback interfaces, plus a variety of related classes. A subpackage named org.springframework.jdbc.core.simple contains the SimpleJdbcInsert and SimpleJdbcCall classes. Another subpackage named org.springframework.jdbc.core.namedparam contains the NamedParameterJdbcTemplate class and the related support classes. See Using the JDBC Core Classes to Control Basic JDBC Processing and Error Handling, JDBC Batch Operations, and Simplifying JDBC Operations with the SimpleJdbc Classes.
+
+    \item datasource: The org.springframework.jdbc.datasource package contains a utility class for easy DataSource access and various simple DataSource implementations that you can use for testing and running unmodified JDBC code outside of a Jakarta EE container. A subpackage named org.springframework.jdbc.datasource.embedded provides support for creating embedded databases by using Java database engines, such as HSQL, H2, and Derby. See Controlling Database Connections and Embedded Database Support.
+
+    \item object: The org.springframework.jdbc.object package contains classes that represent RDBMS queries, updates, and stored procedures as thread-safe, reusable objects. See Modeling JDBC Operations as Java Objects. This style results in a more object-oriented approach, although objects returned by queries are naturally disconnected from the database. This higher-level of JDBC abstraction depends on the lower-level abstraction in the org.springframework.jdbc.core package.
+
+    \item support: The org.springframework.jdbc.support package provides SQLException translation functionality and some utility classes. Exceptions thrown during JDBC processing are translated to exceptions defined in the org.springframework.dao package. This means that code using the Spring JDBC abstraction layer does not need to implement JDBC or RDBMS-specific error handling. All translated exceptions are unchecked, which gives you the option of catching the exceptions from which you can recover while letting other exceptions be propagated to the caller. See Using SQLExceptionTranslator.
+\end{itemize}
+
+\subsection{Using JdbcTemplate}
+
+\subsubsection{Queries}
+
+Examples:
+
+\begin{lstlisting}
+
+    Actor actor = jdbcTemplate.queryForObject(
+    "select first_name, last_name from t_actor where id = ?",
+    (resultSet, rowNum) -> {
+        Actor newActor = new Actor();
+        newActor.setFirstName(
+            resultSet.getString("first_name"));
+        newActor.setLastName(
+            resultSet.getString("last_name"));
+        return newActor;
+    },
+    1212L);
+
+    List<Actor> actors = this.jdbcTemplate.query(
+    "select first_name, last_name from t_actor",
+    (resultSet, rowNum) -> {
+        Actor actor = new Actor();
+        actor.setFirstName(
+            resultSet.getString("first_name"));
+        actor.setLastName(
+            resultSet.getString("last_name"));
+        return actor;
+    });
+
+    // If the last two snippets of code actually existed in the same application, it would make sense to remove the duplication present in the two RowMapper lambda expressions and extract them out into a single field that could then be referenced by DAO methods as needed. For example, it may be better to write the preceding code snippet as follows:
+
+    private final RowMapper<Actor> actorRowMapper = (resultSet, rowNum) -> {
+        Actor actor = new Actor();
+        actor.setFirstName(
+            resultSet.getString("first_name"));
+        actor.setLastName(
+            resultSet.getString("last_name"));
+        return actor;
+    };
+
+    public List<Actor> findAllActors() {
+        return this.jdbcTemplate.query("select first_name, last_name from t_actor", actorRowMapper);
+    }
+\end{lstlisting}
+
+\subsubsection{Updating (INSERT, UPDATE, and DELETE) with JdbcTemplate}
+
+You can use the update(..) method to perform insert, update, and delete operations. Parameter values are usually provided as variable arguments or, alternatively, as an object array.
+
+\begin{lstlisting}
+     //The following example inserts a new entry:
+    this.jdbcTemplate.update(
+    "insert into t_actor (first_name, last_name) values (?, ?)",
+    "Leonor", "Watling");
+
+    //The following example updates an existing entry:
+    this.jdbcTemplate.update(
+    "update t_actor set last_name = ? where id = ?",
+    "Banjo", 5276L);
+
+    //The following example deletes an entry:
+    this.jdbcTemplate.update(
+    "delete from t_actor where id = ?",
+    Long.valueOf(actorId));
+\end{lstlisting}
+
+\subsubsection{Other JdbcTemplate Operations}
+
+You can use the execute(..) method to run any arbitrary SQL. Consequently, the method is often used for DDL statements. It is heavily overloaded with variants that take callback interfaces, binding variable arrays, and so on.
+
+\begin{lstlisting}
+    //The following example creates a table:
+    this.jdbcTemplate.execute("create table mytable (id integer, name varchar(100))");
+
+    //The following example invokes a stored procedure:
+    this.jdbcTemplate.update(
+    "call SUPPORT.REFRESH_ACTORS_SUMMARY(?)",
+    Long.valueOf(unionId));
+\end{lstlisting}
+
+\subsubsection{Callback interfaces }
+
+JdbcTemplate callback interfaces (functional interfaces; implementors must implement the abstract method):
+
+\begin{tabular}{|c|c|c|}
+    \hline
+    RowCallbackHandler&  processRow(ResultSet rs)& process each row
+    \\
+    \hline
+    ResultSetExtractor \textless T \textgreater& extractData(ResultSet rs)
+    & process entire ResultSet\\
+    \hline
+    RowMapper \textless T \textgreater& mapRow(ResultSet rs, int rowNum)
+    &  map each row \\
+    \hline
+\end{tabular}
 
 
-\section{JPA}
+\section{Data Access with JPA}
 \subsection{Repository Query Language}
 
 Example (see \url{  https://docs.spring.io/spring-data/commons/reference/repositories/query-methods-details.html}):
@@ -1490,41 +1674,6 @@ Example:
         \item OrderBy... (e. g. OrderByFirstnameAscLastnameDesc).
     \end{itemize}
 
-\section{Programmatic Transaction Management}
-
-Instead of using the @Transaction annotation, transactions can be managed programmatically using TransactionTemplate.
-
-To be used, it needs to be initialized it with a PlatformTransactionManager.
-
-Example:
-
-\begin{lstlisting}
-    class ManualTransactionIntegrationTest {
-
-        @Autowired
-        private PlatformTransactionManager transactionManager;
-
-        private TransactionTemplate transactionTemplate;
-
-        @BeforeEach
-        void setUp() {
-            transactionTemplate = new TransactionTemplate(transactionManager);
-        }
-
-        // omitted
-    }
-\end{lstlisting}
-
-When using Spring Boot, an appropriate bean of type PlatformTransactionManager will be automatically registered, so we just need to inject it. Otherwise, we have to manually register a PlatformTransactionManager bean.
-
-The correct order of operations when using TransactionTemplate in programmatic transaction management is:
-
-\begin{itemize}
-    \item begin transaction
-    \item execute callback (which contains the transactional code)
-    \item commit transaction if the callback executes successfully
-    \item rollback transaction if an exception occurs during callback execution
-\end{itemize}
 
 
 
@@ -1633,7 +1782,7 @@ Here is an overview of AuthorizationManager implementations: see \ref{fig:auth-m
 
 Spring Security also supports modeling at the method level.
 
-You can activate it in your application by annotating any @Configuration class with @EnableMethodSecurity or adding <method-security> to any XML configuration file. (Note: Spring Boot Starter Security does not activate method-level authorization by default.)
+You can activate it in your application by annotating any @Configuration class with @EnableMethodSecurity or adding \textless method-security \textgreater  to any XML configuration file. (Note: Spring Boot Starter Security does not activate method-level authorization by default.)
 
 Then, you are immediately able to annotate any Spring-managed class or method with @PreAuthorize, @PostAuthorize, @PreFilter, and @PostFilter to authorize method invocations, including the input parameters and return values.
 
@@ -1658,11 +1807,37 @@ Example:
    }
 \end{lstlisting}
 
-\section{Spring Testing: MockMvc}
+\section{Testing with Spring}
+
+\subsection{TestContext Framework}
+
+The Spring TestContext Framework (located in the org.springframework.test.context package) provides generic, annotation-driven unit and integration testing support that is agnostic of the testing framework in use.
+
+In addition to generic testing infrastructure, the TestContext framework provides explicit support for JUnit 4, JUnit Jupiter (AKA JUnit 5), and TestNG.
+
+\subsection{Executing SQL Scripts}
+
+Sometimes it is essential to be able to modify the database during integration tests.
+Spring provides the following options for executing SQL scripts programmatically within integration test methods:
+
+\begin{itemize}
+    \item org.springframework.jdbc.datasource.init.ScriptUtils
+    \item org.springframework.jdbc.datasource.init.ResourceDatabasePopulator
+    \item org.springframework.test.context.junit4.AbstractTransactionalJUnit4SpringContextTests
+    \item org.springframework.test.context.testng.AbstractTransactionalTestNGSpringContextTests
+\end{itemize}
+
+\lstinline|ScriptUtils| provides a collection of static utility methods for working with SQL scripts and is mainly intended for internal use within the framework. However, if you require full control over how SQL scripts are parsed and run, ScriptUtils may suit your needs better than some of the other alternatives described later.
+
+\lstinline|ResourceDatabasePopulator| provides an object-based API for programmatically populating, initializing, or cleaning up a database by using SQL scripts defined in external resources. ResourceDatabasePopulator provides options for configuring the character encoding, statement separator, comment delimiters, and error handling flags used when parsing and running the scripts.
+
+In addition to the aforementioned mechanisms for running SQL scripts programmatically, you can declare the \lstinline|@Sql| annotation on a test class or test method to configure individual SQL statements or the resource paths to SQL scripts that should be run against a given database before or after an integration test class or test method. Support for @Sql is provided by the \lstinline|SqlScriptsTestExecutionListener|, which is enabled by default.
+
+\subsection{MockMvc}
 
 The Spring MVC Test framework, also known as MockMvc, aims to provide more complete testing for Spring MVC controllers without a running server. It does that by invoking the DispatcherServlet and passing “mock” implementations of the Servlet API from the spring-test module which replicates the full Spring MVC request handling without a running server.
 
-\subsection{Implications}
+\subsubsection{Implications}
 
 As opposed to @SpringBootTest, MockMvc is built on Servlet API mock implementations from the spring-test module and does not rely on a running container.
 
@@ -1670,7 +1845,7 @@ MockMvc starts out with a blank MockHttpServletRequest. Whatever is added to it 
 
 This means that, if you use JSPs, you can verify the JSP page to which the request was forwarded, but no HTML is rendered. In other words, the JSP is not invoked. Note, however, that all other rendering technologies that do not rely on forwarding, such as Thymeleaf and Freemarker, render HTML to the response body as expected. The same is true for rendering JSON, XML, and other formats through @ResponseBody methods.
 
-\subsection{Static imports}
+\subsubsection{Static imports}
 
 When using MockMvc directly to perform requests, the following static imports are needed:
 
@@ -1684,7 +1859,7 @@ When using MockMvc directly to perform requests, the following static imports ar
     \item MockMvcResultHandlers.*
 \end{itemize}
 
-\subsection{Setup}
+\subsubsection{Setup}
 
 MockMvc can be setup in one of two ways. One is to point directly to the controllers you want to test and programmatically configure Spring MVC infrastructure. Example:
 
@@ -1721,7 +1896,7 @@ The second is to point to Spring configuration with Spring MVC and controller in
     }
 \end{lstlisting}
 
-\subsection{Queries with MockMvc}
+\subsubsection{Queries with MockMvc}
 
 Example queries using MockMvc:
 
@@ -1741,7 +1916,7 @@ Example queries using MockMvc:
 \end{lstlisting}
 
 
-\section{Mocking in detail: @Mock vs. @MockBean}
+\subsection{Mocking in detail: @Mock vs. @MockBean}
 
 @Mock is an annotation provided by the Mockito library. It is used to create mock objects for dependencies that are not part of the Spring context.
 
@@ -1879,7 +2054,6 @@ Spring Web MVC is the original web framework built on the Servlet API and has be
 
     // For access to an existing attribute in the model (instantiated if not present) with data binding and validation applied. See @ModelAttribute as well as Model and DataBinder.
     @ModelAttribute
-    the end of this table.
 
     // For access to errors from validation and data binding for a command object (that is, a @ModelAttribute argument) or errors from the validation of a @RequestBody or @RequestPart arguments.
     Errors, BindingResult
@@ -1898,7 +2072,10 @@ Spring Web MVC is the original web framework built on the Servlet API and has be
     Supported return values \textit{include}:
 
     \begin{lstlisting}
+    // The return value is converted through HttpMessageConverter implementations and written to the response.
     @ResponseBody
+
+    // The return value that specifies the full response (including HTTP headers and body) is to be converted through HttpMessageConverter implementations and written to the response.
     HttpEntity<B>, ResponseEntity<B>
 
     HttpHeaders
@@ -1975,14 +2152,6 @@ Note that you can also register Validator implementations locally, as the follow
 \subsection{Interceptors}
 
 You can register interceptors to apply to incoming requests, as the following example shows:
-@Configuration
-public class WebConfiguration implements WebMvcConfigurer {
-
-    @Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new LocaleChangeInterceptor());
-    }
-}
 
 \begin{lstlisting}
     @Configuration
