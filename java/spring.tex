@@ -518,6 +518,9 @@ To use the @Inject annotation, declare the javax.inject library as a Gradle or M
     \begin{lstlisting}
         @Import(VehiclePartSupplier.class)
         class VehicleFactoryConfig {}
+
+        // use array to import several classes
+        @Import({Demo1.class, Demo2.class})
     \end{lstlisting}
 
 \subsubsection{@ImportResource}
@@ -1334,9 +1337,26 @@ You can use the org.springframework.aop.aspectj.annotation.AspectJProxyFactory c
 
 \subsection{Declarative}
 
+The Spring Framework’s declarative transaction management is made possible with Spring aspect-oriented programming (AOP). Due to reliance on AOP, we can customize transactional behavior - for example, insert custom behavior in the case of transaction rollback, or add arbitrary advice, along with transactional advice.
+
+The concept of rollback rules is important. They let you specify which exceptions (and throwables) should cause automatic rollback. You can specify this declaratively, in configuration, not in Java code. So, although you can still call \lstinline|setRollbackOnly()| on the TransactionStatus object to roll back the current transaction, most often you can specify a rule that MyApplicationException must always result in rollback.
+
+The combination of AOP with transactional metadata yields an AOP proxy that uses a \lstinline|TransactionInterceptor| in conjunction with an appropriate \lstinline|TransactionManager| implementation to drive transactions around method invocations.
+
+The following image shows a conceptual view of calling a method on a transactional proxy:
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{transactions-aop}
+    \caption{Spring Transaction Management Overview}
+    \label{fig:transactions-aop}
+\end{figure}
+
+Since declarative transaction management is made possible using Spring AOP, which by default uses JDK Dynamic Proxies, only public methods called from outside the class are affected by the @Transactional annotation.
+
 \subsection{Manual}
 
-Instead of using the @Transaction annotation, transactions can be managed programmatically using TransactionTemplate.
+Instead of using the @Transactional annotation, transactions can be managed programmatically using TransactionTemplate.
 
 To be used, it needs to be initialized it with a PlatformTransactionManager.
 
@@ -1827,9 +1847,38 @@ Spring provides the following options for executing SQL scripts programmatically
     \item org.springframework.test.context.testng.AbstractTransactionalTestNGSpringContextTests
 \end{itemize}
 
-\lstinline|ScriptUtils| provides a collection of static utility methods for working with SQL scripts and is mainly intended for internal use within the framework. However, if you require full control over how SQL scripts are parsed and run, ScriptUtils may suit your needs better than some of the other alternatives described later.
+\lstinline|ScriptUtils| provides a collection of static utility methods (all called \lstinline|executeSqlScript|) for working with SQL scripts and is mainly intended for internal use within the framework. However, if you require full control over how SQL scripts are parsed and run, ScriptUtils may suit your needs better than some of the other alternatives described later.
+
+\begin{lstlisting}
+    // one of 4 overloaded versions
+    public static void executeSqlScript(
+        Connection connection,
+        EncodedResource resource,
+        boolean continueOnError,
+        boolean ignoreFailedDrops,
+        String commentPrefix,
+        @Nullable
+        String separator,
+        String blockCommentStartDelimiter,
+        String blockCommentEndDelimiter
+    ) throws ScriptException
+\end{lstlisting}
 
 \lstinline|ResourceDatabasePopulator| provides an object-based API for programmatically populating, initializing, or cleaning up a database by using SQL scripts defined in external resources. ResourceDatabasePopulator provides options for configuring the character encoding, statement separator, comment delimiters, and error handling flags used when parsing and running the scripts.
+
+\begin{lstlisting}
+    //  Populates, initializes, or cleans up a database using SQL scripts defined in external resources.
+
+    public class ResourceDatabasePopulator implements DatabasePopulator
+
+    /*
+    Call addScript(org.springframework.core.io.Resource) to add a single SQL script location.
+    Call addScripts(org.springframework.core.io.Resource...) to add multiple SQL script locations.
+    Consult the setter methods in this class for further configuration options.
+    Call populate(java.sql.Connection) or execute(javax.sql.DataSource) to initialize or clean up the database using the configured scripts.
+    */
+
+\end{lstlisting}
 
 In addition to the aforementioned mechanisms for running SQL scripts programmatically, you can declare the \lstinline|@Sql| annotation on a test class or test method to configure individual SQL statements or the resource paths to SQL scripts that should be run against a given database before or after an integration test class or test method. Support for @Sql is provided by the \lstinline|SqlScriptsTestExecutionListener|, which is enabled by default.
 
@@ -2246,13 +2295,6 @@ UriComponentsBuilder helps to build URI’s from URI templates with variables.
     .build();
 
     URI uri = uriComponents.expand("Westin", "123").toUri();
-
-    Static factory method with a URI template.
-    Add or replace URI components.
-    Request to have the URI template and URI variables encoded.
-    Build a UriComponents.
-    Expand variables and obtain the URI.
-
 \end{lstlisting}
 
 The preceding example can be consolidated into one chain and shortened with buildAndExpand:
@@ -2311,10 +2353,6 @@ The following example shows how to configure a RestTemplate:
     URI uri = uriBuilderFactory.uriString("/hotels/{hotel}")
     .queryParam("q", "{q}")
     .build("Westin", "123");
-
-
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
 \end{lstlisting}
 
 \subsection{View Controllers}
@@ -2359,7 +2397,7 @@ The following example configures content negotiation view resolution by using JS
 
 The MVC Java configuration and the MVC XML namespace provide default configuration suitable for most applications and a configuration API to customize it.
 
-You can use the @EnableWebMvc annotation to enable MVC configuration with programmatic configuration, or <mvc:annotation-driven> with XML configuration:
+You can use the @EnableWebMvc annotation to enable MVC configuration with programmatic configuration, or \textless mvc:annotation-driven \textgreater  with XML configuration:
 
 \begin{lstlisting}
     @Configuration
@@ -2559,6 +2597,54 @@ Examples:
     }
 \end{lstlisting}
 
+\subsection{SpringApplication}
+
+In addition to the usual Spring Framework events, such as ContextRefreshedEvent, a SpringApplication sends some additional application events.
+
+Some events are actually triggered before the ApplicationContext is created, so you cannot register a listener on those as a @Bean. You can register them with the SpringApplication.addListeners...) method or the SpringApplicationBuilder.listeners(...) method.
+
+If you want those listeners to be registered automatically, regardless of the way the application is created, you can add a \lstinline|META-INF/spring.factories| file to your project and reference your listener(s) by using the ApplicationListener key, as shown in the following example:
+
+\begin{lstlisting}
+    org.springframework.context.ApplicationListener = com.example.project.MyListener
+\end{lstlisting}
+
+\subsection{More on spring.factories}
+
+The spring.factories file can be used to register custom interface implementations in the following cases:
+
+\begin{itemize}
+    \item Register application event listeners regardless of how the Spring Boot application is created (configured). This is done by implementing a class that inherits from SpringApplicationEvent.
+    \item Locate auto-configuration candidates in, for instance, your own starter module.
+    \item Register a filter to limit the auto-configuration classes considered. See AutoConfigurationImportFilter.
+    \item  Activate application listeners that create a file containing the application process id and/or create file(s) containing the port number(s) used by the running web server (if any). These listeners, ApplicationPidFileWriter and WebServerPortFileWriter, both implement the ApplicationListener interface.
+    \item Register failure analyzers. Failure analyzers implement the FailureAnalyzer interface.
+    \item Customize the environment or application context prior to Spring Boot application startup, by implementing the ApplicationListener, ApplicationContextListener or the EnvironmentPostProcessor interfaces.
+    \item Register the availability of view template providers. See TemplateAvailabilityProvider interface.
+\end{itemize}
+\subsection{ApplicationContext in Boot}
+
+A SpringApplication attempts to create the right type of ApplicationContext on your behalf. The algorithm used to determine a WebApplicationType is the following:
+
+\begin{itemize}
+    \item If Spring MVC is present, an AnnotationConfigServletWebServerApplicationContext is used.
+    \item If Spring MVC is not present and Spring WebFlux is present, an AnnotationConfigReactiveWebServerApplicationContext is used.
+    \item Otherwise, AnnotationConfigApplicationContext is used.
+\end{itemize}
+
+It is also possible to take complete control of the ApplicationContext type that is used by calling setApplicationContextFactory(...).
+
+
+Architecture Overview (see \ref{fig:spring-web}):
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{spring-web}
+    \caption{Spring Boot Web Architecture Overview}
+    \label{fig:spring-web}
+\end{figure}
+
+
 \subsection{Profiles in Spring Boot}
 
 In Spring Boot, the additional annotation @ConfigurationProperties is available. This results in an additional way to use profiles.
@@ -2647,7 +2733,16 @@ You can programmatically set active profiles by calling SpringApplication.setAdd
 
 \subsubsection{Profile-specific Configuration Files}
 
-Profile-specific variants of both application.properties (or application.yaml) and files referenced through @ConfigurationProperties are considered as files and loaded.
+Profile-specific variants of both application.properties (or application.yaml)
+
+
+\subsubsection{Profile Specific Files}
+
+As well as application property files, Spring Boot will also attempt to load profile-specific files using the naming convention application-{profile}. For example, if your application activates a profile named prod and uses YAML files, then both application.yaml and application-prod.yaml will be considered.
+
+Profile-specific properties are loaded from the same locations as standard application.properties, with profile-specific files always overriding the non-specific ones. If several profiles are specified, a last-wins strategy applies. For example, if profiles prod,live are specified by the spring.profiles.active property, values in application-prod.properties can be overridden by those in application-live.properties.
+
+In addition, files referenced through @ConfigurationProperties are loaded.
 
 \subsection{Externalized Configuration}
 
@@ -2725,34 +2820,6 @@ The following example shows how to specify two distinct files:
 
 spring.config.name, spring.config.location, and spring.config.additional-location are used very early to determine which files have to be loaded. They must be defined as an environment property (typically an OS environment variable, a system property, or a command-line argument).
 
-\subsubsection{Profile Specific Files}
-
-As well as application property files, Spring Boot will also attempt to load profile-specific files using the naming convention application-{profile}. For example, if your application activates a profile named prod and uses YAML files, then both application.yaml and application-prod.yaml will be considered.
-
-Profile-specific properties are loaded from the same locations as standard application.properties, with profile-specific files always overriding the non-specific ones. If several profiles are specified, a last-wins strategy applies. For example, if profiles prod,live are specified by the spring.profiles.active property, values in application-prod.properties can be overridden by those in application-live.properties.
-
-\subsection{ApplicationContext in Boot}
-
-A SpringApplication attempts to create the right type of ApplicationContext on your behalf. The algorithm used to determine a WebApplicationType is the following:
-
-\begin{itemize}
-    \item If Spring MVC is present, an AnnotationConfigServletWebServerApplicationContext is used.
-    \item If Spring MVC is not present and Spring WebFlux is present, an AnnotationConfigReactiveWebServerApplicationContext is used.
-    \item Otherwise, AnnotationConfigApplicationContext is used.
-\end{itemize}
-
-It is also possible to take complete control of the ApplicationContext type that is used by calling setApplicationContextFactory(...).
-
-
-Architecture Overview (see \ref{fig:spring-web}):
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=1\linewidth]{spring-web}
-    \caption{Spring Boot Web Architecture Overview}
-    \label{fig:spring-web}
-\end{figure}
-
 \subsection{Spring Boot Auto-Configuration}
 
 When @EnableAutoConfiguration is present, beans annotated with @AutoConfiguration  will be configured.
@@ -2768,61 +2835,11 @@ Spring's DataSourceAutoConfiguration class is one example. See fig. \ref{fig:dat
     \label{fig:datasourceautoconfiguration}
 \end{figure}
 
-
-\subsection{Externalized Configuration}
-
-Spring Boot lets you externalize your configuration so that you can work with the same application code in different environments. You can use a variety of external configuration sources including Java properties files, YAML files, environment variables, and command-line arguments.
-
-Property values can be injected directly into your beans by using the \lstinline |@Value| annotation, accessed through Spring’s Environment abstraction, or be bound to structured objects through \lstinline[]|@ConfigurationProperties|.
-
-Differences between both are:
-
-\begin{itemize}
-    \item @ConfigurationProperties does support relaxed binding, allowing for more flexibility in property names and values. On the other hand, @Value does not have this feature, requiring an exact match between the property name and the field.
-    \item @ConfigurationProperties can be validated using JSR-303 bean validation, providing a way to enforce constraints on the properties being bound. In contrast, @Value does not have built-in support for bean validation.
-    \item @ConfigurationProperties is designed to bind properties to entire classes, allowing for a more structured and organized approach to configuration. On the other hand, @Value is typically used to bind specific properties to individual fields within a class.
-\end{itemize}
-
-Spring Boot uses a very particular PropertySource order that is designed to allow sensible overriding of values. Sources are considered in the following order:
-
-\begin{itemize}
-    \item Default properties (specified by setting SpringApplication.setDefaultProperties).
-    \item @PropertySource annotations on your @Configuration classes. Please note that such property sources are not added to the Environment until the application context is being refreshed. This is too late to configure certain properties such as logging.* and spring.main.* which are read before refresh begins.
-    \item Config data (such as application.properties files).
-    \item A RandomValuePropertySource that has properties only in random.*.
-    \item OS environment variables.
-    \item Java System properties (System.getProperties()).
-    \item JNDI attributes from java:comp/env.
-    \item ServletContext init parameters.
-    \item ServletConfig init parameters.
-    \item Properties from SPRING\_APPLICATION\_JSON (inline JSON embedded in an environment variable or system property).
-    \item Command line arguments.
-    \item properties attribute on your tests. Available on @SpringBootTest and the test annotations for testing a particular slice of your application.
-    \item @DynamicPropertySource annotations in your tests.
-    \item @TestPropertySource annotations on your tests.
-    \item Devtools global settings properties in the \$HOME/.config/spring-boot directory when devtools is active.
-\end{itemize}
-
-\subsection{ApplicationContext in Boot}
-
-A SpringApplication attempts to create the right type of ApplicationContext on your behalf. The algorithm used to determine a WebApplicationType is the following:
-
-\begin{itemize}
-    \item If Spring MVC is present, an AnnotationConfigServletWebServerApplicationContext is used.
-    \item If Spring MVC is not present and Spring WebFlux is present, an AnnotationConfigReactiveWebServerApplicationContext is used.
-    \item Otherwise, AnnotationConfigApplicationContext is used.
-\end{itemize}
-
-It is also possible to take complete control of the ApplicationContext type that is used by calling setApplicationContextFactory(...).
-
-
 \subsection{Testing with Spring Boot}
 
 Test support is provided by two modules: spring-boot-test contains core items, and spring-boot-test-autoconfigure supports auto-configuration for tests.
 
 spring-boot-starter-test imports both Spring Boot test modules as well as JUnit Jupiter, AssertJ, Hamcrest, and a number of other useful libraries. Precisely:
-
-
 
 \begin{itemize}
     \item JUnit 5: The de-facto standard for unit testing Java applications.
@@ -2842,8 +2859,6 @@ spring-boot-starter-test imports both Spring Boot test modules as well as JUnit 
     \item Awaitility: A library for testing asynchronous systems.
 
 \end{itemize}
-
-
 
 By default, @SpringBootTest will not start a server. You can use the webEnvironment attribute of @SpringBootTest to further refine how your tests run:
 
