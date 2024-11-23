@@ -567,6 +567,8 @@ To use the @Inject annotation, declare the javax.inject library as a Gradle or M
        \item On methods annotated with the @Bean annotation.
    \end{itemize}
 
+    The profile string may contain a simple profile name (for example, production) or a profile expression. A profile expression allows for more complicated profile logic to be expressed. The following operators are supported in profile expressions: \lstinline{!,\&,|}.
+
     To define alternative beans with different profile conditions, use distinct Java method names pointing to the same bean name via the @Bean name attribute:
 
     \begin{lstlisting}
@@ -2137,6 +2139,9 @@ Spring Web MVC is the original web framework built on the Servlet API and has be
     //  A View instance to use for rendering together with the implicit model
     View
 
+    // The view and model attributes to use and, optionally, a response status.
+    ModelAndView
+
     // Attributes to be added to the implicit model, with the view name implicitly determined through a RequestToViewNameTranslator.
 
     java.util.Map, org.springframework.ui.Model
@@ -2392,6 +2397,22 @@ The following example configures content negotiation view resolution by using JS
     }
 \end{lstlisting}
 
+\subsection{Template Engines}
+
+As well as REST web services, you can also use Spring MVC to serve dynamic HTML content. Spring MVC supports a variety of templating technologies, including Thymeleaf, FreeMarker, and JSPs. Also, many other templating engines include their own Spring MVC integrations.
+
+Spring Boot includes auto-configuration support for the following templating engines:
+
+\begin{itemize}
+    \item FreeMarker
+    \item Groovy
+    \item Thymeleaf
+    \item Mustache
+\end{itemize}
+
+If possible, JSPs should be avoided. There are several known limitations when using them with embedded servlet containers.
+
+When you use one of these templating engines with the default configuration, your templates are picked up automatically from src/main/resources/templates.
 
 \subsection{MVC Config}
 
@@ -2597,6 +2618,10 @@ Examples:
     }
 \end{lstlisting}
 
+Spring Boot provides integration with three JSON mapping libraries: Gson, Jackson, and JSON-B.
+
+Jackson is the preferred and default library.
+
 \subsection{SpringApplication}
 
 In addition to the usual Spring Framework events, such as ContextRefreshedEvent, a SpringApplication sends some additional application events.
@@ -2608,6 +2633,14 @@ If you want those listeners to be registered automatically, regardless of the wa
 \begin{lstlisting}
     org.springframework.context.ApplicationListener = com.example.project.MyListener
 \end{lstlisting}
+
+A Spring Boot application can be shut down programmatically in the following ways:
+\begin{itemize}
+    \item use \lstinline|AbstractApplicationContext.close()|
+    \item call \lstinline|SpringApplication.exit()|
+    \item register a shutdown hook: \lstinline|AbstractApplicationContext.registerShutdownHook()|
+    \item use Actuator (need to enable the shutdown endpoint)
+\end{itemize}
 
 \subsection{More on spring.factories}
 
@@ -2644,6 +2677,7 @@ Architecture Overview (see \ref{fig:spring-web}):
     \label{fig:spring-web}
 \end{figure}
 
+\subsection{Creating Your Own Auto-configuration}
 
 \subsection{Profiles in Spring Boot}
 
@@ -2874,7 +2908,7 @@ By default, @SpringBootTest will not start a server. You can use the webEnvironm
 
 \subsection{Test Configuration}
 
-In Spring testing in general, we use @ContextConfiguration(classes=...) in order to specify which Spring @Configuration to load.
+In Spring testing in general, we use \lstinline|@ContextConfiguration(classes=...)| in order to specify which Spring @Configuration to load.
 When testing Spring Boot applications, this is often not required. Spring Boot’s @*Test annotations search for the primary configuration automatically.
 
 The search algorithm works up from the package that contains the test until it finds a class annotated with @SpringBootApplication or @SpringBootConfiguration.
@@ -3035,13 +3069,13 @@ You can enable or disable each individual endpoint and expose them (make them re
 
 The built-in endpoints are auto-configured only when they are available. Most applications choose exposure over HTTP, where the ID of the endpoint and a prefix of /actuator is mapped to a URL. For example, by default, the health endpoint is mapped to /actuator/health.
 
-By default, \textit{all endpoints except for shutdown are enabled}. To configure the enablement of an endpoint, use its management.endpoint.<id>.enabled property. The following example enables the shutdown endpoint:
+By default, \textit{all endpoints except for shutdown are enabled}. To configure the enablement of an endpoint, use its management.endpoint.\textless id\textgreater.enabled property. The following example enables the shutdown endpoint:
 
 \begin{lstlisting}
    management.endpoint.shutdown.enabled=true
 \end{lstlisting}
 
-If you prefer endpoint enablement to be opt-in rather than opt-out, set the management.endpoints.enabled-by-default property to false and use individual endpoint enabled properties to opt back in. The following example enables the info endpoint and disables all other endpoints:
+If you prefer endpoint enablement to be opt-in rather than opt-out, set the \lstinline|management.endpoints.enabled-by-default| property (which by default is true) to false and use individual endpoint enabled properties to opt back in. The following example enables the info endpoint and disables all other endpoints:
 
 \begin{lstlisting}
     management.endpoints.enabled-by-default=false
@@ -3070,6 +3104,25 @@ For example, to only expose the health and info endpoints over JMX, use the foll
     management.endpoints.web.exposure.exclude=env,beans
 
 \end{lstlisting}
+
+\paragraph{Monitoring and Management Over HTTP}
+
+Customization:
+
+\begin{lstlisting}
+    // base for all endpoints
+    management.endpoints.web.base-path=
+
+    // for a specific endpoint
+    management.endpoints.web.path-mapping.<actuator>
+    // e.g.
+    management.endpoints.web.path-mapping.health=custom-health
+
+    // prt
+    management.server.port=8081
+\end{lstlisting}
+
+
 
 \paragraph{Health information}
 
@@ -3154,11 +3207,14 @@ Auto-configured InfoContributors may be:
 \end{lstlisting}
 
 Whether an individual contributor is enabled is controlled by its management.info.someid.enabled property.
+
 Different contributors have different defaults for this property, depending on their prerequisites and the nature of the information that they expose.
 
 With no prerequisites to indicate that they should be enabled, the env, java, os, and process contributors are disabled by default.
 
 The build and git info contributors are enabled by default.
+
+The Health Indicator status severity order be changed using the \lstinline|management.health.status.order| property.
 
 \paragraph{Custom Application Information}
 
@@ -3194,33 +3250,6 @@ When the env contributor is enabled, you can customize the data exposed by the i
 \end{lstlisting}
 
 
-
-\subsubsection{Monitoring and Management Over HTTP}
-
-Customization:
-
-\begin{lstlisting}
-    // base for all endpoints
-    management.endpoints.web.base-path=
-
-    // for a specific endpoint
-    management.endpoints.web.path-mapping.<actuator>
-    // e.g.
-    management.endpoints.web.path-mapping.health=custom-health
-
-    // prt
-    management.server.port=8081
-\end{lstlisting}
-
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
-\begin{lstlisting}
-    management.endpoint.shutdown.enabled=true
-\end{lstlisting}
 
 
 
