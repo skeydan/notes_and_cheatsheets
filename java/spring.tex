@@ -201,6 +201,14 @@ Your beans remain live in the application context until it is closed by calling 
 \subsubsection{Custom destruction}
 If a bean implements the DisposableBean interface, Spring calls its destroy() method to destroy any process or clean up the resources of your application. There are other methods to achieve this step-for example, you can use the destroy-method of the tag, the destroyMethod attribute of the `@Bean` annotation, and JSR 250's `@PreDestroy` annotation.
 
+Precisely, the order of invocation is this:
+
+\begin{itemize}
+    \item Any methods in the bean implementation class annotated with @PreDestroy are invoked.
+    \item Any destroy method in a bean implementation class implementing the DisposableBean interface is invoked.
+    \item Any custom bean destruction method is invoked. Bean destruction methods can be specified either in the value of the destroy-method attribute in the corresponding \textless bean \textgreater element in a Spring XML configuration or in the destroyMethod property of the @Bean annotation.
+\end{itemize}
+
 \section{Dependency injection}
 
 Note: In addition to bean definitions that contain information on how to create a specific bean, the ApplicationContext implementations also permit the registration of existing objects that are created outside the container (by users).
@@ -305,6 +313,140 @@ Implementing interfaces are:
        XmlWebApplicationContext
 \end{lstlisting}
 
+\subsection{Standard and Custom Events}
+
+Event handling in the ApplicationContext is provided through the ApplicationEvent class and the ApplicationListener interface. If a bean that implements the ApplicationListener interface is deployed into the context, every time an ApplicationEvent gets published to the ApplicationContext, that bean is notified.
+
+The event infrastructure offers an annotation-based model as well as the ability to publish any arbitrary event (that is, an object that does not necessarily extend from ApplicationEvent). When such an object is published, we wrap it in an event for you.
+
+These are the standard events that Spring provides:
+
+ContextRefreshedEvent Published when the ApplicationContext is initialized or refreshed (for example, by using the refresh() method on the ConfigurableApplicationContext interface). Here, “initialized” means that all beans are loaded, post-processor beans are detected and activated, singletons are pre-instantiated, and the ApplicationContext object is ready for use. As long as the context has not been closed, a refresh can be triggered multiple times, provided that the chosen ApplicationContext actually supports such “hot” refreshes. For example, XmlWebApplicationContext supports hot refreshes, but GenericApplicationContext does not.
+
+ContextStartedEvent
+Published when the ApplicationContext is started by using the start() method on the ConfigurableApplicationContext interface. Here, “started” means that all Lifecycle beans receive an explicit start signal. Typically, this signal is used to restart beans after an explicit stop, but it may also be used to start components that have not been configured for autostart (for example, components that have not already started on initialization).
+
+ContextStoppedEvent Published when the ApplicationContext is stopped by using the stop() method on the ConfigurableApplicationContext interface. Here, “stopped” means that all Lifecycle beans receive an explicit stop signal. A stopped context may be restarted through a start() call.
+
+ContextClosedEvent Published when the ApplicationContext is being closed by using the close() method on the ConfigurableApplicationContext interface or via a JVM shutdown hook. Here, "closed" means that all singleton beans will be destroyed. Once the context is closed, it reaches its end of life and cannot be refreshed or restarted.
+
+RequestHandledEvent A web-specific event telling all beans that an HTTP request has been serviced. This event is published after the request is complete. This event is only applicable to web applications that use Spring’s DispatcherServlet.
+
+ServletRequestHandledEvent A subclass of RequestHandledEvent that adds Servlet-specific context information.
+
+You can also create and publish your own custom events. The following example shows a simple class that extends Spring’s ApplicationEvent base class:
+
+public class BlockedListEvent extends ApplicationEvent {
+
+    private final String address;
+    private final String content;
+
+    public BlockedListEvent(Object source, String address, String content) {
+        super(source);
+        this.address = address;
+        this.content = content;
+    }
+
+    // accessor and other methods...
+}
+
+To publish a custom ApplicationEvent, call the publishEvent() method on an ApplicationEventPublisher. Typically, this is done by creating a class that implements ApplicationEventPublisherAware and registering it as a Spring bean. The following example shows such a class:
+
+Java
+
+Kotlin
+
+public class EmailService implements ApplicationEventPublisherAware {
+
+    private List<String> blockedList;
+    private ApplicationEventPublisher publisher;
+
+    public void setBlockedList(List<String> blockedList) {
+        this.blockedList = blockedList;
+    }
+
+    public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
+        this.publisher = publisher;
+    }
+
+    public void sendEmail(String address, String content) {
+        if (blockedList.contains(address)) {
+            publisher.publishEvent(new BlockedListEvent(this, address, content));
+            return;
+        }
+        // send email...
+    }
+}
+
+At configuration time, the Spring container detects that EmailService implements ApplicationEventPublisherAware and automatically calls setApplicationEventPublisher(). In reality, the parameter passed in is the Spring container itself. You are interacting with the application context through its ApplicationEventPublisher interface.
+
+To receive the custom ApplicationEvent, you can create a class that implements ApplicationListener and register it as a Spring bean. The following example shows such a class:
+
+Java
+
+Kotlin
+
+public class BlockedListNotifier implements ApplicationListener<BlockedListEvent> {
+
+    private String notificationAddress;
+
+    public void setNotificationAddress(String notificationAddress) {
+        this.notificationAddress = notificationAddress;
+    }
+
+    public void onApplicationEvent(BlockedListEvent event) {
+        // notify appropriate parties via notificationAddress...
+    }
+}
+
+Notice that ApplicationListener is generically parameterized with the type of your custom event (BlockedListEvent in the preceding example). This means that the onApplicationEvent() method can remain type-safe, avoiding any need for downcasting. You can register as many event listeners as you wish, but note that, by default, event listeners receive events synchronously. This means that the publishEvent() method blocks until all listeners have finished processing the event. One advantage of this synchronous and single-threaded approach is that, when a listener receives an event, it operates inside the transaction context of the publisher if a transaction context is available. If another strategy for event publication becomes necessary, for example, asynchronous event processing by default, see the javadoc for Spring’s ApplicationEventMulticaster interface and SimpleApplicationEventMulticaster implementation for configuration options which can be applied to a custom "applicationEventMulticaster" bean definition. In these cases, ThreadLocals and logging context are not propagated for the event processing. See the @EventListener Observability section for more information on Observability concerns.
+
+The following example shows the bean definitions used to register and configure each of the classes above:
+
+<bean id="emailService" class="example.EmailService">
+<property name="blockedList">
+<list>
+<value>known.spammer@example.org</value>
+<value>known.hacker@example.org</value>
+<value>john.doe@example.org</value>
+</list>
+</property>
+</bean>
+
+<bean id="blockedListNotifier" class="example.BlockedListNotifier">
+<property name="notificationAddress" value="blockedlist@example.org"/>
+</bean>
+
+<!-- optional: a custom ApplicationEventMulticaster definition -->
+<bean id="applicationEventMulticaster" class="org.springframework.context.event.SimpleApplicationEventMulticaster">
+<property name="taskExecutor" ref="..."/>
+<property name="errorHandler" ref="..."/>
+</bean>
+
+Putting it all together, when the sendEmail() method of the emailService bean is called, if there are any email messages that should be blocked, a custom event of type BlockedListEvent is published. The blockedListNotifier bean is registered as an ApplicationListener and receives the BlockedListEvent, at which point it can notify appropriate parties.
+
+\subsection{Annotation-based Event Listeners}
+
+You can register an event listener on any method of a managed bean by using the @EventListener annotation. Example:
+
+\begin{lstlisting}
+   public class BlockedListNotifier {
+
+       private String notificationAddress;
+
+       public void setNotificationAddress(String notificationAddress) {
+           this.notificationAddress = notificationAddress;
+       }
+
+       @EventListener
+       public void processBlockedListEvent(BlockedListEvent event) {
+           // notify appropriate parties via notificationAddress...
+       }
+   }
+\end{lstlisting}
+
+
+
 \section{Configuration: Implicit vs. Explicit}
 
     Also referred to as Java-based (decoupled) and annotation-based.
@@ -386,6 +528,31 @@ Implementing interfaces are:
        private X x;
     \end{lstlisting}
 
+\subsubsection{Using @Primary in conjunction with @Qualified}
+
+For example, when you work with two different databases, using the @Primary annotation allows you to specify the main DataSource. Additional DataSources can be configured with different qualifiers, allowing you to inject them as needed.
+
+\begin{lstlisting}
+
+    @Configuration
+    public class DataSourceConfig {
+
+        @Bean
+        @Primary
+        @ConfigurationProperties(prefix = "spring.datasource")
+        public DataSource primaryDataSource() {
+            return DataSourceBuilder.create().build();
+        }
+
+        @Bean
+        @ConfigurationProperties(prefix = "spring.second-datasource")
+        public DataSource secondaryDataSource() {
+            return DataSourceBuilder.create().build();
+        }
+    }
+
+\end{{lstlisting}
+
 \subsubsection{@Bean}
 
     @Bean marks a factory method which instantiates a Spring bean.
@@ -424,7 +591,9 @@ Here’s an example injecting a field. Note that the bean id and the correspondi
     }
 \end{lstlisting}
 
-\subsubsection{@Inject}
+\subsubsection{@Inject and @Named}
+
+Spring offers support for JSR-330 standard annotations (Dependency Injection). Those annotations are scanned in the same way as the Spring annotations. To use them, you need to have the relevant jars in your classpath.
 
 The @Inject annotation matches by type, qualifier, or name (in this order). It is applicable to setter and field injection. With @Inject, the class reference variable's name and the bean name don’t have to match.
 
@@ -448,6 +617,103 @@ To use the @Inject annotation, declare the javax.inject library as a Gradle or M
         private File defaultFile;
     }
 \end{lstlisting}
+
+Furthermore, you may declare your injection point as a Provider, allowing for on-demand access to beans of shorter scopes or lazy access to other beans through a Provider.get() call. The following example offers a variant of the preceding example:
+
+\begin{lstlisting}
+    import jakarta.inject.Inject;
+    import jakarta.inject.Provider;
+
+    public class SimpleMovieLister {
+
+        private Provider<MovieFinder> movieFinder;
+
+        @Inject
+        public void setMovieFinder(Provider<MovieFinder> movieFinder) {
+            this.movieFinder = movieFinder;
+        }
+
+    public void listMovies() {
+        this.movieFinder.get().findMovies(...);
+        // ...
+    }
+}
+\end{lstlisting}
+
+If you would like to use a qualified name for the dependency that should be injected, you should use the\lstinline| @Named| annotation, as the following example shows:
+
+\begin{lstlisting}
+    import jakarta.inject.Inject;
+    import jakarta.inject.Named;
+
+    public class SimpleMovieLister {
+
+        private MovieFinder movieFinder;
+
+        @Inject
+        public void setMovieFinder(@Named("main") MovieFinder movieFinder) {
+            this.movieFinder = movieFinder;
+        }
+
+        // ...
+    }
+\end{lstlisting}
+
+\subsubsection{@Named and @ManagedBean: Standard Equivalents to the @Component Annotation}
+
+Instead of @Component, you can use @jakarta.inject.Named or jakarta.annotation.ManagedBean:
+
+\begin{lstlisting}
+
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+
+@Named("movieListener")  // @ManagedBean("movieListener") could be used as well
+public class SimpleMovieLister {
+
+    private MovieFinder movieFinder;
+
+    @Inject
+    public void setMovieFinder(MovieFinder movieFinder) {
+        this.movieFinder = movieFinder;
+    }
+
+    // ...
+}
+\end{lstlisting}
+
+It is very common to use @Component without specifying a name for the component. @Named can be used in a similar fashion:
+
+\begin{lstlisting}
+    import jakarta.inject.Inject;
+    import jakarta.inject.Named;
+
+    @Named
+    public class SimpleMovieLister {
+
+        private MovieFinder movieFinder;
+
+        @Inject
+        public void setMovieFinder(MovieFinder movieFinder) {
+            this.movieFinder = movieFinder;
+        }
+
+        // ...
+    }
+\end{lstlisting}
+
+When you use @Named or @ManagedBean, you can use component scanning in the exact same way as when you use Spring annotations:
+
+\begin{lstlisting}
+
+@Configuration
+@ComponentScan(basePackages = "org.example")
+public class AppConfig  {
+    // ...
+}
+
+\end{lstlisting}
+I
 
 \subsubsection{@Value}
 
@@ -829,6 +1095,39 @@ Do implicit type conversion of arguments.
 
 Causes Java objects returned by the Controller to be processed by HttpMessageConverters in order to return information to the client in the form requested in the Accept header.
 
+Example (assuming the client requests JSON):
+
+Here, the @ResponseBody annotation tells a controller that the \textit{object} returned is automatically serialized into \textit{JSON} and passed back into the \textit{HttpResponse} object.
+
+Suppose we have a custom Response object:
+
+\begin{lstlisting}
+    public class ResponseTransfer {
+        private String text;
+
+        // standard getters/setters
+    }
+\end{lstlisting}
+
+Next, the associated controller can be implemented:
+
+\begin{lstlisting}
+   @Controller
+   @RequestMapping("/post")
+   public class ExamplePostController {
+
+       @Autowired
+       ExampleService exampleService;
+
+       @PostMapping("/response")
+       @ResponseBody
+       public ResponseTransfer postResponseController(
+       @RequestBody LoginForm loginForm) {
+           return new ResponseTransfer("Thanks For Posting!!!");
+       }
+   }
+\end{lstlisting}
+
 \subsubsection{@ResponseStatus}
 
     Used to return a status other than 200.
@@ -841,6 +1140,33 @@ Causes Java objects returned by the Controller to be processed by HttpMessageCon
 \subsubsection{@RequestBody}
 
     Used to extract the request body.
+
+    More precisely, @RequestBody maps the HttpRequest body to a transfer or domain object, enabling automatic deserialization of the inbound HttpRequest body onto a Java object.
+
+    Example:
+
+    \begin{lstlisting}
+
+    @PostMapping("/request")
+    public ResponseEntity postController(
+    @RequestBody LoginForm loginForm) {
+
+        exampleService.fakeAuthenticate(loginForm);
+        return ResponseEntity.ok(HttpStatus.OK);
+    }
+
+    \end{lstlisting}
+    Here, Spring automatically deserializes the JSON into a Java type, assuming an appropriate one is specified.
+
+    \begin{lstlisting}
+        @ResponseStatus(HttpStatus.NO_CONTENT)
+        public void updateOrder(...){}
+    \end{lstlisting}
+
+    \begin{lstlisting}
+        @ResponseStatus(HttpStatus.NO_CONTENT)
+        public void updateOrder(...){}
+    \end{lstlisting}
 
 \section{Aware Interfaces}
 
@@ -2167,12 +2493,22 @@ To register custom formatters and converters, use the following:
 \begin{lstlisting}
 \end{lstlisting}
 
-\begin{lstlisting}
-\end{lstlisting}
-
 \subsection{Validation}
 
-By default, if Bean Validation is present on the classpath (for example, Hibernate Validator), the LocalValidatorFactoryBean is registered as a global Validator for use with @Valid and @Validated on controller method arguments.
+JSR-303/JSR-380 annotations provide a standard way of validating objects in Java. These annotations can be used on domain object fields to enforce validation constraints.
+
+Example:
+
+\begin{lstlisting}
+    public class User {
+
+        @NotNull
+        @Size(min = 1, max = 20)
+        private String name;
+    }
+\end{lstlisting}
+
+In addition, if Bean Validation is present on the classpath (for example, Hibernate Validator), the LocalValidatorFactoryBean is registered as a global Validator for use with @Valid and @Validated on controller method arguments.
 
 You can customize the global Validator instance, as the following example shows:
 
@@ -2491,6 +2827,31 @@ RestTemplate uses the same HTTP library abstraction as RestClient. By default, i
 RestTemplate can be instrumented for observability, in order to produce metrics and traces.
 
 Objects passed into and returned from RestTemplate methods are converted to and from HTTP messages with the help of an HttpMessageConverter.
+
+\section{Integration Features}
+
+\subsection{Task Execution and Scheduling}
+Spring provides annotation support for both task scheduling and asynchronous method execution.
+
+To enable support for @Scheduled and @Async annotations, you can add @EnableScheduling and @EnableAsync to one of your @Configuration classes, or \textless task:annotation-driven \textgreater element:
+
+\begin{lstlisting}
+    @Configuration
+    @EnableAsync
+    @EnableScheduling
+    public class SchedulingConfiguration {
+    }
+
+\end{lstlisting}
+
+@Scheduled usage example:
+
+\begin{lstlisting}
+    @Scheduled(fixedDelay = 5000)
+    public void doSomething() {
+        // something that should run periodically
+    }
+\end{lstlisting}
 
 \section{Spring Boot (Web): Servlet Web Applications}
 
