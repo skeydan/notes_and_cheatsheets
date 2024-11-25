@@ -315,28 +315,32 @@ Implementing interfaces are:
 
 \subsection{Standard and Custom Events}
 
-Event handling in the ApplicationContext is provided through the ApplicationEvent class and the ApplicationListener interface. If a bean that implements the ApplicationListener interface is deployed into the context, every time an ApplicationEvent gets published to the ApplicationContext, that bean is notified.
+Event handling in the ApplicationContext is provided through the \lstinline|ApplicationEvent| class and the \lstinline|ApplicationListener| interface. If a bean that implements the ApplicationListener interface is deployed into the context, every time an ApplicationEvent gets published to the ApplicationContext, that bean is notified.
 
-The event infrastructure offers an annotation-based model as well as the ability to publish any arbitrary event (that is, an object that does not necessarily extend from ApplicationEvent). When such an object is published, we wrap it in an event for you.
+The event infrastructure offers an annotation-based model as well as the ability to publish any arbitrary event (that is, an object that does not necessarily extend from ApplicationEvent). When such an object is published, it is wrapped in an event.
 
 These are the standard events that Spring provides:
 
-ContextRefreshedEvent Published when the ApplicationContext is initialized or refreshed (for example, by using the refresh() method on the ConfigurableApplicationContext interface). Here, “initialized” means that all beans are loaded, post-processor beans are detected and activated, singletons are pre-instantiated, and the ApplicationContext object is ready for use. As long as the context has not been closed, a refresh can be triggered multiple times, provided that the chosen ApplicationContext actually supports such “hot” refreshes. For example, XmlWebApplicationContext supports hot refreshes, but GenericApplicationContext does not.
+\begin{itemize}
+    \item ContextRefreshedEvent
 
-ContextStartedEvent
-Published when the ApplicationContext is started by using the start() method on the ConfigurableApplicationContext interface. Here, “started” means that all Lifecycle beans receive an explicit start signal. Typically, this signal is used to restart beans after an explicit stop, but it may also be used to start components that have not been configured for autostart (for example, components that have not already started on initialization).
+     Published when the ApplicationContext is initialized or refreshed (for example, by using the refresh() method on the ConfigurableApplicationContext interface). Here, “initialized” means that all beans are loaded, post-processor beans are detected and activated, singletons are pre-instantiated, and the ApplicationContext object is ready for use. As long as the context has not been closed, a refresh can be triggered multiple times, provided that the chosen ApplicationContext actually supports such “hot” refreshes. For example, XmlWebApplicationContext supports hot refreshes, but GenericApplicationContext does not.
+    \item ContextStartedEvent
 
-ContextStoppedEvent Published when the ApplicationContext is stopped by using the stop() method on the ConfigurableApplicationContext interface. Here, “stopped” means that all Lifecycle beans receive an explicit stop signal. A stopped context may be restarted through a start() call.
-
-ContextClosedEvent Published when the ApplicationContext is being closed by using the close() method on the ConfigurableApplicationContext interface or via a JVM shutdown hook. Here, "closed" means that all singleton beans will be destroyed. Once the context is closed, it reaches its end of life and cannot be refreshed or restarted.
-
-RequestHandledEvent A web-specific event telling all beans that an HTTP request has been serviced. This event is published after the request is complete. This event is only applicable to web applications that use Spring’s DispatcherServlet.
-
-ServletRequestHandledEvent A subclass of RequestHandledEvent that adds Servlet-specific context information.
+     Published when the ApplicationContext is started by using the start() method on the ConfigurableApplicationContext interface. Here, “started” means that all Lifecycle beans receive an explicit start signal. Typically, this signal is used to restart beans after an explicit stop, but it may also be used to start components that have not been configured for autostart (for example, components that have not already started on initialization).
+     \item ContextStoppedEvent Published when the ApplicationContext is stopped by using the stop() method on the ConfigurableApplicationContext interface. Here, “stopped” means that all Lifecycle beans receive an explicit stop signal. A stopped context may be restarted through a start() call.
+    \item ContextClosedEvent
+     Published when the ApplicationContext is being closed by using the close() method on the ConfigurableApplicationContext interface or via a JVM shutdown hook. Here, "closed" means that all singleton beans will be destroyed. Once the context is closed, it reaches its end of life and cannot be refreshed or restarted.
+    \item RequestHandledEvent
+     A web-specific event telling all beans that an HTTP request has been serviced. This event is published after the request is complete. This event is only applicable to web applications that use Spring’s DispatcherServlet.
+    \item ServletRequestHandledEvent
+     A subclass of RequestHandledEvent that adds Servlet-specific context information.
+\end{itemize}
 
 You can also create and publish your own custom events. The following example shows a simple class that extends Spring’s ApplicationEvent base class:
 
-public class BlockedListEvent extends ApplicationEvent {
+\begin{lstlisting}
+    public class BlockedListEvent extends ApplicationEvent {
 
     private final String address;
     private final String content;
@@ -350,80 +354,58 @@ public class BlockedListEvent extends ApplicationEvent {
     // accessor and other methods...
 }
 
-To publish a custom ApplicationEvent, call the publishEvent() method on an ApplicationEventPublisher. Typically, this is done by creating a class that implements ApplicationEventPublisherAware and registering it as a Spring bean. The following example shows such a class:
+\end{lstlisting}
 
-Java
+To publish a custom ApplicationEvent, call the publishEvent() method on an \lstinline|ApplicationEventPublisher|.
 
-Kotlin
+Typically, this is done by creating a class that implements \lstinline|ApplicationEventPublisherAware| and registering it as a Spring bean. The following example shows such a class:
 
-public class EmailService implements ApplicationEventPublisherAware {
+\begin{lstlisting}
+    public class EmailService implements ApplicationEventPublisherAware {
 
-    private List<String> blockedList;
-    private ApplicationEventPublisher publisher;
+        private List<String> blockedList;
+        private ApplicationEventPublisher publisher;
 
-    public void setBlockedList(List<String> blockedList) {
-        this.blockedList = blockedList;
-    }
-
-    public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
-        this.publisher = publisher;
-    }
-
-    public void sendEmail(String address, String content) {
-        if (blockedList.contains(address)) {
-            publisher.publishEvent(new BlockedListEvent(this, address, content));
-            return;
+        public void setBlockedList(List<String> blockedList) {
+            this.blockedList = blockedList;
         }
-        // send email...
+
+        public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
+            this.publisher = publisher;
+        }
+
+        public void sendEmail(String address, String content) {
+            if (blockedList.contains(address)) {
+                publisher.publishEvent(new BlockedListEvent(this, address, content));
+                return;
+            }
+            // send email...
+        }
     }
-}
+\end{lstlisting}
 
 At configuration time, the Spring container detects that EmailService implements ApplicationEventPublisherAware and automatically calls setApplicationEventPublisher(). In reality, the parameter passed in is the Spring container itself. You are interacting with the application context through its ApplicationEventPublisher interface.
 
 To receive the custom ApplicationEvent, you can create a class that implements ApplicationListener and register it as a Spring bean. The following example shows such a class:
 
-Java
+\begin{lstlisting}
+    public class BlockedListNotifier implements ApplicationListener<BlockedListEvent> {
 
-Kotlin
+        private String notificationAddress;
 
-public class BlockedListNotifier implements ApplicationListener<BlockedListEvent> {
+        public void setNotificationAddress(String notificationAddress) {
+            this.notificationAddress = notificationAddress;
+        }
 
-    private String notificationAddress;
-
-    public void setNotificationAddress(String notificationAddress) {
-        this.notificationAddress = notificationAddress;
+        public void onApplicationEvent(BlockedListEvent event) {
+            // notify appropriate parties via notificationAddress...
+        }
     }
+\end{lstlisting}
 
-    public void onApplicationEvent(BlockedListEvent event) {
-        // notify appropriate parties via notificationAddress...
-    }
-}
+Notice that ApplicationListener is generically parameterized with the type of your custom event (BlockedListEvent in the preceding example).
 
-Notice that ApplicationListener is generically parameterized with the type of your custom event (BlockedListEvent in the preceding example). This means that the onApplicationEvent() method can remain type-safe, avoiding any need for downcasting. You can register as many event listeners as you wish, but note that, by default, event listeners receive events synchronously. This means that the publishEvent() method blocks until all listeners have finished processing the event. One advantage of this synchronous and single-threaded approach is that, when a listener receives an event, it operates inside the transaction context of the publisher if a transaction context is available. If another strategy for event publication becomes necessary, for example, asynchronous event processing by default, see the javadoc for Spring’s ApplicationEventMulticaster interface and SimpleApplicationEventMulticaster implementation for configuration options which can be applied to a custom "applicationEventMulticaster" bean definition. In these cases, ThreadLocals and logging context are not propagated for the event processing. See the @EventListener Observability section for more information on Observability concerns.
-
-The following example shows the bean definitions used to register and configure each of the classes above:
-
-<bean id="emailService" class="example.EmailService">
-<property name="blockedList">
-<list>
-<value>known.spammer@example.org</value>
-<value>known.hacker@example.org</value>
-<value>john.doe@example.org</value>
-</list>
-</property>
-</bean>
-
-<bean id="blockedListNotifier" class="example.BlockedListNotifier">
-<property name="notificationAddress" value="blockedlist@example.org"/>
-</bean>
-
-<!-- optional: a custom ApplicationEventMulticaster definition -->
-<bean id="applicationEventMulticaster" class="org.springframework.context.event.SimpleApplicationEventMulticaster">
-<property name="taskExecutor" ref="..."/>
-<property name="errorHandler" ref="..."/>
-</bean>
-
-Putting it all together, when the sendEmail() method of the emailService bean is called, if there are any email messages that should be blocked, a custom event of type BlockedListEvent is published. The blockedListNotifier bean is registered as an ApplicationListener and receives the BlockedListEvent, at which point it can notify appropriate parties.
+You can register as many event listeners as you wish, but note that, by default, event listeners receive events synchronously. This means that the publishEvent() method blocks until all listeners have finished processing the event.
 
 \subsection{Annotation-based Event Listeners}
 
@@ -445,7 +427,89 @@ You can register an event listener on any method of a managed bean by using the 
    }
 \end{lstlisting}
 
+\subsection{The BeanFactory API}
 
+The BeanFactory API provides the underlying basis for Spring’s IoC functionality. Its specific contracts are mostly used in integration with other parts of Spring and related third-party frameworks, and its \lstinline|DefaultListableBeanFactory| implementation is a key delegate within the higher-level \lstinline|GenericApplicationContext| container.
+
+BeanFactory and related interfaces (such as \lstinline|BeanFactoryAware|, \lstinline|InitializingBean|, \lstinline|DisposableBean|) are important integration points for other framework components. By not requiring any annotations or even reflection, they allow for very efficient interaction between the container and its components. Application-level beans may use the same callback interfaces but typically prefer declarative dependency injection instead, either through annotations or through programmatic configuration.
+
+\subsubsection{BeanFactory or ApplicationContext?}
+
+Because an ApplicationContext includes all the functionality of a BeanFactory, it is generally recommended over a plain BeanFactory, except for scenarios where full control over bean processing is needed.
+
+For many extended container features, such as annotation processing and AOP proxying, the BeanPostProcessor extension point is essential. If you use only a plain DefaultListableBeanFactory, such post-processors do not get detected and activated by default.
+
+The following table lists features provided by the BeanFactory and ApplicationContext interfaces and implementations.
+
+\begin{table}[h!]
+\begin{tabular}{|c|c|c|}
+    \hline
+    BeanFactory &  ApplicationContext&  Feature\\
+    \hline
+    Bean instantiation/wiring&  Y&  Y\\
+    \hline
+    Integrated lifecycle management&  N&  Y\\
+    \hline
+    Automatic BeanPostProcessor registration&  N&  Y\\
+    \hline
+    Automatic BeanFactoryPostProcessor registration&  N&  Y\\
+    \hline
+    Convenient MessageSource access&  N&  Y\\
+    \hline
+    Built-in ApplicationEvent publication mechanism&  N&  Y\\
+    \hline
+    \hline
+\end{tabular}
+\end{table}
+
+To explicitly register a bean post-processor with a DefaultListableBeanFactory, you need to programmatically call addBeanPostProcessor, as the following example shows:
+
+\begin{lstlisting}
+    DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+    // populate the factory with bean definitions
+
+    // now register any needed BeanPostProcessor instances
+    factory.addBeanPostProcessor(new AutowiredAnnotationBeanPostProcessor());
+    factory.addBeanPostProcessor(new MyBeanPostProcessor());
+
+    // now start using the factory
+
+\end{lstlisting}
+
+To apply a BeanFactoryPostProcessor to a plain DefaultListableBeanFactory, you need to call its postProcessBeanFactory method, as the following example shows:
+
+\begin{lstlisting}
+    DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+    XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(factory);
+    reader.loadBeanDefinitions(new FileSystemResource("beans.xml"));
+
+    // bring in some property values from a Properties file
+    PropertySourcesPlaceholderConfigurer cfg = new PropertySourcesPlaceholderConfigurer();
+    cfg.setLocation(new FileSystemResource("jdbc.properties"));
+
+    // now actually do the replacement
+    cfg.postProcessBeanFactory(factory);
+
+\end{lstlisting}
+
+
+In both cases, the explicit registration steps are inconvenient, which is why the various ApplicationContext variants are preferred over a plain DefaultListableBeanFactory in Spring-backed applications, especially when relying on BeanFactoryPostProcessor and BeanPostProcessor instances for extended container functionality in a typical enterprise setup.
+
+An AnnotationConfigApplicationContext has all common annotation post-processors registered and may bring in additional processors underneath the covers through configuration annotations, such as @EnableTransactionManagement. At the abstraction level of Spring’s annotation-based configuration model, the notion of bean post-processors becomes a mere internal container detail.
+
+\subsection{Overriding Beans}
+
+Bean overriding occurs when a bean is registered using an identifier that is already allocated. While bean overriding is possible, it makes the configuration harder to read.
+Bean overriding will be deprecated in a future release.
+
+To disable bean overriding altogether, you can set the \lstinline|allowBeanDefinitionOverriding| flag to false on the ApplicationContext before it is refreshed. In such a setup, an exception is thrown if bean overriding is used.
+
+By default, the container logs every attempt to override a bean at INFO level so that you can adapt your configuration accordingly. While not recommended, you can silence those logs by setting the \lstinline|allowBeanDefinitionOverriding| flag to true.
+
+If you use Java Configuration, a corresponding \lstinline|@Bean| method always silently overrides a scanned bean class with the same component name as long as the return type of the @Bean method matches that bean class. This simply means that the container will call the @Bean factory method in favor of any pre-declared constructor on the bean class.
+
+Note:
+\textit{Spring Boot 2.1 disabled bean overriding by default as a defensive approach}. On respective attempts, a \lstinline{BeanDefinitionOverrideException} is thrown.
 
 \section{Configuration: Implicit vs. Explicit}
 
@@ -2473,6 +2537,32 @@ Spring Web MVC is the original web framework built on the Servlet API and has be
     java.util.Map, org.springframework.ui.Model
     \end{lstlisting}
 
+\subsection{Securing Endpoints}
+
+Configuring HTTP security using \lstinline|HttpSecurity| in a class extending \lstinline|WebSecurityConfigurerAdapter| allows you to define security rules for your application, such as requiring authentication for certain endpoints.
+
+Example:
+
+\begin{lstlisting}
+    @Configuration
+    @EnableWebSecurity
+    public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http
+            .authorizeRequests()
+            .antMatchers("/public/**").permitAll()
+            .anyRequest().authenticated()
+            .and()
+            .formLogin().permitAll()
+            .and()
+            .logout().permitAll();
+        }
+    }
+\end{lstlisting}
+
+
 \subsection{Type Conversion}
 
 By default, formatters for various number and date types are installed, along with support for customization via @NumberFormat, @DurationFormat, and @DateTimeFormat on fields and parameters.
@@ -2552,6 +2642,26 @@ You can register interceptors to apply to incoming requests, as the following ex
             registry.addInterceptor(new LocaleChangeInterceptor());
         }
     }
+\end{lstlisting}
+
+\subsection{Filters}
+
+Implementing the Filter interface and registering it as a bean allows you to define custom behavior for each HTTP request. The filter will be applied to all incoming requests.
+
+Example:
+
+
+\begin{lstlisting}
+    @Component
+public class RequestLoggingFilter implements Filter {
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+    throws IOException, ServletException {
+        // Log request details
+        chain.doFilter(request, response);
+    }
+}
 \end{lstlisting}
 
 \subsection{Content Types}
@@ -2987,7 +3097,7 @@ Jackson is the preferred and default library.
 
 In addition to the usual Spring Framework events, such as ContextRefreshedEvent, a SpringApplication sends some additional application events.
 
-Some events are actually triggered before the ApplicationContext is created, so you cannot register a listener on those as a @Bean. You can register them with the SpringApplication.addListeners...) method or the SpringApplicationBuilder.listeners(...) method.
+Some events are actually triggered before the ApplicationContext is created, so you cannot register a listener on those as a @Bean. You can register them with the \lstinline|SpringApplication.addListeners...)| method or the \lstinline|SpringApplicationBuilder.listeners(...)| method.
 
 If you want those listeners to be registered automatically, regardless of the way the application is created, you can add a \lstinline|META-INF/spring.factories| file to your project and reference your listener(s) by using the ApplicationListener key, as shown in the following example:
 
@@ -3038,106 +3148,15 @@ Architecture Overview (see \ref{fig:spring-web}):
     \label{fig:spring-web}
 \end{figure}
 
-\subsection{Creating Your Own Auto-configuration}
+\subsection{Accessing Command Line Properties}
 
-\subsection{Profiles in Spring Boot}
+By default, SpringApplication converts any command line option arguments (that is, arguments
+starting with \lstinline|--|, such as \lstinline|--server.port=9000)| to a property and adds them to the Spring Environment.
+Command line properties always take precedence over file-based
+property sources.
 
-In Spring Boot, the additional annotation @ConfigurationProperties is available. This results in an additional way to use profiles.
-
-In Spring Boot, any @Component, @Configuration or @ConfigurationProperties can be marked with @Profile to limit when it is loaded, as shown in the following example:
-
-\begin{lstlisting}
-    import org.springframework.context.annotation.Configuration;
-    import org.springframework.context.annotation.Profile;
-
-    @Configuration(proxyBeanMethods = false)
-    @Profile("production")
-    public class ProductionConfiguration {
-        // ...
-    }
-\end{lstlisting}
-
-Note:
-
-If @ConfigurationProperties beans are registered through @EnableConfigurationProperties instead of automatic scanning, the @Profile annotation needs to be specified on the @Configuration class that has the @EnableConfigurationProperties annotation. In the case where @ConfigurationProperties are scanned, @Profile can be specified on the @ConfigurationProperties class itself.
-
-\subsubsection{Specifying which profiles are active}
-
-You can use a spring.profiles.active Environment property to specify which profiles are active. You can specify the property in any of the ways described earlier in this chapter. For example, you could include it in your application.properties, as shown in the following example:
-
-\begin{lstlisting}
-    spring.profiles.active=dev,hsqldb
-\end{lstlisting}
-
-
-You could also specify it on the command line by using the following switch: \lstinline|--spring.profiles.active=dev,hsqldb|.
-
-If no profile is active, a default profile is enabled. The name of the default profile is default and it can be tuned using the \lstinline|spring.profiles.default| Environment property, as shown in the following example:
-
-
-\begin{lstlisting}
-    spring.profiles.default=none
-\end{lstlisting}
-
-spring.profiles.active and spring.profiles.default can only be used in non-profile-specific documents. This means they cannot be included in profile specific files or documents activated by spring.config.activate.on-profile.
-
-For example, the second document configuration is invalid:
-
-\begin{lstlisting}
-    spring.profiles.active=prod
-    spring.config.activate.on-profile=prod
-    spring.profiles.active=metrics
-\end{lstlisting}
-
-\subsubsection{Adding Active Profiles}
-
-The spring.profiles.active property follows the same ordering rules as other properties: The highest PropertySource wins. This means that you can specify active profiles in application.properties and then replace them by using the command line switch.
-
-Sometimes, it is useful to have properties that add to the active profiles rather than replace them. The \lstinline|spring.profiles.include| property can be used to add active profiles on top of those activated by the spring.profiles.active property. The SpringApplication entry point also has a Java API for setting additional profiles. See the setAdditionalProfiles() method in SpringApplication.
-
-For example, when an application with the following properties is run, the common and local profiles will be activated even when it runs using the --spring.profiles.active switch:
-
-\begin{lstlisting}
-    spring.profiles.include[0]=common
-    spring.profiles.include[1]=local
-\end{lstlisting}
-
-Similar to spring.profiles.active, spring.profiles.include can only be used in non-profile-specific documents. This means it cannot be included in profile specific files or documents activated by spring.config.activate.on-profile.
-
-Profile groups, which are described in the next section can also be used to add active profiles if a given profile is active.
-
-\subsubsection{Profile Groups}
-
-Occasionally the profiles that you define and use in your application are too fine-grained and become cumbersome to use. For example, you might have proddb and prodmq profiles that you use to enable database and messaging features independently.
-
-To help with this, Spring Boot lets you define profile groups. A profile group allows you to define a logical name for a related group of profiles.
-
-For example, we can create a production group that consists of our proddb and prodmq profiles.
-\begin{lstlisting}
-    spring.profiles.group.production[0]=proddb
-    spring.profiles.group.production[1]=prodmq
-\end{lstlisting}
-
-Our application can now be started using --spring.profiles.active=production to activate the production, proddb and prodmq profiles in one hit.
-
-Similar to spring.profiles.active and spring.profiles.include, spring.profiles.group can only be used in non-profile-specific documents. This means it cannot be included in profile specific files or documents activated by spring.config.activate.on-profile.
-
-\subsubsection{Programmatically Setting Profiles}
-
-You can programmatically set active profiles by calling SpringApplication.setAdditionalProfiles(...)) before your application runs. It is also possible to activate profiles by using Spring’s ConfigurableEnvironment interface.
-
-\subsubsection{Profile-specific Configuration Files}
-
-Profile-specific variants of both application.properties (or application.yaml)
-
-
-\subsubsection{Profile Specific Files}
-
-As well as application property files, Spring Boot will also attempt to load profile-specific files using the naming convention application-{profile}. For example, if your application activates a profile named prod and uses YAML files, then both application.yaml and application-prod.yaml will be considered.
-
-Profile-specific properties are loaded from the same locations as standard application.properties, with profile-specific files always overriding the non-specific ones. If several profiles are specified, a last-wins strategy applies. For example, if profiles prod,live are specified by the spring.profiles.active property, values in application-prod.properties can be overridden by those in application-live.properties.
-
-In addition, files referenced through @ConfigurationProperties are loaded.
+If you do not want command line properties to be added to the Environment, you can disable them
+by using \lstinline|SpringApplication.setAddCommandLineProperties(false)|.
 
 \subsection{Externalized Configuration}
 
@@ -3214,6 +3233,175 @@ The following example shows how to specify two distinct files:
 \end{lstlisting}
 
 spring.config.name, spring.config.location, and spring.config.additional-location are used very early to determine which files have to be loaded. They must be defined as an environment property (typically an OS environment variable, a system property, or a command-line argument).
+
+
+\subsection{Type-safe Configuration Properties in Spring Boot}
+
+Using the \lstinline|@Value("${property}")| annotation to inject configuration properties can sometimes be
+cumbersome, especially if you are working with multiple properties or your data is hierarchical in
+nature. Spring Boot provides an alternative method of working with properties that lets strongly
+typed beans govern and validate the configuration of your application.
+TIP
+See also the differences between @Value and type-safe configuration properties.
+JavaBean Properties Binding
+It is possible to bind a bean declaring standard JavaBean properties as shown in the following
+example:
+
+\begin{lstlisting}
+    import java.net.InetAddress;
+    import java.util.ArrayList;
+    import java.util.Collections;
+    import java.util.List;
+    import org.springframework.boot.context.properties.ConfigurationProperties;
+
+    @ConfigurationProperties("my.service")
+    public class MyProperties {
+        private boolean enabled;
+        private InetAddress remoteAddress;
+        private final Security security = new Security();
+        public boolean isEnabled() {
+            return this.enabled;
+        }
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+        public InetAddress getRemoteAddress() {
+            return this.remoteAddress;
+        }
+        public void setRemoteAddress(InetAddress remoteAddress) {
+            this.remoteAddress = remoteAddress;
+        }
+        public Security getSecurity() {
+            return this.security;
+        }
+        public static class Security {
+            private String username;
+            private String password;
+            private List<String> roles = new ArrayList<>(Collections.singleton("USER"));
+            public String getUsername() {
+                return this.username;
+            }
+            public void setUsername(String username) {
+                this.username = username;
+            }
+            public String getPassword() {
+                return this.password;
+            }
+            public void setPassword(String password) {
+                this.password = password;
+            }
+            public List<String> getRoles() {
+                return this.roles;
+            }
+            public void setRoles(List<String> roles) {
+                this.roles = roles;
+            }
+        }
+    }
+\end{lstlisting}
+
+The preceding POJO defines the following properties:
+
+\begin{itemize}
+    \item my.service.enabled, with a value of false by default.
+    \item my.service.remote-address, with a type that can be coerced from String.
+    \item my.service.security.username, with a nested "security" object whose name is determined by the
+    \item name of the property. In particular, the type is not used at all there and could have been
+    \item SecurityProperties.
+    \item my.service.security.password.
+    \item my.service.security.roles, with a collection of String that defaults to USER.
+\end{itemize}
+
+
+In Spring Boot, any @Component, @Configuration or @ConfigurationProperties can be marked with @Profile to limit when it is loaded, as shown in the following example:
+
+\begin{lstlisting}
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.context.annotation.Profile;
+
+    @Configuration(proxyBeanMethods = false)
+    @Profile("production")
+    public class ProductionConfiguration {
+        // ...
+    }
+\end{lstlisting}
+
+Note: If @ConfigurationProperties beans are registered through @EnableConfigurationProperties instead of automatic scanning, the @Profile annotation needs to be specified on the @Configuration class that has the @EnableConfigurationProperties annotation. In the case where @ConfigurationProperties are scanned, @Profile can be specified on the @ConfigurationProperties class itself.
+
+
+\subsubsection{Specifying which profiles are active}
+
+You can use a spring.profiles.active Environment property to specify which profiles are active. You can specify the property in any of the ways described earlier in this chapter. For example, you could include it in your application.properties, as shown in the following example:
+
+\begin{lstlisting}
+    spring.profiles.active=dev,hsqldb
+\end{lstlisting}
+
+
+You could also specify it on the command line by using the following switch: \lstinline|--spring.profiles.active=dev,hsqldb|.
+
+If no profile is active, a default profile is enabled. The name of the default profile is default and it can be tuned using the \lstinline|spring.profiles.default| Environment property, as shown in the following example:
+
+
+\begin{lstlisting}
+    spring.profiles.default=none
+\end{lstlisting}
+
+spring.profiles.active and spring.profiles.default can only be used in non-profile-specific documents. This means they cannot be included in profile specific files or documents activated by spring.config.activate.on-profile.
+
+For example, the second document configuration is invalid:
+
+\begin{lstlisting}
+    spring.profiles.active=prod
+    spring.config.activate.on-profile=prod
+    spring.profiles.active=metrics
+\end{lstlisting}
+
+\subsubsection{Adding Active Profiles}
+
+The spring.profiles.active property follows the same ordering rules as other properties: The highest PropertySource wins. This means that you can specify active profiles in application.properties and then replace them by using the command line switch.
+
+Sometimes, it is useful to have properties that add to the active profiles rather than replace them. The \lstinline|spring.profiles.include| property can be used to add active profiles on top of those activated by the spring.profiles.active property. The SpringApplication entry point also has a Java API for setting additional profiles. See the setAdditionalProfiles() method in SpringApplication.
+
+For example, when an application with the following properties is run, the common and local profiles will be activated even when it runs using the --spring.profiles.active switch:
+
+\begin{lstlisting}
+    spring.profiles.include[0]=common
+    spring.profiles.include[1]=local
+\end{lstlisting}
+
+Similar to spring.profiles.active, spring.profiles.include can only be used in non-profile-specific documents. This means it cannot be included in profile specific files or documents activated by spring.config.activate.on-profile.
+
+Profile groups, which are described in the next section can also be used to add active profiles if a given profile is active.
+
+\subsubsection{Profile Groups}
+
+Occasionally the profiles that you define and use in your application are too fine-grained and become cumbersome to use. For example, you might have proddb and prodmq profiles that you use to enable database and messaging features independently.
+
+To help with this, Spring Boot lets you define profile groups. A profile group allows you to define a logical name for a related group of profiles.
+
+For example, we can create a production group that consists of our proddb and prodmq profiles.
+\begin{lstlisting}
+    spring.profiles.group.production[0]=proddb
+    spring.profiles.group.production[1]=prodmq
+\end{lstlisting}
+
+Our application can now be started using --spring.profiles.active=production to activate the production, proddb and prodmq profiles in one hit.
+
+Similar to spring.profiles.active and spring.profiles.include, spring.profiles.group can only be used in non-profile-specific documents. This means it cannot be included in profile specific files or documents activated by spring.config.activate.on-profile.
+
+\subsubsection{Programmatically Setting Profiles}
+
+You can programmatically set active profiles by calling SpringApplication.setAdditionalProfiles(...)) before your application runs. It is also possible to activate profiles by using Spring’s ConfigurableEnvironment interface.
+
+\subsubsection{Profile Specific Files}
+
+As well as application property files, Spring Boot will also attempt to load profile-specific files using the naming convention application-{profile}. For example, if your application activates a profile named prod and uses YAML files, then both application.yaml and application-prod.yaml will be considered.
+
+Profile-specific properties are loaded from the same locations as standard application.properties, with profile-specific files always overriding the non-specific ones. If several profiles are specified, a last-wins strategy applies. For example, if profiles prod,live are specified by the spring.profiles.active property, values in application-prod.properties can be overridden by those in application-live.properties.
+
+In addition, files referenced through @ConfigurationProperties are loaded.
+
 
 \subsection{Spring Boot Auto-Configuration}
 
