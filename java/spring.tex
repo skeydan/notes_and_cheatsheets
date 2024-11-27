@@ -1001,7 +1001,7 @@ I
 
 \subsubsection{@PropertySource}
 
-    With this annotation, we define property \textit{files} for application settings.
+    With this annotation, we set properties using a POJO.
 
     \begin{lstlisting}
         @Configuration
@@ -1188,9 +1188,26 @@ I
     This is a combination of three annotations:
 
     \begin{lstlisting}
-        @Configuration
+        // enable registration of extra beans in the context or the import of additional configuration classes. An alternative to Spring's standard @Configuration that aids configuration detection in your integration tests.
+        @SpringBootConfiguration
         @EnableAutoConfiguration
         @ComponentScan
+    \end{lstlisting}
+
+ Here is its definition:
+
+    \begin{lstlisting}
+        @Target(TYPE)
+        @Retention(RUNTIME)
+        @Documented
+        @Inherited
+        @SpringBootConfiguration
+        @EnableAutoConfiguration
+        @ComponentScan(excludeFilters={@Filter(
+            type=CUSTOM,
+            classes=TypeExcludeFilter.class),})
+        public @interface SpringBootApplication
+
     \end{lstlisting}
 
 \subsubsection{@ConfigurationProperties}
@@ -1502,6 +1519,8 @@ When in a @Configuration class we use the @Bean annotation on a method, Spring u
         @Value("#{environment['daily.limit']} ?: 1000")
         int limit;
     \end{lstlisting}
+
+    In SpEL, Beans are referenced using @: e.g., \lstinline|@myComponent.toString()|.
 
     In addition to application-defined beans, SpEL can make use of beans implicitly provided by Spring, namely environment, systemProperties, and systemEnvironment.
 
@@ -2169,9 +2188,12 @@ Example:
 \section{Spring Security}
 \subsection{Overview}
 
+Spring Security provides a Filter implementation named \lstinline|DelegatingFilterProxy| that allows bridging between the Servlet container’s lifecycle and Spring’s ApplicationContext.
+
+
 Architecture Overview (see \ref{fig:spring-security}):
 
-\begin{figure}[h]
+\begin{figure}[h!]
     \centering
     \includegraphics[width=1\linewidth]{spring-security}
     \caption{Spring Security Architecture Overview}
@@ -2182,7 +2204,7 @@ Architecture Overview (see \ref{fig:spring-security}):
 
 Overview (see \ref{fig:filter-chain}):
 
-\begin{figure}
+\begin{figure}[h!]
     \centering
     \includegraphics[width=1\linewidth]{filter-chain}
     \caption{Spring Security Filter Chain}
@@ -2191,7 +2213,7 @@ Overview (see \ref{fig:filter-chain}):
 
 Example (see \ref{fig:filter-chain-example}):
 
-\begin{figure}
+\begin{figure} [h!]
     \centering
     \includegraphics[width=1\linewidth]{filter-chain-example}
     \caption{Example Filter Chain}
@@ -2273,7 +2295,27 @@ Spring Security also supports modeling at the method level.
 
 You can activate it in your application by annotating any @Configuration class with @EnableMethodSecurity or adding \textless method-security \textgreater  to any XML configuration file. (Note: Spring Boot Starter Security does not activate method-level authorization by default.)
 
-Then, you are immediately able to annotate any Spring-managed class or method with @PreAuthorize, @PostAuthorize, @PreFilter, and @PostFilter to authorize method invocations, including the input parameters and return values.
+Then, you are immediately able to annotate any Spring-managed class or method with @PreAuthorize, @PostAuthorize, @PreFilter, and @PostFilter to authorize method invocations, including the input parameters and return values. This is because in the annotation interface \lstinline|EnableMethodSecurity|, the parameter \lstinline|prePostEnabled| is, by default, true.
+
+\paragraph{Pre-Post hooks}
+
+All of @PreFilter, @PostFilter, @PreAuthorize and @PostAuthorize are to be passed SpEL expressions. See interfaces in \lstinline|org.springframework.security.access.prepost:|
+
+\begin{lstlisting}
+
+    // Annotation for specifying a method access-control expression which will be evaluated after a method has been invoked.
+    PostAuthorize
+
+    Annotation for specifying a method filtering expression which will be evaluated after a method has been invoked.
+    PostFilter
+
+    // Annotation for specifying a method access-control expression which will be evaluated to decide whether a method invocation is allowed or not.
+    PreAuthorize
+
+    // Annotation for specifying a method filtering expression which will be evaluated before a method has been invoked.
+    PreFilter
+
+\end{lstlisting}
 
 Spring Security’s method authorization support is handy for:
 
@@ -2294,6 +2336,33 @@ Example:
        @PostAuthorize("returnObject.owner == authentication.name")
        public Customer readCustomer(String id) { ... }
    }
+\end{lstlisting}
+
+Note: The @Secured annotation doesn’t support Spring Expression Language (SpEL).
+
+\paragraph{@Secured and @jsr250Enabled}
+
+These parameters to EnableMethodSecurity need to be explicitly enabled.
+
+The \lstinline|@Secured| annotation is used to specify a list of roles on a method.
+
+Example:
+
+\begin{lstlisting}
+    @Secured({ "ROLE_VIEWER", "ROLE_EDITOR" })
+    public boolean isValidUsername(String username) {
+        return userRoleRepository.isValidUsername(username);
+    }
+
+\end{lstlisting}
+
+\lstinline|@RolesAllowed| is JSR-250’s equivalent. Example:
+
+\begin{lstlisting}
+    @RolesAllowed({ "ROLE_VIEWER", "ROLE_EDITOR" })
+    public boolean isValidUsername2(String username) {
+        //...
+    }
 \end{lstlisting}
 
 \section{Testing with Spring}
@@ -3170,6 +3239,15 @@ Spring Boot provides integration with three JSON mapping libraries: Gson, Jackso
 
 Jackson is the preferred and default library.
 
+\subsection{Logging in Spring Boot}
+
+Spring Boot uses \textit{Commons Logging} for all internal logging but leaves the underlying log implementation open.
+
+Default configurations are provided for \textit{Java Util Logging}, \textit{Log4j2}, and \textit{Logback}. In each case, loggers are pre-configured to use console output with optional file output also available.
+
+By default, if you use the starters, \textit{Logback} is used for logging. Appropriate Logback routing is also included to ensure that dependent libraries that use Java Util Logging, Commons Logging, Log4J, or SLF4J all work correctly.
+
+
 \subsection{SpringApplication}
 
 In addition to the usual Spring Framework events, such as ContextRefreshedEvent, a SpringApplication sends some additional application events.
@@ -3524,7 +3602,7 @@ By default, @SpringBootTest will not start a server. You can use the webEnvironm
 \begin{itemize}
     \item MOCK(Default) : Loads a web ApplicationContext and provides a mock web environment. Embedded servers are not started when using this annotation. If a web environment is not available on your classpath, this mode transparently falls back to creating a regular non-web ApplicationContext. It can be used in conjunction with @AutoConfigureMockMvc or @AutoConfigureWebTestClient for mock-based testing of your web application.
 
-    \item RANDOM\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a random port.
+    \item RANDOM\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a random port. The @LocalServerPort annotation can be used to inject the actual port used into your test.
 
     \item DEFINED\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a defined port (from your application.properties) or on the default port of 8080.
 
@@ -3598,11 +3676,40 @@ To test whether Spring MVC controllers are working as expected, use the @WebMvcT
 
 @WebMvcTest auto-configures the Spring MVC infrastructure and limits scanned beans to @Controller, @ControllerAdvice, @JsonComponent, Converter, GenericConverter, Filter, HandlerInterceptor, WebMvcConfigurer, WebMvcRegistrations, and HandlerMethodArgumentResolver.
 
+Auto-configured capabilities include: a templating engine, Jackson, caching.
+
 Regular @Component and @ConfigurationProperties beans are not scanned when the @WebMvcTest annotation is used. @EnableConfigurationProperties can be used to include @ConfigurationProperties beans.
 
 Often, @WebMvcTest is limited to a single controller and is used in combination with @MockBean to provide mock implementations for required collaborators.
 
 @WebMvcTest also auto-configures MockMvc.
+
+
+\subsection{Auto-Configuration for Slice Tests}
+\subsubsection{Auto-configured JPA Tests}
+
+The annotation \lstinline|@DataJpaTest| causes the following auto-configuration to take place:
+
+\begin{lstlisting}
+    // optional:org.springframework.boot.testcontainers.
+       service.connection.ServiceConnectionAutoConfiguration
+
+    // org.springframework.boot.autoconfigure.
+       cache.CacheAutoConfiguration
+
+       data.jpa.JpaRepositoriesAutoConfiguration
+
+       flyway.FlywayAutoConfiguration
+       jdbc.DataSourceAutoConfiguration jdbc.DataSourceTransactionManagerAutoConfiguration jdbc.JdbcClientAutoConfiguration jdbc.JdbcTemplateAutoConfiguration liquibase.LiquibaseAutoConfiguration
+
+        orm.jpa.HibernateJpaAutoConfiguration sql.init.SqlInitializationAutoConfiguration TransactionAutoConfiguration
+
+        //org.springframework.boot.test.
+        autoconfigure.jdbc.TestDatabaseAutoConfiguration autoconfigure.orm.jpa.TestEntityManagerAutoConfiguration
+
+\end{lstlisting}
+
+Note especially the auto-configuration of caching, JDBCTemplate, Liquibase and Flyway.
 
 \subsection{TestRestTemplate}
 
