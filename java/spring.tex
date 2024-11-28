@@ -1956,6 +1956,9 @@ The following image shows a conceptual view of calling a method on a transaction
 
 Since declarative transaction management is made possible using Spring AOP, which by default uses JDK Dynamic Proxies, only public methods called from outside the class are affected by the @Transactional annotation.
 
+Note: The @Transactional annotation in Spring is not sufficient to handle distributed transactions seamlessly across microservices. It is limited to managing transactions within a single service or database.
+
+
 \subsection{Manual}
 
 Instead of using the @Transactional annotation, transactions can be managed programmatically using TransactionTemplate.
