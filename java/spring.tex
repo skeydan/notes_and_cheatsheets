@@ -335,7 +335,7 @@ Resp.
 
 \subsection{Field-based}
 
-In field-based DI, we can inject the dependencies by marking them with an @Autowired annotation. (This even works for private fields.)
+In field-based DI, we can inject the dependencies by marking them with an @Autowired annotation. This even works for private fields - not, though, if a field is \textit{final}.
 Field-based injection is not recommended - e.g., it makes testing harder.
 
 \begin{lstlisting}
@@ -973,7 +973,18 @@ I
 
 \subsubsection{@Scope}
 
-    @Scope is used to define the scope of a @Component class or a @Bean definition. It can be either singleton, prototype, request, session, globalSession or some cust@Component.
+   The Spring Framework supports six scopes, four of which are available only if you use a web-aware ApplicationContext. You can also create a custom scope.
+
+   These are:
+
+   \begin{itemize}
+       \item singleton
+       \item    prototype
+       \item    request
+       \item    session
+       \item    application: Scopes a single bean definition to the lifecycle of a ServletContext.
+       \item    websocket
+   \end{itemize}
 
 \subsection{Context Configuration Annotations}
 
@@ -1070,6 +1081,19 @@ I
 
    , or via an annotation (@ActiveProfiles; integration tests only).
 
+\subsubsection{Conditional}
+
+Indicates that a component is only eligible for registration when all specified conditions match.
+
+The @Conditional annotation may be used in any of the following ways:
+
+\begin{itemize}
+    \item as a type-level annotation on any class directly or indirectly annotated with @Component, including @Configuration classes
+    \item as a meta-annotation, for the purpose of composing custom stereotype annotations
+    \item as a method-level annotation on any @Bean method
+\end{itemize}
+
+If a @Configuration class is marked with @Conditional, all of the @Bean methods, @Import annotations, and @ComponentScan annotations associated with that class will be subject to the conditions.
 
 \subsubsection{@ComponentScan}
 
@@ -1181,6 +1205,25 @@ I
         }
     \end{lstlisting}
 
+\subsubsection{@JdkProxyHint}
+
+In Spring Boot 2.5, the @JdkProxyHint annotation was introduced to address compatibility issues with GraalVM's native image generation. GraalVM is a high-performance runtime that can compile Java applications into native executables, providing improved startup time and reduced memory footprint.
+
+When using Spring Boot with GraalVM native image generation, the default dynamic proxy mechanism based on JDK proxies may cause issues. The @JdkProxyHint annotation allows developers to configure specific beans or bean types to be processed differently when generating the native image. By providing hints, Spring Boot can switch to alternative proxying mechanisms, such as CGLIB proxies, to ensure compatibility with GraalVM.
+
+\subsection{Spring MVC annotations}
+
+\subsubsection{@RequestMapping}
+
+This annotation can be used both at the class and at the method level.
+
+In most cases, at the method level applications will prefer to use one of the HTTP method specific variants @GetMapping, @PostMapping, @PutMapping, @DeleteMapping, or @PatchMapping.
+
+Example, passing the path and the method (all optional):
+
+\begin{lstlisting}
+    @RequestMapping(path="/profile", method = RequestMethod.PUT)
+\end{lstlisting}
 
 \subsection{Spring Boot Annotations}
 \subsubsection{@SpringBootApplication}
@@ -1258,7 +1301,47 @@ I
 
 \subsubsection{@ConditionalOnX}
 
-Determine what auto configuration does. For example: @ConditionalOnBean, @ConditionalOnMissingBean, @ConditionalOnClass, @ConditionalOnMissingClass, @ConditionalOnProperty.
+Determine what auto configuration does. There are:
+
+\begin{lstlisting}
+    ConditionalOnBean
+    ConditionalOnSingleCandidate
+    onditionalOnMissingBean
+
+    ConditionalOnCheckpointRestore
+
+    ConditionalOnClass
+    ConditionalOnMissingClass
+
+    ConditionalOnCloudPlatform
+
+    //  allows conditional auto-configuration based on the evaluation of a SpEL expression.
+    ConditionalOnExpression
+
+    // @Conditional that matches based on the JVM version the application is running on.
+    ConditionalOnJava
+    ConditionalOnJava.Range
+
+    ConditionalOnJndi
+
+    ConditionalOnWarDeployment
+    ConditionalOnNotWarDeployment
+
+    ConditionalOnWebApplication
+    ConditionalOnWebApplication.Type
+    ConditionalOnNotWebApplication
+
+    // @Conditional that checks if the specified properties have a specific value.
+    ConditionalOnProperty
+
+    // @Conditional that only matches when the specified resources are on the classpath.
+    ConditionalOnResource
+
+    ConditionalOnThreading
+
+\end{lstlisting}
+
+
 
 For example, @Profile is such a condition.
 
@@ -1631,7 +1714,8 @@ Code to be executed at a particular join point.
 Types:
 
 \begin{itemize}
-    \item Before-advice is executed before calling the target method.
+    \item Before-advice is executed before calling the target method. It does \textit{not} have the ability to prevent execution flow proceeding to the join point (unless it throws an exception).
+
     \begin{lstlisting}
         @Before("execution(void set*(*))    \end{lstlisting}
     \item
@@ -1823,6 +1907,36 @@ You can use the org.springframework.aop.aspectj.annotation.AspectJProxyFactory c
 
 \section{Transaction Management}
 
+\subsection{Propagation Mode}
+
+
+
+
+
+
+
+
+
+\begin{tabular}{|c|c|}
+    \hline
+    Enum Constant& Description \\
+    \hline
+    MANDATORY&  Support a current transaction, throw an exception if none exists.\\
+    \hline
+    NESTED&  Execute within a nested transaction if a current transaction exists, behave like REQUIRED otherwise.\\
+    \hline
+    NEVER &  Execute non-transactionally, throw an exception if a transaction exists.\\
+    \hline
+    NOT\_SUPPORTED& Execute non-transactionally, suspend the current transaction if one exists.\\
+    \hline
+    REQUIRED &  Support a current transaction, create a new one if none exists.\\
+    \hline
+    REQUIRES\_NEW &  Create a new transaction, and suspend the current transaction if one exists.\\
+    \hline
+    SUPPORTS&  Support a current transaction, execute non-transactionally if none exists.\\
+    \hline
+\end{tabular}
+
 \subsection{Declarative}
 
 The Spring Framework’s declarative transaction management is made possible with Spring aspect-oriented programming (AOP). Due to reliance on AOP, we can customize transactional behavior - for example, insert custom behavior in the case of transaction rollback, or add arbitrary advice, along with transactional advice.
@@ -1925,6 +2039,8 @@ The Spring Framework’s JDBC abstraction framework consists of four different p
 \end{itemize}
 
 \subsection{Using JdbcTemplate}
+
+JdbcTemplate acquires a database connection only during a method call, which requires data access, and releases it as soon as the rows are fetched.
 
 \subsubsection{Queries}
 
@@ -2193,7 +2309,7 @@ Spring Security provides a Filter implementation named \lstinline|DelegatingFilt
 
 Architecture Overview (see \ref{fig:spring-security}):
 
-\begin{figure}[h!]
+\begin{figure}[h]
     \centering
     \includegraphics[width=1\linewidth]{spring-security}
     \caption{Spring Security Architecture Overview}
@@ -2204,7 +2320,7 @@ Architecture Overview (see \ref{fig:spring-security}):
 
 Overview (see \ref{fig:filter-chain}):
 
-\begin{figure}[h!]
+\begin{figure}[h]
     \centering
     \includegraphics[width=1\linewidth]{filter-chain}
     \caption{Spring Security Filter Chain}
@@ -2213,7 +2329,7 @@ Overview (see \ref{fig:filter-chain}):
 
 Example (see \ref{fig:filter-chain-example}):
 
-\begin{figure} [h!]
+\begin{figure} [h]
     \centering
     \includegraphics[width=1\linewidth]{filter-chain-example}
     \caption{Example Filter Chain}
@@ -2222,9 +2338,11 @@ Example (see \ref{fig:filter-chain-example}):
 
 \subsection{Authentication}
 
+Spring Security offers the following authentication mechanisms: Username and Password, OAuth 2.0, SAML 2.0, CAS, Remember Me, JAAS Authentication, OpenID, Pre-Authentication Scenarios and X509 Authentication.
+
 Overview (see \ref{fig:authentication}):
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=1\linewidth]{authentication}
     \caption{Spring Security Filter Chain}
@@ -2580,9 +2698,11 @@ Both @Mock and @MockBean are included in spring-boot-starter-test.
 
 Spring Web MVC is the original web framework built on the Servlet API and has been included in the Spring Framework from the very beginning.
 
+It is packaged in \textit{spring-textmvc.jar}.
+
 \subsection{Controllers}
 
-    @RequestMapping handler methods have a flexible signature and can choose from a range of supported controller method arguments and return values.
+    @RequestMapping handler methods have a flexible signatu\texttt{}re and can choose from a range of supported controller method arguments and return values.
 
     Supported controller method arguments are:
 
@@ -2679,11 +2799,13 @@ Spring Web MVC is the original web framework built on the Servlet API and has be
     ModelAndView
 
     // Attributes to be added to the implicit model, with the view name implicitly determined through a RequestToViewNameTranslator.
-
-    java.util.Map, org.springframework.ui.Model
+    org.springframework.ui.Model
+    java.util.Map
     \end{lstlisting}
 
 \subsection{Securing Endpoints}
+
+To enable Spring Security integration with Spring MVC, add the \lstinline|@EnableWebSecurity| annotation to your configuration.
 
 Configuring HTTP security using \lstinline|HttpSecurity| in a class extending \lstinline|WebSecurityConfigurerAdapter| allows you to define security rules for your application, such as requiring authentication for certain endpoints.
 
@@ -2708,6 +2830,35 @@ Example:
     }
 \end{lstlisting}
 
+Spring Security provides deep integration with how Spring MVC matches on URLs with MvcRequestMatcher. This is helpful to ensure that your Security rules match the logic used to handle your requests.
+Consider a controller that is mapped as follows:
+
+\begin{lstlisting}
+    @RequestMapping("/admin")
+    public String admin() {
+        // ...
+    }
+\end{lstlisting}
+
+To restrict access to this controller method to admin users, you can provide authorization rules by matching on the HttpServletRequest with the following:
+
+\begin{lstlisting}
+   @Bean
+   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+       http
+       .authorizeHttpRequests((authorize) -> authorize
+       .requestMatchers("/admin").hasRole("ADMIN")
+       );
+       return http.build();
+   }
+
+\end{lstlisting}
+
+With either configuration, the /admin URL requires the authenticated user to be an admin user. However, depending on our Spring MVC configuration, the /admin.html URL also maps to our admin() method. Additionally, depending on our Spring MVC configuration, the /admin URL also maps to our admin() method.
+
+The problem is that our security rule protects only /admin. We could add additional rules for all the permutations of Spring MVC, but this would be quite verbose and tedious.
+
+Fortunately, when using the requestMatchers DSL method, Spring Security automatically creates a MvcRequestMatcher if it detects that Spring MVC is available in the classpath. Therefore, it will protect the same URLs that Spring MVC will match on by using Spring MVC to match on the URL.
 
 \subsection{Type Conversion}
 
@@ -3247,7 +3398,7 @@ Default configurations are provided for \textit{Java Util Logging}, \textit{Log4
 
 By default, if you use the starters, \textit{Logback} is used for logging. Appropriate Logback routing is also included to ensure that dependent libraries that use Java Util Logging, Commons Logging, Log4J, or SLF4J all work correctly.
 
-
+The default log level used by Spring Boot is INFO.
 \subsection{SpringApplication}
 
 In addition to the usual Spring Framework events, such as ContextRefreshedEvent, a SpringApplication sends some additional application events.
@@ -3597,18 +3748,6 @@ spring-boot-starter-test imports both Spring Boot test modules as well as JUnit 
 
 \end{itemize}
 
-By default, @SpringBootTest will not start a server. You can use the webEnvironment attribute of @SpringBootTest to further refine how your tests run:
-
-\begin{itemize}
-    \item MOCK(Default) : Loads a web ApplicationContext and provides a mock web environment. Embedded servers are not started when using this annotation. If a web environment is not available on your classpath, this mode transparently falls back to creating a regular non-web ApplicationContext. It can be used in conjunction with @AutoConfigureMockMvc or @AutoConfigureWebTestClient for mock-based testing of your web application.
-
-    \item RANDOM\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a random port. The @LocalServerPort annotation can be used to inject the actual port used into your test.
-
-    \item DEFINED\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a defined port (from your application.properties) or on the default port of 8080.
-
-    \item NONE: Loads an ApplicationContext by using SpringApplication but does not provide any web environment (mock or otherwise).
-\end{itemize}
-
 \subsection{Test Configuration}
 
 In Spring testing in general, we use \lstinline|@ContextConfiguration(classes=...)| in order to specify which Spring @Configuration to load.
@@ -3640,9 +3779,11 @@ To customize the primary configuration, one can use a \textit{nested} \lstinline
 
 Note: An imported @TestConfiguration is processed earlier than an inner-class @TestConfiguration and an imported @TestConfiguration will be processed before any configuration found through component scanning.
 
-\subsection{Testing With a Mock Environment}
+\subsection{The @SpringBootTest annotation}
 
-By default, @SpringBootTest does not start the server but instead sets up a mock environment for testing web endpoints.
+The @SpringBootTest annotation is used to specify the main class that should be used when launching an application context for integration tests.
+
+By default, @SpringBootTest does not start a server but instead sets up a mock environment for testing web endpoints.
 
 With Spring MVC, we can query our web endpoints using MockMvc or WebTestClient, as shown in the following example:
 
@@ -3670,19 +3811,33 @@ With Spring MVC, we can query our web endpoints using MockMvc or WebTestClient, 
 
 \end{lstlisting}
 
-\subsection{Auto-configured Spring MVC Tests}
+By default, @SpringBootTest will not start a server. You can use the webEnvironment attribute of @SpringBootTest to further refine how your tests run:
+
+\begin{itemize}
+    \item MOCK(Default) : Loads a web ApplicationContext and provides a mock web environment. Embedded servers are not started when using this annotation. If a web environment is not available on your classpath, this mode transparently falls back to creating a regular non-web ApplicationContext. It can be used in conjunction with @AutoConfigureMockMvc or @AutoConfigureWebTestClient for mock-based testing of your web application.
+
+    \item RANDOM\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a random port.
+    Alternatively, the property \lstinline|server.port| may be set to 0.
+    The @LocalServerPort annotation can be used to inject the \textit{actual port used} into your test.
+
+    \item DEFINED\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a defined port (from your application.properties) or on the default port of 8080.
+
+    \item NONE: Loads an ApplicationContext by using SpringApplication but does not provide any web environment (mock or otherwise).
+\end{itemize}
+
+\subsection{Auto-configured Spring MVC Tests: @WebMvcTest}
 
 To test whether Spring MVC controllers are working as expected, use the @WebMvcTest annotation.
 
 @WebMvcTest auto-configures the Spring MVC infrastructure and limits scanned beans to @Controller, @ControllerAdvice, @JsonComponent, Converter, GenericConverter, Filter, HandlerInterceptor, WebMvcConfigurer, WebMvcRegistrations, and HandlerMethodArgumentResolver.
 
-Auto-configured capabilities include: a templating engine, Jackson, caching.
+Auto-configured capabilities include: a templating engine (Thymeleaf), Jackson, caching.
 
-Regular @Component and @ConfigurationProperties beans are not scanned when the @WebMvcTest annotation is used. @EnableConfigurationProperties can be used to include @ConfigurationProperties beans.
+Regular @Component and @ConfigurationProperties beans are not scanned when the @WebMvcTest annotation is used. @EnableConfigurationProperti es can be used to include @ConfigurationProperties beans.
 
 Often, @WebMvcTest is limited to a single controller and is used in combination with @MockBean to provide mock implementations for required collaborators.
 
-@WebMvcTest also auto-configures MockMvc.
+@WebMvcTest also auto-configures \lstinline|MockMvc|.
 
 
 \subsection{Auto-Configuration for Slice Tests}
@@ -3741,10 +3896,10 @@ TestRestTemplate can be instantiated directly in your integration tests:
     }
 \end{lstlisting}
 
-Alternatively, if you use the @SpringBootTest annotation with WebEnvironment.RANDOM\_PORT or WebEnvironment.DEFINED\_PORT, you can inject a fully configured TestRestTemplate and start using it. If necessary, additional customizations can be applied through the RestTemplateBuilder bean. Any URLs that do not specify a host and port automatically connect to the embedded server:
+Alternatively, if you use the \lstinline|@SpringBootTest| annotation with WebEnvironment.RANDOM\_PORT or WebEnvironment.DEFINED\_PORT, you can inject a fully configured TestRestTemplate and start using it. If necessary, additional customizations can be applied through the RestTemplateBuilder bean. Any URLs that do not specify a host and port automatically connect to the embedded server:
 
 \begin{lstlisting}
-    import java.time.Duration;
+import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
@@ -3981,8 +4136,36 @@ When the env contributor is enabled, you can customize the data exposed by the i
     }
 \end{lstlisting}
 
+\paragraph{Tracing}
 
+Spring Boot Actuator provides dependency management and auto-configuration for Micrometer Tracing, a facade for popular tracer libraries.
 
+Spring Boot ships auto-configuration for the following tracers:
+
+\begin{itemize}
+    \item OpenTelemetry with Zipkin, Wavefront, or OTLP
+    \item OpenZipkin Brave with Zipkin or Wavefront
+\end{itemize}
+
+\paragraph{Recording HTTP Exchanges}
+
+You can enable recording of HTTP exchanges by providing a bean of type \lstinline|HttpExchangeRepository| in your application’s configuration. For convenience, Spring Boot offers \lstinline|InMemoryHttpExchangeRepository|, which, by default, stores the last 100 request-response exchanges.
+
+You can use the httpexchanges endpoint to obtain information about the request-response exchanges that are stored in the HttpExchangeRepository.
+
+To customize the items that are included in each recorded exchange, use the \lstinline|management.httpexchanges.recording.include| configuration property.
+
+To disable recoding entirely, set \lstinline|management.httpexchanges.recording.enabled| to false.
+
+\paragraph{Auditing}
+
+Once Spring Security is in play, Spring Boot Actuator has a flexible audit framework that publishes events (by default, “authentication success”, “failure” and “access denied” exceptions). This feature can be very useful for reporting and for implementing a lock-out policy based on authentication failures.
+
+You can enable auditing by providing a bean of type \lstinline|AuditEventRepository| in your application’s configuration. For convenience, Spring Boot offers an \lstinline|InMemoryAuditEventRepository|.
+
+To customize published security events, you can provide your own implementations of \lstinline|AbstractAuthenticationAuditListener| and \lstinline|AbstractAuthorizationAuditListener|.
+
+You can also use the audit services for your own business events. To do so, either inject the \lstinline|AuditEventRepository| bean into your own components and use that directly or publish an \lstinline|AuditApplicationEvent| with the Spring \lstinline|ApplicationEventPublisher| (by implementing \lstinline|ApplicationEventPublisherAware|).
 
 
 \end{document}
