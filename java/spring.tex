@@ -76,6 +76,8 @@ Implementing interfaces are:
        XmlWebApplicationContext
 \end{lstlisting}
 
+It is possible for applications to have multiple application contexts, arranged in a parent-child hierarchy.
+
 \subsection{Standard and Custom Events}
 
 Event handling in the ApplicationContext is provided through the \lstinline|ApplicationEvent| class and the \lstinline|ApplicationListener| interface. If a bean that implements the ApplicationListener interface is deployed into the context, every time an ApplicationEvent gets published to the ApplicationContext, that bean is notified.
@@ -913,7 +915,40 @@ public class AppConfig  {
 }
 
 \end{lstlisting}
-I
+
+Limitations of using @Inject and @Named / @ManagedBean are (Spring equivalent is also shown):
+
+\begin{table}[hbt!]
+\begin{tabular}{ |l p{.2\linewidth} | l p{.2\linewidth} | l p{.4.5\linewidth}|}
+    \hline
+    Spring&  jakarta.inject.*&  Comments\\
+    \hline
+    @Autowired & @Inject & @Inject has no 'required' attribute. Can be used with Java 8's Optional instead.\\
+    \hline
+    @Component&  @Named / @ManagedBean&  JSR-330 does not provide a composable model, only a way to identify named components.\\
+    \hline
+    @Scope("singleton")&  @Singleton&  The JSR-330 default scope is like     Spring’s prototype. However, in order to keep it consistent with
+    Spring’s general defaults, a JSR-330 bean declared in the Spring
+    container is a singleton by default. In order to use a scope
+    other than singleton, you should use Spring’s @Scope
+    annotation. jakarta.inject also provides a jakarta.inject.Scope    annotation: however, this one is only intended to be used for
+    creating custom annotations.\\
+    \hline
+    @Qualifier&  @Qualifier / @Named&  jakarta.inject.Qualifier is just a meta-annotation for building custom qualifiers. Concrete
+    String qualifiers (like Spring’s @Qualifier with a value) can be
+    associated through jakarta.inject.Named.\\
+    \hline
+    @Value&  -&  -\\
+    \hline
+    @Lazy&  -&  -\\
+    \hline
+    ObjectFactory&  Primary&  jakarta.inject.Provider is a  direct alternative to Spring’s ObjectFactory, only with a
+    shorter get() method name. It can also be used in combination
+    with Spring’s @Autowired or with non-annotated constructors and
+    setter methods.\\
+    \hline
+\end{tabular}
+\end{table}
 
 \subsubsection{@Value}
 
@@ -971,6 +1006,7 @@ I
         }
     \end{lstlisting}
 
+@Lazy may also be used to annotate test classes.
 \subsubsection{@Scope}
 
    The Spring Framework supports six scopes, four of which are available only if you use a web-aware ApplicationContext. You can also create a custom scope.
@@ -1097,7 +1133,7 @@ If a @Configuration class is marked with @Conditional, all of the @Bean methods,
 
 \subsubsection{@ComponentScan}
 
-    The @ComponentScan annotation is used together with @Configuration.
+    The @ComponentScan annotation is used on a class annotated with  @Configuration. (Equivalently, in Spring Boot,  \lstinline|scanBasePackageClasses| may be specified on the  @SpringBootApplication class.)
 
     @ComponentScan can be used with and without arguments.
 
@@ -1298,6 +1334,13 @@ Example, passing the path and the method (all optional):
     \caption{}
     \label{fig:configurationproperties}
 \end{figure}
+
+Just like @Value, @ConfigurationProperties supports SpEL expressions.
+
+As opposed to @Value, @ConfigurationProperties can be validated using JSR-303 bean validation, providing a way to enforce constraints on the properties being bound.
+
+Also in contrast to @Value, @ConfigurationProperties supports relaxed binding, allowing for more flexibility in property names and values.
+
 
 \subsubsection{@ConditionalOnX}
 
@@ -1644,6 +1687,8 @@ All parts except the returning type pattern (ret-type-pattern in the preceding s
 
 \end{itemize}
 
+Pointcuts can be combined using \&\&, || and !.
+
 Examples:
 
 \begin{lstlisting}
@@ -1835,9 +1880,11 @@ Linking aspects with other application types or objects to create an advised obj
 
 Spring AOP defaults to using standard\textit{ JDK dynamic proxies} for AOP proxies. This enables any interface (or set of interfaces) to be proxied.
 
-Spring AOP can also use CGLIB proxies. This is necessary to proxy classes rather than interfaces. By default, CGLIB is used if a business object does not implement an interface.
+Spring AOP can also use CGLIB proxies (included in Spring Core). This is necessary to proxy classes rather than interfaces. By default, CGLIB is used if a business object does not implement an interface.
 
 If the target object to be proxied implements at least one interface, a JDK dynamic proxy is used, and all of the interfaces implemented by the target type are proxied. If the target object does not implement any interfaces, a CGLIB proxy is created which is a runtime-generated subclass of the target type.
+
+Note: Since CGLIB creates a subclass, \textit{the class and its methods may not be final}.
 
 \subsection{Implications of Using a Proxy}
 
@@ -1907,15 +1954,41 @@ You can use the org.springframework.aop.aspectj.annotation.AspectJProxyFactory c
 
 \section{Transaction Management}
 
+\subsection{ACID transactions}
+
+Example code:
+
+\begin{lstlisting}
+    BEGIN TRANSACTION;
+    SELECT * FROM T;
+    WAITFOR DELAY '00:01:00'
+    SELECT * FROM T;
+    COMMIT;
+\end{lstlisting}
+
+Isolation levels and what can still happen:
+
+\begin{table}
+\begin{tabular}{|r|r|}
+    \hline
+    READ\_UNCOMMITTED&  dirty reads\\
+    \hline
+    READ\_COMMITTED&  non-repeatable reads\\
+    \hline
+    REPEATABLE\_READ& phantom reads \\
+    \hline
+    SERIALIZABLE&  -\\
+    \hline
+\end{tabular}
+\end{table}
+
+With READ\_COMMITTED, any (committed) data that have been inserted between reads are read, possible resulting in non-repeatable reads.
+
+With REPEATABLE\_READ, the second read is guaranteed to display at least the rows that were returned from the first read (unchanged). New rows may have been added by a concurrent transaction in the meantime, but the existing rows cannot be deleted nor changed.
+
+With SERIALIZABLE, the first read sees exactly the same data as the second.
+
 \subsection{Propagation Mode}
-
-
-
-
-
-
-
-
 
 \begin{tabular}{|c|c|}
     \hline
@@ -1994,6 +2067,8 @@ The correct order of operations when using TransactionTemplate in programmatic t
     \item commit transaction if the callback executes successfully
     \item rollback transaction if an exception occurs during callback execution
 \end{itemize}
+
+Note: commit before eventual rollback (for consistency)!
 
 \section{Data Access with JDBC}
 
@@ -2307,30 +2382,67 @@ Example:
 \section{Spring Security}
 \subsection{Overview}
 
-Spring Security provides a Filter implementation named \lstinline|DelegatingFilterProxy| that allows bridging between the Servlet container’s lifecycle and Spring’s ApplicationContext.
+Fig. \ref*{fig:spring-security} shows a birds-eye view of how Spring Security takes care of authentication and authorization.
 
-
-Architecture Overview (see \ref{fig:spring-security}):
-
-\begin{figure}[h]
+\begin{figure}[h!]
     \centering
     \includegraphics[width=1\linewidth]{spring-security}
     \caption{Spring Security Architecture Overview}
     \label{fig:spring-security}
 \end{figure}
 
-\subsection{Filter Chain}
+\subsubsection{Servlet Filters and the \lstinline|FilterChain|}
 
-Overview (see \ref{fig:filter-chain}):
+Spring Security’s Servlet support is based on Servlet Filters.
 
+What happens is the following: The client sends a request to the application, and the container creates a \lstinline|FilterChain|, which contains the Filter instances and Servlet that should process the HttpServletRequest, based on the path of the request URI.
+
+In a Spring MVC application, the Servlet is an instance of \lstinline|DispatcherServlet|. At most, one Servlet can handle a single HttpServletRequest and HttpServletResponse. However, more than one Filter can be used to:
+
+\begin{itemize}
+    \item Prevent downstream Filter instances or the Servlet from being invoked. In this case, the Filter typically writes the HttpServletResponse.
+    \item Modify the HttpServletRequest or HttpServletResponse used by the downstream Filter instances and the Servlet.
+\end{itemize}
+
+The power of the Filter comes from the \lstinline|FilterChain| that is passed into it.
+
+\subsubsection{DelegatingFilterProxy}
+
+Spring Security provides a Filter implementation named \lstinline|DelegatingFilterProxy| that bridges between the Servlet container’s lifecycle and Spring’s ApplicationContext.
+
+The Servlet container allows registering Filter instances by using its own standards, but it is not aware of Spring-defined Beans. You can register DelegatingFilterProxy through the standard Servlet container mechanisms but delegate all the work to a Spring Bean that implements Filter.
+
+\subsubsection{FilterChainProxy}
+
+Spring Security’s Servlet support is contained within \lstinline|FilterChainProxy|.
+FilterChainProxy is a special Filter provided by Spring Security that allows delegating to many Filter instances through SecurityFilterChain.
+\textit{Since FilterChainProxy is a Bean, it is typically wrapped in a DelegatingFilterProxy.}
+
+\subsubsection{SecurityFilterChain}
+
+The Security Filters in SecurityFilterChain are typically Beans, but they are registered with \lstinline|FilterChainProxy| instead of \lstinline|DelegatingFilterProxy|.
+
+If there are multiple SecurityFilterChains, FilterChainProxy decides which SecurityFilterChain should be used. Only the first SecurityFilterChain that matches is invoked.
+
+If a URL of /api/messages/ is requested, it first matches on the SecurityFilterChain0 pattern of /api/**, so only SecurityFilterChain0 is invoked, even though it also matches on SecurityFilterChainn. If a URL of /messages/ is requested, it does not match on the SecurityFilterChain0 pattern of /api/**, so FilterChainProxy continues trying each SecurityFilterChain. Assuming that no other SecurityFilterChain instances match, SecurityFilterChain is invoked.
+
+Here (\ref{fig:filters}) is an overview of the filter architecture.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\linewidth]{filters}
+    \caption{DelegatingFilterProxy, FilterChainProxy, and SecurityFilterChain in Spring Security }
+    \label{fig:filters}
+\end{figure}
+
+See also \ref{fig:filter-chain} and \ref{fig:filter-chain-example}
+.
 \begin{figure}[h]
     \centering
     \includegraphics[width=1\linewidth]{filter-chain}
     \caption{Spring Security Filter Chain}
     \label{fig:filter-chain}
 \end{figure}
-
-Example (see \ref{fig:filter-chain-example}):
 
 \begin{figure} [h]
     \centering
@@ -2360,8 +2472,6 @@ The GrantedAuthority interface has only one method:
 \begin{lstlisting}
     String getAuthority();
 \end{lstlisting}
-
-String getAuthority();
 
 This method is used by an AuthorizationManager instance to obtain a precise String representation of the GrantedAuthority.
 
@@ -2494,6 +2604,7 @@ The Spring TestContext Framework (located in the org.springframework.test.contex
 
 In addition to generic testing infrastructure, the TestContext framework provides explicit support for JUnit 4, JUnit Jupiter (AKA JUnit 5), and TestNG.
 
+It also provides mocks for Environment and PropertySource, JNDI, and the Servlet API.
 \subsection{Executing SQL Scripts}
 
 Sometimes it is essential to be able to modify the database during integration tests.
@@ -2666,6 +2777,7 @@ Example:
 \end{lstlisting}
 
 In contrast, @MockBean is a Spring Boot-specific annotation provided by the Spring Boot Test module. It is used to create mock objects for dependencies that are part of the Spring context.
+
 Example:
 
 \begin{lstlisting}
@@ -3028,8 +3140,11 @@ Some implementations of HttpMessageConverter are:
     ByteArrayHttpMessageConverter
     MarshallingHttpMessageConverter
     JsonbHttpMessageConverter
+    MappingJackson2HttpMessageConverter
+    Jaxb2RootElementHttpMessageConverter
     ProtobufHttpMessageConverter
     ProtobufJsonFormatHttpMessageConverter
+    AtomFeedHttpMessageConverter
     \end{lstlisting}
 
 \subsection{URI Links}
@@ -3821,7 +3936,7 @@ By default, @SpringBootTest will not start a server. You can use the webEnvironm
 
     \item RANDOM\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a random port.
     Alternatively, the property \lstinline|server.port| may be set to 0.
-    The @LocalServerPort annotation can be used to inject the \textit{actual port used} into your test.
+    The @LocalServerPort annotation - equivalent to  \lstinline|@Value("${local.server.port}")| - can be used to inject the \textit{actual port used} into your test.
 
     \item DEFINED\_PORT: Loads a WebServerApplicationContext and provides a real web environment. Embedded servers are started and listen on a defined port (from your application.properties) or on the default port of 8080.
 
@@ -3849,19 +3964,24 @@ Often, @WebMvcTest is limited to a single controller and is used in combination 
 The annotation \lstinline|@DataJpaTest| causes the following auto-configuration to take place:
 
 \begin{lstlisting}
-    // optional:org.springframework.boot.testcontainers.
+        // optional:org.springframework.boot.testcontainers.
        service.connection.ServiceConnectionAutoConfiguration
 
-    // org.springframework.boot.autoconfigure.
+        // caching
+        // org.springframework.boot.autoconfigure.
        cache.CacheAutoConfiguration
 
+        // repositories
        data.jpa.JpaRepositoriesAutoConfiguration
 
+        // data sources and jdbc access
        flyway.FlywayAutoConfiguration
        jdbc.DataSourceAutoConfiguration jdbc.DataSourceTransactionManagerAutoConfiguration jdbc.JdbcClientAutoConfiguration jdbc.JdbcTemplateAutoConfiguration liquibase.LiquibaseAutoConfiguration
 
-        orm.jpa.HibernateJpaAutoConfiguration sql.init.SqlInitializationAutoConfiguration TransactionAutoConfiguration
+        orm.jpa.HibernateJpaAutoConfiguration sql.init.SqlInitializationAutoConfiguration
+        TransactionAutoConfiguration
 
+        // testing setup
         //org.springframework.boot.test.
         autoconfigure.jdbc.TestDatabaseAutoConfiguration autoconfigure.orm.jpa.TestEntityManagerAutoConfiguration
 
@@ -3953,7 +4073,41 @@ The recommended way to enable the features is to add a dependency on the spring-
 
 \subsubsection{Endpoints}
 
-Actuator endpoints let you monitor and interact with your application. Spring Boot includes a number of built-in endpoints and lets you add your own. For example, the health endpoint provides basic application health information.
+Actuator endpoints let you monitor and interact with your application. Spring Boot includes a number of built-in endpoints and lets you add your own.
+
+The following technology-agnostic endpoints are available:
+
+\begin{itemize}
+    \item auditevents
+    \item beans
+    \item caches
+    \item conditions
+    \item configprops
+    \item env
+    \item flyway
+    \item health
+    \item httpexchanges
+    \item info
+    \item integrationgraph
+    \item loggers
+    \item liquibase
+    \item metrics
+    \item mappings
+    \item quartz
+    \item scheduledtasks
+    \item sessions
+    \item shutdown
+    \item startup
+    \item threaddump
+\end{itemize}
+
+If your application is a web application (Spring MVC, Spring WebFlux, or Jersey), you can use the following additional endpoints:
+
+\begin{itemize}
+    \item heapdump
+    \item logfile
+    \item prometheus
+\end{itemize}
 
 You can enable or disable each individual endpoint and expose them (make them remotely accessible) over HTTP or JMX. An endpoint is considered to be available when it is \textit{both enabled and exposed}.
 
@@ -4139,6 +4293,22 @@ When the env contributor is enabled, you can customize the data exposed by the i
     }
 \end{lstlisting}
 
+\paragraph{Metrics}
+
+Areas where metrics are recorded include:
+
+\begin{itemize}
+    \item JVM Metrics
+    \item System Metrics
+    \item Application Startup Metrics
+    \item Logger Metrics
+    \item Task Execution and Scheduling Metrics
+    \item JMS Metrics
+    \item Spring MVC Metrics
+\end{itemize}
+
+as well as product-specific metrics.
+
 \paragraph{Tracing}
 
 Spring Boot Actuator provides dependency management and auto-configuration for Micrometer Tracing, a facade for popular tracer libraries.
@@ -4169,6 +4339,18 @@ You can enable auditing by providing a bean of type \lstinline|AuditEventReposit
 To customize published security events, you can provide your own implementations of \lstinline|AbstractAuthenticationAuditListener| and \lstinline|AbstractAuthorizationAuditListener|.
 
 You can also use the audit services for your own business events. To do so, either inject the \lstinline|AuditEventRepository| bean into your own components and use that directly or publish an \lstinline|AuditApplicationEvent| with the Spring \lstinline|ApplicationEventPublisher| (by implementing \lstinline|ApplicationEventPublisherAware|).
+
+\section{Special features}
+
+\subsection{HATEOAS}
+
+If you develop a RESTful API that makes use of hypermedia, Spring Boot provides auto-configuration for Spring HATEOAS that works well with most applications.
+
+The auto-configuration replaces the need to use \lstinline|@EnableHypermediaSupport| and registers a number of beans to ease building hypermedia-based applications, including a \lstinline|LinkDiscoverer| (for client side support) and an \lstinline|ObjectMapper| configured to correctly marshal responses into the desired representation.
+
+The ObjectMapper is customized by setting the various spring.jackson.* properties or, if one exists, by a Jackson2ObjectMapperBuilder bean.
+
+Note: You can take control of Spring HATEOAS’s configuration by explicitly using @EnableHypermediaSupport. Doing so \textit{disables} the ObjectMapper customization described earlier.
 
 
 \end{document}
