@@ -2809,11 +2809,38 @@ Key differences:
 
 Both @Mock and @MockBean are included in spring-boot-starter-test.
 
+\subsection{Test Annotations}
+
+\subsubsection{@SpringJUnitConfig}
+
+@SpringJUnitConfig is a composed annotation that combines \lstinline|@ExtendWith(SpringExtension.class)| from JUnit Jupiter with \lstinline|@ContextConfiguration| from the Spring TestContext Framework.
+
+It can be used at the class level as a drop-in replacement for \lstinline|@ContextConfiguration|. With regard to configuration options, the only difference between @ContextConfiguration and @SpringJUnitConfig is that component classes may be declared with the value attribute in @SpringJUnitConfig.
+
+The following example shows how to use the @SpringJUnitConfig annotation to specify a configuration class:
+
+\begin{lstlisting}
+    @SpringJUnitConfig(TestConfig.class)
+class ConfigurationClassJUnitJupiterSpringTests {
+    // class body...
+}
+
+\end{lstlisting}
+
+The following example shows how to use the @SpringJUnitConfig annotation to specify the location of a configuration file:
+
+\begin{lstlisting}
+    @SpringJUnitConfig(locations = "/test-config.xml")
+class XmlJUnitJupiterSpringTests {
+    // class body...
+}
+\end{lstlisting}
+
 \section{Spring Web MVC}
 
 Spring Web MVC is the original web framework built on the Servlet API and has been included in the Spring Framework from the very beginning.
 
-It is packaged in \textit{spring-textmvc.jar}.
+It is packaged in \textit{spring-webmvc.jar}; packages are prefixed with \textit{org.springframework.web}.
 
 \subsection{Controllers}
 
@@ -3928,6 +3955,21 @@ With Spring MVC, we can query our web endpoints using MockMvc or WebTestClient, 
     }
 
 \end{lstlisting}
+
+SpringBootTest is itself annotated with
+\lstinline|@ExtendWith(org.springframework.test.context.junit.jupiter.SpringExtension.class)|
+
+It provides the following features over and above the regular Spring TestContext Framework:
+
+\begin{itemize}
+    \item Uses SpringBootContextLoader as the default ContextLoader when no specific @ContextConfiguration(loader=...) is defined.
+    \item Automatically searches for a \lstinline|@SpringBootConfiguratio|n when nested @Configuration is not used, and no explicit classes are specified.
+    \item Allows \textit{custom Environment properties} to be defined using the properties attribute.
+    \item Allows application arguments to be defined using the args attribute.
+    \item Provides support for different webEnvironment modes, including the ability to start a fully running web server listening on a defined or random port.
+    \item Registers a \lstinline|TestRestTemplate| and/or \lstinline|WebTestClient| bean for use in web tests that are using a fully running web server.
+\end{itemize}
+
 
 By default, @SpringBootTest will not start a server. You can use the webEnvironment attribute of @SpringBootTest to further refine how your tests run:
 
