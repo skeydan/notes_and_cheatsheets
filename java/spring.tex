@@ -209,7 +209,7 @@ The following table lists features provided by the BeanFactory and ApplicationCo
 \begin{table}[h!]
 \begin{tabular}{|c|c|c|}
     \hline
-    BeanFactory &  ApplicationContext&  Feature\\
+    Feature &  BeanFactory&  ApplicationContext\\
     \hline
     Bean instantiation/wiring&  Y&  Y\\
     \hline
@@ -919,7 +919,7 @@ public class AppConfig  {
 Limitations of using @Inject and @Named / @ManagedBean are (Spring equivalent is also shown):
 
 \begin{table}[hbt!]
-\begin{tabular}{ |l p{.2\linewidth} | l p{.2\linewidth} | l p{.4.5\linewidth}|}
+\begin{tabular}{ p{.25\linewidth}  p{.15\linewidth}  p{.5\linewidth}}
     \hline
     Spring&  jakarta.inject.*&  Comments\\
     \hline
@@ -1081,6 +1081,20 @@ Limitations of using @Inject and @Named / @ManagedBean are (Spring equivalent is
    \end{itemize}
 
     The profile string may contain a simple profile name (for example, production) or a profile expression. A profile expression allows for more complicated profile logic to be expressed. The following operators are supported in profile expressions: \lstinline{!,\&,|}.
+
+    If a given profile is prefixed with the NOT operator (!), the annotated component will be registered if the profile is not active.
+
+    For example, given @Profile({"p1", "!p2"}), registration will occur if profile 'p1' is active \textit{or} if profile 'p2' is not active.
+    In consequence, the following will result in the profile(s) being registered:
+
+    \begin{lstlisting}
+        p1,p2 // !
+
+        p1
+
+        p3
+
+    \end{lstlisting}
 
     To define alternative beans with different profile conditions, use distinct Java method names pointing to the same bean name via the @Bean name attribute:
 
@@ -2027,7 +2041,7 @@ The following image shows a conceptual view of calling a method on a transaction
     \label{fig:transactions-aop}
 \end{figure}
 
-Since declarative transaction management is made possible using Spring AOP, which by default uses JDK Dynamic Proxies, only public methods called from outside the class are affected by the @Transactional annotation.
+Since declarative transaction management is made possible using Spring AOP, which by default uses JDK Dynamic Proxies, only \textit{public} methods called from outside the class are affected by the @Transactional annotation.
 
 Note: The @Transactional annotation in Spring is not sufficient to handle distributed transactions seamlessly across microservices. It is limited to managing transactions within a single service or database.
 
@@ -2118,7 +2132,15 @@ The Spring Framework’s JDBC abstraction framework consists of four different p
 
 \subsection{Using JdbcTemplate}
 
-JdbcTemplate acquires a database connection only during a method call, which requires data access, and releases it as soon as the rows are fetched.
+This is the central class in the JDBC core package.
+
+This class executes SQL queries or updates, initiating iteration over ResultSets and catching JDBC exceptions and translating them to the generic, more informative exception hierarchy defined in the org.springframework.dao package.
+
+Because this class is parameterizable by the callback interfaces and the SQLExceptionTranslator interface, there should be no need to subclass it.
+
+All SQL operations performed by this class are logged at debug level, using "org.springframework.jdbc.core.JdbcTemplate" as log category.
+
+Note: JdbcTemplate acquires a database connection only during a method call, which requires data access, and releases it as soon as the rows are fetched.
 
 \subsubsection{Queries}
 
@@ -2202,7 +2224,7 @@ You can use the execute(..) method to run any arbitrary SQL. Consequently, the m
 
 \subsubsection{Callback interfaces }
 
-JdbcTemplate callback interfaces (functional interfaces; implementors must implement the abstract method):
+JdbcTemplate callback (functional, i.e., implementors must implement the abstract method) interfaces are :
 
 \begin{tabular}{|c|c|c|}
     \hline
@@ -2627,8 +2649,7 @@ Spring provides the following options for executing SQL scripts programmatically
         boolean continueOnError,
         boolean ignoreFailedDrops,
         String commentPrefix,
-        @Nullable
-        String separator,
+        @Nullable String separator,
         String blockCommentStartDelimiter,
         String blockCommentEndDelimiter
     ) throws ScriptException
@@ -2644,7 +2665,6 @@ Spring provides the following options for executing SQL scripts programmatically
     /*
     Call addScript(org.springframework.core.io.Resource) to add a single SQL script location.
     Call addScripts(org.springframework.core.io.Resource...) to add multiple SQL script locations.
-    Consult the setter methods in this class for further configuration options.
     Call populate(java.sql.Connection) or execute(javax.sql.DataSource) to initialize or clean up the database using the configured scripts.
     */
 
@@ -3330,10 +3350,14 @@ In Java configuration, you can implement the WebMvcConfigurer interface:
 
 \section{REST Clients}
 
+
+
+    The REST architectural style emphasises \textit{uniform interfaces}, \textit{independent deployment of components}, the \textit{scalability of interactions} between them, and creating a layered architecture to promote \textit{caching} to reduce user-perceived latency, enforce \textit{security}, and encapsulate legacy systems.
+
 \begin{itemize}
-    \item RestClient is a synchronous HTTP client that exposes a modern, fluent API.
+    \item \textit{RestClient} is a synchronous HTTP client that exposes a modern, fluent API.
     \item WebClient is a reactive client to perform HTTP requests with a fluent API.
-    \item RestTemplate is a synchronous client to perform HTTP requests. It is the original Spring REST client and exposes a simple, template-method API over underlying HTTP client libraries.
+    \item \textit{RestTemplate} is a synchronous client to perform HTTP requests. It is the original Spring REST client and exposes a simple, template-method API over underlying HTTP client libraries.
     \item HTTP Interface: The Spring Frameworks lets you define an HTTP service as a Java interface with HTTP exchange methods. You can then generate a proxy that implements this interface and performs the exchanges. This helps to simplify HTTP remote access and provides additional flexibility for to choose an API style such as synchronous or reactive.
 \end{itemize}
 
@@ -3569,13 +3593,13 @@ A Spring Boot application can be shut down programmatically in the following way
 The spring.factories file can be used to register custom interface implementations in the following cases:
 
 \begin{itemize}
-    \item Register application event listeners regardless of how the Spring Boot application is created (configured). This is done by implementing a class that inherits from SpringApplicationEvent.
-    \item Locate auto-configuration candidates in, for instance, your own starter module.
-    \item Register a filter to limit the auto-configuration classes considered. See AutoConfigurationImportFilter.
+    \item Register application \textit{event listeners} regardless of how the Spring Boot application is created (configured). This is done by implementing a class that inherits from SpringApplicationEvent.
+    \item Locate \textit{auto-configuration candidates} in, for instance, your own starter module.
+    \item Register a \textit{filter} to limit the auto-configuration classes considered. See AutoConfigurationImportFilter.
     \item  Activate application listeners that create a file containing the application process id and/or create file(s) containing the port number(s) used by the running web server (if any). These listeners, ApplicationPidFileWriter and WebServerPortFileWriter, both implement the ApplicationListener interface.
-    \item Register failure analyzers. Failure analyzers implement the FailureAnalyzer interface.
+    \item Register \textit{failure analyzers}. Failure analyzers implement the FailureAnalyzer interface.
     \item Customize the environment or application context prior to Spring Boot application startup, by implementing the ApplicationListener, ApplicationContextListener or the EnvironmentPostProcessor interfaces.
-    \item Register the availability of view template providers. See TemplateAvailabilityProvider interface.
+    \item Register the availability of \textit{view} template providers. See TemplateAvailabilityProvider interface.
 \end{itemize}
 \subsection{ApplicationContext in Boot}
 
