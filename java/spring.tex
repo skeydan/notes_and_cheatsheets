@@ -552,7 +552,7 @@ Precisely, the order of invocation is this:
 \subsection{Customizing the Nature of a Bean}
 \subsubsection{Lifecycle Callbacks}
 
-To interact with the container’s management of the bean lifecycle, you can implement the Spring
+To interact with the container’s management of the bean lifecycle, you can implement the \textit{InitializingBean}
 \lstinline|| and \lstinline|DisposableBean| interfaces. The container calls \lstinline|afterPropertiesSet()| for the
 former and \lstinline|destroy()| for the latter to let the bean perform certain actions upon initialization and
 destruction of your beans.
@@ -727,6 +727,7 @@ public class ApplicationContextAwareImpl implements ApplicationContextAware {
 
        // field injection
        @Autowired
+       // private works!
        private X x;
     \end{lstlisting}
 
@@ -753,7 +754,7 @@ For example, when you work with two different databases, using the @Primary anno
         }
     }
 
-\end{{lstlisting}
+\end{lstlisting}
 
 \subsubsection{@Bean}
 
@@ -1398,9 +1399,35 @@ Determine what auto configuration does. There are:
 
 \end{lstlisting}
 
-
-
 For example, @Profile is such a condition.
+
+Example annotation:
+
+\begin{lstlisting}
+    /*
+    When placed on a @Bean method and none of value(), type(), name(), or annotation() has been specified, the bean type to match defaults to the return type of the @Bean method:
+
+    @Configuration
+    public class MyAutoConfiguration {
+
+        @ConditionalOnBean
+        @Bean
+        public MyService myService() {
+            ...
+        }
+
+    }
+
+    In the sample above the condition will match if a bean of type MyService is already contained in the BeanFactory.
+
+    The condition can only match the bean definitions that have been processed by the application context so far and, as such, it is strongly recommended to use this condition on auto-configuration classes only. If a candidate bean may be created by another auto-configuration, make sure that the one using this condition runs after.
+    */
+
+    @Conditional(
+        org.springframework.boot.autoconfigure.condition.OnBeanCondition.class)
+    public @interface ConditionalOnBean
+
+\end{lstlisting}
 
 \subsubsection{RestController}
 
@@ -1663,6 +1690,15 @@ When in a @Configuration class we use the @Bean annotation on a method, Spring u
     In SpEL, Beans are referenced using @: e.g., \lstinline|@myComponent.toString()|.
 
     In addition to application-defined beans, SpEL can make use of beans implicitly provided by Spring, namely environment, systemProperties, and systemEnvironment.
+
+    For example, these are two vaild ways to access a system property daily.limit:
+
+    \begin{lstlisting}
+        @Value("${daily.limit}")
+
+        @Value("#{systemProperties['daily.limit']}")
+    \end{lstlisting}
+
 
 \section{AOP in Spring}
 
@@ -2755,107 +2791,6 @@ Example queries using MockMvc:
 \end{lstlisting}
 
 
-\subsection{Mocking in detail: @Mock vs. @MockBean}
-
-@Mock is an annotation provided by the Mockito library. It is used to create mock objects for dependencies that are not part of the Spring context.
-
-The @Mock annotation is typically used in conjunction with the MockitoJUnitRunner or MockitoExtension to initialize the mock objects.
-
-Example:
-
-\begin{lstlisting}
-    import static org.mockito.Mockito.*;
-
-    @RunWith(MockitoJUnitRunner.class)
-    public class UserServiceTest {
-
-        @Mock
-        private UserRepository userRepository;
-
-        // inject mock objects into UserService
-        @InjectMocks
-        private UserService userService;
-
-        @Test
-        public void testGetUserById() {
-            // Given
-            User mockedUser = new User("John", "Doe", 25);
-            when(userRepository.findById(1L)).thenReturn(
-            Optional.of(mockedUser));
-
-            // When
-            User result = userService.getUserById(1L);
-
-            // Then
-            assertNotNull(result);
-            assertEquals("John", result.getFirstName());
-
-            // Verify that the findById method was called
-            verify(userRepository).findById(1L);
-        }
-    }
-\end{lstlisting}
-
-In contrast, @MockBean is a Spring Boot-specific annotation provided by the Spring Boot Test module. It is used to create mock objects for dependencies that are part of the Spring context.
-
-Example:
-
-\begin{lstlisting}
-    @SpringBootTest
-    public class UserServiceIntegrationTest {
-
-        @Autowired
-        private UserService userService;
-
-        @MockBean
-        private UserRepository userRepository;
-
-        @Test
-        public void testGetUserById() {
-            // same as above
-        }
-    }
-\end{lstlisting}
-
-
-Key differences:
-
-\begin{itemize}
-    \item @Mock can only be applied to fields and parameters, whereas @MockBean can only be applied to classes and fields.
-    \item @Mock can be used to mock any Java class or interface while @MockBean only allows for mocking of Spring beans or creation of mock Spring beans. It can be used to mock existing beans, but also to create new beans that will belong to the Spring application context.
-    \item To be able to use the @MockBean annotation, the Spring runner (@RunWith(SpringRunner.class) ) is used, whereas @Mock is used with MockitoJUnitRunner.
-    \item @MockBean can be used to create custom annotations for specific, reoccurring, needs.
-\end{itemize}
-
-Both @Mock and @MockBean are included in spring-boot-starter-test.
-
-\subsection{Test Annotations}
-
-\subsubsection{@SpringJUnitConfig}
-
-@SpringJUnitConfig is a composed annotation that combines \lstinline|@ExtendWith(SpringExtension.class)| from JUnit Jupiter with \lstinline|@ContextConfiguration| from the Spring TestContext Framework.
-
-It can be used at the class level as a drop-in replacement for \lstinline|@ContextConfiguration|. With regard to configuration options, the only difference between @ContextConfiguration and @SpringJUnitConfig is that component classes may be declared with the value attribute in @SpringJUnitConfig.
-
-The following example shows how to use the @SpringJUnitConfig annotation to specify a configuration class:
-
-\begin{lstlisting}
-    @SpringJUnitConfig(TestConfig.class)
-class ConfigurationClassJUnitJupiterSpringTests {
-    // class body...
-}
-
-\end{lstlisting}
-
-The following example shows how to use the @SpringJUnitConfig annotation to specify the location of a configuration file:
-
-\begin{lstlisting}
-    @SpringJUnitConfig(locations = "/test-config.xml")
-class XmlJUnitJupiterSpringTests {
-    // class body...
-}
-\end{lstlisting}
-
 \section{Spring Web MVC}
 
 Spring Web MVC is the original web framework built on the Servlet API and has been included in the Spring Framework from the very beginning.
@@ -3559,6 +3494,8 @@ Spring Boot provides integration with three JSON mapping libraries: Gson, Jackso
 
 Jackson is the preferred and default library.
 
+Spring Boot contains the \lstinline|spring-boot-devtools| dependency, enabling automatic application restart on file change.
+
 \subsection{Logging in Spring Boot}
 
 Spring Boot uses \textit{Commons Logging} for all internal logging but leaves the underlying log implementation open.
@@ -3718,7 +3655,8 @@ nature. Spring Boot provides an alternative method of working with properties th
 typed beans govern and validate the configuration of your application.
 TIP
 See also the differences between @Value and type-safe configuration properties.
-JavaBean Properties Binding
+\subsubsection{JavaBean Properties Binding}
+
 It is possible to bind a bean declaring standard JavaBean properties as shown in the following
 example:
 
@@ -3948,7 +3886,35 @@ To customize the primary configuration, one can use a \textit{nested} \lstinline
 
 Note: An imported @TestConfiguration is processed earlier than an inner-class @TestConfiguration and an imported @TestConfiguration will be processed before any configuration found through component scanning.
 
-\subsection{The @SpringBootTest annotation}
+
+\subsection{Test Annotations}
+
+\subsubsection{@SpringJUnitConfig}
+
+@SpringJUnitConfig is a composed annotation that combines \lstinline|@ExtendWith(SpringExtension.class)| from JUnit Jupiter with \lstinline|@ContextConfiguration| from the Spring TestContext Framework.
+
+It can be used at the class level as a drop-in replacement for \lstinline|@ContextConfiguration|. With regard to configuration options, the only difference between @ContextConfiguration and @SpringJUnitConfig is that component classes may be declared with the value attribute in @SpringJUnitConfig.
+
+The following example shows how to use the @SpringJUnitConfig annotation to specify a configuration class:
+
+\begin{lstlisting}
+    @SpringJUnitConfig(TestConfig.class)
+    class ConfigurationClassJUnitJupiterSpringTests {
+        // class body...
+    }
+
+\end{lstlisting}
+
+The following example shows how to use the @SpringJUnitConfig annotation to specify the location of a configuration file:
+
+\begin{lstlisting}
+    @SpringJUnitConfig(locations = "/test-config.xml")
+    class XmlJUnitJupiterSpringTests {
+        // class body...
+    }
+\end{lstlisting}
+
+\subsubsection{The @SpringBootTest annotation}
 
 The @SpringBootTest annotation is used to specify the main class that should be used when launching an application context for integration tests.
 
@@ -4009,7 +3975,7 @@ By default, @SpringBootTest will not start a server. You can use the webEnvironm
     \item NONE: Loads an ApplicationContext by using SpringApplication but does not provide any web environment (mock or otherwise).
 \end{itemize}
 
-\subsection{Auto-configured Spring MVC Tests: @WebMvcTest}
+\subsubsection{Auto-configured Spring MVC Tests: @WebMvcTest}
 
 To test whether Spring MVC controllers are working as expected, use the @WebMvcTest annotation.
 
@@ -4024,36 +3990,114 @@ Often, @WebMvcTest is limited to a single controller and is used in combination 
 @WebMvcTest also auto-configures \lstinline|MockMvc|.
 
 
-\subsection{Auto-Configuration for Slice Tests}
-\subsubsection{Auto-configured JPA Tests}
+\subsubsection{Auto-Configuration for Slice Tests}
+\paragraph{Auto-configured JPA Tests}
 
 The annotation \lstinline|@DataJpaTest| causes the following auto-configuration to take place:
 
 \begin{lstlisting}
-        // optional:org.springframework.boot.testcontainers.
-       service.connection.ServiceConnectionAutoConfiguration
+    // optional:org.springframework.boot.testcontainers.
+    service.connection.ServiceConnectionAutoConfiguration
 
-        // caching
-        // org.springframework.boot.autoconfigure.
-       cache.CacheAutoConfiguration
+    // caching
+    // org.springframework.boot.autoconfigure.
+    cache.CacheAutoConfiguration
 
-        // repositories
-       data.jpa.JpaRepositoriesAutoConfiguration
+    // repositories
+    data.jpa.JpaRepositoriesAutoConfiguration
 
-        // data sources and jdbc access
-       flyway.FlywayAutoConfiguration
-       jdbc.DataSourceAutoConfiguration jdbc.DataSourceTransactionManagerAutoConfiguration jdbc.JdbcClientAutoConfiguration jdbc.JdbcTemplateAutoConfiguration liquibase.LiquibaseAutoConfiguration
+    // data sources and jdbc access
+    flyway.FlywayAutoConfiguration
+    jdbc.DataSourceAutoConfiguration jdbc.DataSourceTransactionManagerAutoConfiguration jdbc.JdbcClientAutoConfiguration jdbc.JdbcTemplateAutoConfiguration liquibase.LiquibaseAutoConfiguration
 
-        orm.jpa.HibernateJpaAutoConfiguration sql.init.SqlInitializationAutoConfiguration
-        TransactionAutoConfiguration
+    orm.jpa.HibernateJpaAutoConfiguration sql.init.SqlInitializationAutoConfiguration
+    TransactionAutoConfiguration
 
-        // testing setup
-        //org.springframework.boot.test.
-        autoconfigure.jdbc.TestDatabaseAutoConfiguration autoconfigure.orm.jpa.TestEntityManagerAutoConfiguration
+    // testing setup
+    //org.springframework.boot.test.
+    autoconfigure.jdbc.TestDatabaseAutoConfiguration autoconfigure.orm.jpa.TestEntityManagerAutoConfiguration
 
 \end{lstlisting}
 
 Note especially the auto-configuration of caching, JDBCTemplate, Liquibase and Flyway.
+
+\subsubsection{Mocking in detail: @Mock vs. @MockBean}
+
+@Mock is an annotation provided by the Mockito library. It is used to create mock objects for dependencies that are not part of the Spring context.
+
+The @Mock annotation is typically used in conjunction with the MockitoJUnitRunner or MockitoExtension to initialize the mock objects.
+
+Example:
+
+\begin{lstlisting}
+    import static org.mockito.Mockito.*;
+
+    @RunWith(MockitoJUnitRunner.class)
+    public class UserServiceTest {
+
+        @Mock
+        private UserRepository userRepository;
+
+        // inject mock objects into UserService
+        @InjectMocks
+        private UserService userService;
+
+        @Test
+        public void testGetUserById() {
+            // Given
+            User mockedUser = new User("John", "Doe", 25);
+            when(userRepository.findById(1L)).thenReturn(
+            Optional.of(mockedUser));
+
+            // When
+            User result = userService.getUserById(1L);
+
+            // Then
+            assertNotNull(result);
+            assertEquals("John", result.getFirstName());
+
+            // Verify that the findById method was called
+            verify(userRepository).findById(1L);
+        }
+    }
+\end{lstlisting}
+
+In contrast, @MockBean is a Spring Boot-specific annotation provided by the Spring Boot Test module. It is used to create mock objects for dependencies that are part of the Spring context.
+
+Example:
+
+\begin{lstlisting}
+    @SpringBootTest
+    public class UserServiceIntegrationTest {
+
+        @Autowired
+        private UserService userService;
+
+        @MockBean
+        private UserRepository userRepository;
+
+        @Test
+        public void testGetUserById() {
+            // same as above
+        }
+    }
+\end{lstlisting}
+
+
+Key differences:
+
+\begin{itemize}
+    \item @Mock can only be applied to fields and parameters, whereas @MockBean can only be applied to classes and fields.
+    \item @Mock can be used to mock any Java class or interface while @MockBean only allows for mocking of Spring beans or creation of mock Spring beans. It can be used to mock existing beans, but also to create new beans that will belong to the Spring application context.
+    \item To be able to use the @MockBean annotation, the Spring runner (@RunWith(SpringRunner.class) ) is used, whereas @Mock is used with MockitoJUnitRunner.
+    \item @MockBean can be used to create custom annotations for specific, reoccurring, needs.
+\end{itemize}
+
+Both @Mock and @MockBean are included in \lstinline|spring-boot-starter-test|.
+
+
+
+
 
 \subsection{TestRestTemplate}
 
