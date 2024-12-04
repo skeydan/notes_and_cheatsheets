@@ -506,6 +506,8 @@ It includes support for the javax.annotation.PostConstruct and javax.annotation.
 
 \end{lstlisting}
 
+ Annotated methods can have any visibility but must take no parameters and may only return void.
+
 \subsubsection{Initialization hook 2: \lstinline|InitializingBean|’s \lstinline|afterPropertiesSet()|}
 If a bean implements the InitializingBean interface, Spring calls its afterPropertiesSet() method. Used to initialize processes,  load resources, etc. This approach is simple to use but it’s not recommended because it will create tight coupling with the Spring framework in our bean implementations.
 
@@ -544,7 +546,7 @@ If a bean implements the DisposableBean interface, Spring calls its destroy() me
 Precisely, the order of invocation is this:
 
 \begin{itemize}
-    \item Any methods in the bean implementation class annotated with @PreDestroy are invoked.
+    \item Any methods in the bean implementation class annotated with @PreDestroy are invoked. (Annotated methods can have any visibility but must take no parameters and may only return void.)
     \item Any destroy method in a bean implementing the DisposableBean interface is invoked.
     \item Any custom bean destruction method is invoked. Bean destruction methods can be specified either in the value of the destroy-method attribute in the corresponding \textless bean \textgreater element in a Spring XML configuration or in the destroyMethod property of the @Bean annotation.
 \end{itemize}
@@ -1816,7 +1818,7 @@ Types:
     \item
     After-advice is executed after the target method, whatever its outcome.
     \begin{lstlisting}
-        @Before("execution(void set*(*))
+        @After("execution(void set*(*))
     \end{lstlisting}
     \item
     After-returning: executed after the target returns successfully. This advice will never execute if the target throws any exception.
@@ -2040,7 +2042,9 @@ With SERIALIZABLE, the first read sees exactly the same data as the second.
 
 \subsection{Propagation Mode}
 
-\begin{tabular}{|c|c|}
+\begin{table}[h!]
+
+\begin{tabular}{p{.35\linewidth}  p{.6\linewidth}}
     \hline
     Enum Constant& Description \\
     \hline
@@ -2059,10 +2063,13 @@ With SERIALIZABLE, the first read sees exactly the same data as the second.
     SUPPORTS&  Support a current transaction, execute non-transactionally if none exists.\\
     \hline
 \end{tabular}
+\end{table}
+
+Note: The NESTED propagation behavior indicates that a new transaction should be created, but it will run within an existing transaction context. The nested transaction can be rolled back independently of the outer transaction. If no transaction context exists when the method is called, a new transaction will be created.
 
 \subsection{Declarative}
 
-The Spring Framework’s declarative transaction management is made possible with Spring aspect-oriented programming (AOP). Due to reliance on AOP, we can customize transactional behavior - for example, insert custom behavior in the case of transaction rollback, or add arbitrary advice, along with transactional advice.
+Declarative transaction management is made possible with Spring aspect-oriented programming (AOP), and needs to be enabled using \lstinline|@EnableTransactionManagement|. Due to reliance on AOP, we can customize transactional behavior - for example, insert custom behavior in the case of transaction rollback, or add arbitrary advice, along with transactional advice.
 
 The concept of rollback rules is important. They let you specify which exceptions (and throwables) should cause automatic rollback. You can specify this declaratively, in configuration, not in Java code. So, although you can still call \lstinline|setRollbackOnly()| on the TransactionStatus object to roll back the current transaction, most often you can specify a rule that MyApplicationException must always result in rollback.
 
@@ -2277,6 +2284,11 @@ JdbcTemplate callback (functional, i.e., implementors must implement the abstrac
 
 
 \section{Data Access with JPA}
+
+In most Spring Boot applications that use JPA, you don’t need to explicitly use the \lstinline|@EnableJpaRepositories| annotation. By adding the \lstinline|spring-data-jpa| dependency and annotating your main class with \lstinline|@SpringBootApplication|, Spring Boot will automatically enable JPA repositories and scan the appropriate packages for interfaces extending JpaRepository.
+
+However, if you need to customize package scanning or provide additional configuration options for JPA repositories, you can use @EnableJpaRepositories within your @SpringBootApplication class.
+
 \subsection{Repository Query Language}
 
 Example (see \url{  https://docs.spring.io/spring-data/commons/reference/repositories/query-methods-details.html}):
@@ -2387,6 +2399,20 @@ Example:
 
     //  Use a distinct query to return only unique results. Consult the store-specific documentation whether that feature is supported. This keyword can occur in any place of the subject between find (and the other keywords) and by.
     ...Distinct...
+\end{lstlisting}
+
+\subsection{Accessing nested objects}
+
+Custom finders can also navigate relationships.
+
+For example, if the repository’s domain type were Person and it had an Address field with ZipCode, we could write a custom finder that uses the ZipCode of the Entity Address to filter the Person entities containing that Address.
+
+Alternatives are:
+
+\begin{lstlisting}
+    findByAddress_ZipCode(ZipCode zipCode)
+
+    findByAddressZipCode(ZipCode zipCode)
 \end{lstlisting}
 
 \subsection{Supported query method predicate keywords and modifiers}
@@ -2577,6 +2603,26 @@ Here is an overview of AuthorizationManager implementations: see \ref{fig:auth-m
     \caption{Spring Security Filter Chain}
     \label{fig:auth-manag-impl}
 \end{figure}
+
+\subsubsection{Configuring URL interception}
+
+In Spring Security, URL intercept rules are configured using \lstinline|authorizeRequests()| and \lstinline|requestMatchers()| methods, typically in the \lstinline|HttpSecurity| configuration. When defining URL access rules, it's crucial to specify them in the right order: Most-specific rules must come first.
+
+Example:
+
+\begin{lstlisting}
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+    http
+    .authorizeRequests()
+    .requestMatchers("/admin/settings").hasRole("ADMIN")  // Most specific
+    .requestMatchers("/admin/**").hasRole("USER")         // Less specific
+    .requestMatchers("/**").permitAll()                   // Least specific
+    .and()
+    .formLogin();
+}
+\end{lstlisting}
+
 
 \subsubsection{Method Security}
 
@@ -3914,7 +3960,7 @@ The following example shows how to use the @SpringJUnitConfig annotation to spec
     }
 \end{lstlisting}
 
-\subsubsection{The @SpringBootTest annotation}
+\subsubsection{@SpringBootTest}
 
 The @SpringBootTest annotation is used to specify the main class that should be used when launching an application context for integration tests.
 
@@ -3975,13 +4021,15 @@ By default, @SpringBootTest will not start a server. You can use the webEnvironm
     \item NONE: Loads an ApplicationContext by using SpringApplication but does not provide any web environment (mock or otherwise).
 \end{itemize}
 
-\subsubsection{Auto-configured Spring MVC Tests: @WebMvcTest}
+\subsubsection{@WebMvcTest}
 
 To test whether Spring MVC controllers are working as expected, use the @WebMvcTest annotation.
 
-@WebMvcTest auto-configures the Spring MVC infrastructure and limits scanned beans to @Controller, @ControllerAdvice, @JsonComponent, Converter, GenericConverter, Filter, HandlerInterceptor, WebMvcConfigurer, WebMvcRegistrations, and HandlerMethodArgumentResolver.
+@WebMvcTest auto-configures the Spring MVC infrastructure and limits scanned beans to @Controller, @ControllerAdvice, @JsonComponent, Converter, GenericConverter, Filter, HandlerInterceptor, WebMvcConfigurer, WebMvcRegistrations, and HandlerMethodArgumentResolver - but not @Component, @Service or @Repository beans.
 
 Auto-configured capabilities include: a templating engine (Thymeleaf), Jackson, caching.
+
+By default, tests annotated with @WebMvcTest will also auto-configure Spring Security and MockMvc (include support for HtmlUnit WebClient and Selenium WebDriver). For more fine-grained control of MockMVC the @AutoConfigureMockMvc annotation can be used.
 
 Regular @Component and @ConfigurationProperties beans are not scanned when the @WebMvcTest annotation is used. @EnableConfigurationProperti es can be used to include @ConfigurationProperties beans.
 
@@ -4279,6 +4327,15 @@ Customization:
 
 
 \paragraph{Health information}
+
+By default, Spring Boot defines four different values for health status:
+
+\begin{itemize}
+    \item UP — The component or subsystem is working as expected
+    \item DOWN — The component is not working
+    \item OUT\_OF\_SERVICE — The component is out of service temporarily
+    \item UNKNOWN — The component state is unknown
+\end{itemize}
 
 Information exposed by the health endpoint depends on the \lstinline|management.endpoint.health.show-details| and \lstinline|management.endpoint.health.show-components| properties, which can be configured with one of the following values: never, when-authorized, always
 .
