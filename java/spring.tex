@@ -3551,7 +3551,10 @@ Default configurations are provided for \textit{Java Util Logging}, \textit{Log4
 By default, if you use the starters, \textit{Logback} is used for logging. Appropriate Logback routing is also included to ensure that dependent libraries that use Java Util Logging, Commons Logging, Log4J, or SLF4J all work correctly.
 
 The default log level used by Spring Boot is INFO.
+
 \subsection{SpringApplication}
+
+Spring Boot's SpringApplication class is used to bootstrap and launch a Spring application from a Java main method. This class automatically creates the ApplicationContext from the classpath, scans the configuration classes and launches the application.
 
 In addition to the usual Spring Framework events, such as ContextRefreshedEvent, a SpringApplication sends some additional application events.
 
@@ -3595,16 +3598,6 @@ A SpringApplication attempts to create the right type of ApplicationContext on y
 \end{itemize}
 
 It is also possible to take complete control of the ApplicationContext type that is used by calling setApplicationContextFactory(...).
-
-
-Architecture Overview (see \ref{fig:spring-web}):
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=1\linewidth]{spring-web}
-    \caption{Spring Boot Web Architecture Overview}
-    \label{fig:spring-web}
-\end{figure}
 
 \subsection{Accessing Command Line Properties}
 
@@ -4342,13 +4335,7 @@ Information exposed by the health endpoint depends on the \lstinline|management.
 
 The default value is never. A user is considered to be authorized when they are in one or more of the endpoint’s roles. If the endpoint has no configured roles (the default), all authenticated users are considered to be authorized. You can configure the roles by using the management.endpoint.health.roles property.
 
-Health information is collected from the content of a HealthContributorRegistry (by default, all HealthContributor instances defined in your ApplicationContext). Spring Boot includes a number of auto-configured HealthContributors, and you can also write your own.
-
-A \lstinline|HealthContributor| can be either a \lstinline|HealthIndicator| or a \lstinline|CompositeHealthContributor|.
-
-By default, the final system health is derived by a StatusAggregator, which sorts the statuses from each HealthIndicator based on an ordered list of statuses. The first status in the sorted list is used as the overall health status. If no HealthIndicator returns a status that is known to the StatusAggregator, an UNKNOWN status is used.
-
-\paragraph{Auto-configured HealthIndicators}
+Health information is collected from the content of a HealthContributorRegistry (by default, all HealthContributor instances defined in your ApplicationContext). Spring Boot includes a number of auto-configured HealthContributors, and you can also write your own. Auto-configured are:
 
 \begin{lstlisting}
     cassandra
@@ -4367,6 +4354,10 @@ By default, the final system health is derived by a StatusAggregator, which sort
     rabbit
     redis
 \end{lstlisting}
+
+A \lstinline|HealthContributor| can be either a \lstinline|HealthIndicator| or a \lstinline|CompositeHealthContributor|.
+
+By default, the final system health is derived by a StatusAggregator, which sorts the statuses from each HealthIndicator based on an ordered list of statuses. The first status in the sorted list is used as the overall health status. If no HealthIndicator returns a status that is known to the StatusAggregator, an UNKNOWN status is used.
 
 \paragraph{Writing Custom HealthIndicators}
 
