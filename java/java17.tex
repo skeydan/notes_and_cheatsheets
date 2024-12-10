@@ -44,6 +44,7 @@
         static LocalDate parse(CharSequence text, DateTimeFormatter formatter)
 
         // instance methods, e.g.
+        // return a copy!
         LocalDateTime atTime(int hour, int minute, int second, int nanoOfSecond)
         LocalDateTime atTime(LocalTime time)
 
@@ -55,6 +56,7 @@
         int getYear()
 
         // same for plus
+        // return a copy!
         LocalDate minus(long amountToSubtract, TemporalUnit unit)
         LocalDate minusDays(long daysToSubtract)
         LocalDate minusMonths(long monthsToSubtract) //etc
@@ -76,16 +78,18 @@
         static LocalTime ofInstant(Instant instant, ZoneId zone)
 
         // instance methods, e.g.
+        // return a copy!
         LocalDateTime atDate(LocalDate date)
 
         int getHour()
         int getMinute() //etc.
 
         // same for minus
+        // return a copy!
         LocalTime plus(long amountToAdd, TemporalUnit unit)
         LocalTime plusNanos(long nanosToAdd) // etc.
 
-        // returns copy
+        // return a copy!
         LocalTime withHour(int hour)
         LocalTime withMinute(int minute) //etc.
         \end{lstlisting}
@@ -1320,11 +1324,7 @@
         // whereas here, we could not add a broader type
         public static void getExceptions(Collection<? super RuntimeException>)
 
-    \end{lstlisting}
-
-\subsection{Notes on upper bounds}
-
-    \begin{lstlisting}
+        // another example
         List<? super IOException> exceptions = new ArrayList<Exception>();
 
         // DOES NOT COMPILE because this could be a List<IOException>
@@ -1335,6 +1335,12 @@
 
         // BUT this is ok:
         List<? super Exception>
+    \end{lstlisting}
+
+
+
+    \begin{lstlisting}
+
     \end{lstlisting}
 
 \section{Streams, functional interfaces, and lambda functions}
@@ -1388,7 +1394,6 @@
     \end{lstlisting}
 
 \subsection{Stream characteristics}
-\subsubsection{Ordered}
 
     ORed values from: ORDERED, DISTINCT, SORTED, SIZED, NONNULL, IMMUTABLE, CONCURRENT, SUBSIZED
 

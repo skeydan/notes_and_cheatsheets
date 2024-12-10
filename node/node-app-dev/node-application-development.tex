@@ -87,11 +87,23 @@
         style=JSES6Base
     }
 
+    \lstdefinestyle{myBash}{
+        language=bash,
+        numbers=left,
+        stepnumber=1,
+        numbersep=10pt,
+        tabsize=4,
+        showspaces=false,
+        showstringspaces=false,
+        basicstyle=\small,
+        backgroundcolor=\color{lightcyan}
+    }
+
 
 \section{The Node Binary}
 \subsection{Common Command Line Arguments}
 
-    \begin{lstlisting}[language=bash]
+    \begin{lstlisting}[style=myBash]
     # only check syntax
     node --check app.js
     node -c app.js
@@ -118,7 +130,7 @@
 
     All Node core modules can be accessed by their namespaces within the code evaluation context - no require required:
 
-    \begin{lstlisting}[language=bash]
+    \begin{lstlisting}[style=myBash]
     node -p "fs.readdirSync('.').filter((f) => /.js$/.test(f))"
     []
     \end{lstlisting}
@@ -133,7 +145,7 @@
     console.log('app.js: this is the main file')
     \end{lstlisting}
 
-    \begin{lstlisting}[language=bash]
+    \begin{lstlisting}[style=myBash]
     // CommonJS
     node -r ./preload.js app.js
     node --require ./preload.js app.js
@@ -149,7 +161,7 @@
 
     In this case, modify the V8 option --stack-trace-limit:
 
-    \begin{lstlisting}[language=bash]
+    \begin{lstlisting}[style=myBash]
     node --stack-trace-limit=20 file.js
     \end{lstlisting}
 
@@ -157,7 +169,7 @@
 
     Start node in debugging mode:
 
-    \begin{lstlisting}[language=bash]
+    \begin{lstlisting}[style=myBash]
         node --inspect file.js # runs immediately
         node --inspect-brk file.js # breakpoint at start of program
     \end{lstlisting}
@@ -465,6 +477,234 @@ When spreading objects, the properties are added as key-value pairs.
     // "Rufus the dog: awoooooooo"
 \end{lstlisting}
 
+\section{Packages and Dependencies}
+
+\subsection{Specifying a SemVer range}
+
+\begin{itemize}
+    \item Prefix the version with a caret (\lstinline|^|) to include everything that does not increment the first non-zero portion of semver. Example: \lstinline|^8.14.1| is the same as \lstinline|8.x.x|.
+
+    Note:  caret behavior is different for 0.x versions, for which it will only match patch versions.
+    \item Use the tilde symbol to include everything greater than a particular version in the same minor range. Example: \lstinline|~2.2.0| matches \lstinline|2.2.0| and \lstinline|2.2.1| (highest existing minor version).
+    \item Specify a range of versions. Example: \lstinline|>2.1| matches \lstinline|2.2.0|,
+    \lstinline|2.2.1|, ... Note: There must be spaces on either side of hyphens.
+    \item Use \lstinline{||} to combine multiple sets of versions. Example: \lstinline{^2 <2.2 || > 2.3}.
+
+\end{itemize}
+
+\section{Module System}
+
+\subsection{Detecting Main Module in CJS}
+
+In some situations we may want a module to be able to operate both as a program and as a module that can be loaded into other modules.
+
+When a file is the entry point of a program, it's the main module. We can detect whether a particular file is the main module.
+
+\begin{lstlisting}[style=ES6]
+    // imports
+
+    if (require.main === module) {
+       // ...
+    } else {
+        const myfunc = (str) => {
+            // ...
+        }
+        module.exports = myfunc
+    }
+\end{lstlisting}
+
+The "start" script in the package.json file executes \lstinline|node index.js|. When a file is called with node that file is the \textit{entry point of a program}.
+
+\begin{lstlisting}[style=myBash]
+    npm start
+
+    // or:
+    node index.js
+
+    // app starts
+\end{lstlisting}
+
+If it is loaded as a module, it will export function myfunc:
+
+\begin{lstlisting}[style=myBash]
+   $node -p 'require("./index.js")'
+   [Function: myfunc]
+
+   $ node -p 'require("./index.js")("test")'
+   TSET
+\end{lstlisting}
+
+\subsection{Converting a Local CJS File to a Local ESM File}
+
+When using ECMA Script modules in a CJS application, module files need to have the .mjs extension.
+
+\begin{lstlisting}[style=myBash]
+    node -e "fs.renameSync('./format.js', './format.mjs');"
+    node -p "fs.readdirSync('.').join('\t');"
+\end{lstlisting}
+
+\lstinline|require()| cannot be used with ESM modules.
+
+Instead, we need to change it to a dynamic \lstinline|import()| which is available in all CommonJS modules.
+
+This is due to CJS loading modules synchronously, while ESM loads modules asynchronously.
+As a consequence, ESM can import CJS, but CJS cannot require ESM since that would break the synchronous constraint.
+
+\subsubsection{Aside: Static and Dynamic Imports}
+
+Assume we have a file utils.mjs
+
+\begin{lstlisting}[style=ES6]
+    // Default export
+    export default () => {
+        console.log('Hi from the default export!');
+    };
+
+    // Named export `doStuff`
+    export const doStuff = () => {
+        console.log('Doing stuff');
+    };
+\end{lstlisting}
+
+This is a static import:
+
+\begin{lstlisting}[style=ES6]
+    import * as module from './utils.mjs';
+\end{lstlisting}
+
+Whereas this is a dynamic import:
+
+\begin{lstlisting}[style=ES6]
+
+    // returns a Promise
+    import('./utils.mjs')
+    .then((module) => {
+        module.default();
+        // logs 'Hi from the default export!'
+        module.doStuff();
+        // logs 'Doing stuff'
+    });
+
+    // or
+    (async () => {
+        const moduleSpecifier = './utils.mjs';
+        const module = await import(moduleSpecifier)
+        module.default();
+        // logs 'Hi from the default export!'
+        module.doStuff();
+        // logs 'Doing stuff'
+    })();
+\end{lstlisting}
+
+\subsection{Converting a CJS Package to an ESM Package}
+
+\subsubsection{Specify module type}
+
+We can opt-in to ESM-by-default by adding a type field to the package.json and setting it to "module". Our package.json should look as follows:
+
+
+\begin{lstlisting}[style=ES6]
+    {
+        "name": "my-package",
+        "version": "1.0.0",
+        "main": "index.js",
+        "type": "module",
+        //...
+    }
+
+\end{lstlisting}
+
+\subsubsection{Exports in ESM}
+
+Whereas in CJS, we assigned a function to module.exports:
+
+\begin{lstlisting}[style=ES6]
+      module.exports = myfunc
+\end{lstlisting}
+
+in ESM we use the \lstinline|export default| keyword and follow with a function expression to set a function as the main export:
+
+\begin{lstlisting}[style=ES6]
+    export default (str) => {
+        return somefunc(str);
+    }
+\end{lstlisting}
+
+ The default exported function is synchronous again, as it should be.
+
+ Note: ESM exports must be statically analyzable; and this means they can't be conditionally declared. The export keyword only works at the top level.
+
+EcmaScript Modules were primarily specified for browsers, implying that there is no concept of a main module in the spec (since modules are initially loaded via HTML, which could allow for multiple script tags).
+
+We can however infer that a module is the first module executed by Node by comparing process.argv[1] (which contains the execution path of the entry file) with import.meta.url.
+
+\begin{lstlisting}[style=ES6]
+    const isMain = process.argv[1] &&
+    await realpath(fileURLToPath(import.meta.url)) ===
+    await realpath(process.argv[1])
+\end{lstlisting}
+
+One compelling feature of modern ESM is \textit{Top-Level Await (TLA)}. Since all ESM modules load asynchronously it's possible to perform related asynchronous operations as part of a module's initialization.
+
+TLA allows the use of the await keyword in an ESM modules scope at the top level, in addition to the standard usage within async functions.
+
+With a dynamic import, if we want to use an imported module as default export, we have to reassign the default property to it. That's because dynamic imports return a promise which resolves to an object.
+If there's a default export in a module, the default property of that object will be set to it.
+
+\begin{lstlisting}[style=ES6]
+    if (isMain) {
+        const { default: pino } = await import('pino')
+        const logger = pino()
+       //
+    }
+
+    export default (str) => {
+        return format.upper(str).split('').reverse().join('')
+    }
+\end{lstlisting}
+
+\subsubsection{Importing modules}
+
+With static imports, different import possibilities exist:
+
+\begin{itemize}
+    \item Implicitly import a module's default export
+    \begin{lstlisting}[style=ES6]
+        // the default export of the url module is assigned
+        //  to the url reference.
+        import url from 'url'
+    \end{lstlisting}
+
+    \item Import a specific named export from a module
+    \begin{lstlisting}[style=ES6]
+        import { realpath } from 'fs/promises'
+    \end{lstlisting}
+
+    \item If there are no default exports, just individual ones, the following syntax is used:
+    \begin{lstlisting}[style=ES6]
+        import * as format from './format.js'
+    \end{lstlisting}
+
+    If a module \textit{does} have a default export and that same syntax - \lstinline|import * as| - is used to load it, the resulting object will have a \lstinline|default| property holding the default export.
+
+    Note: ESM does not support loading modules without a  full file extension.
+\end{itemize}
+
+
+
+
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+
 
 \begin{lstlisting}[style=ES6]
 
@@ -478,9 +718,6 @@ When spreading objects, the properties are added as key-value pairs.
 
 \end{lstlisting}
 
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
 
 \begin{lstlisting}[style=ES6]
 
@@ -494,9 +731,7 @@ When spreading objects, the properties are added as key-value pairs.
 
 \end{lstlisting}
 
-\begin{lstlisting}[style=ES6]
 
-\end{lstlisting}
 
 
 \end{document}
