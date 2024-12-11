@@ -690,23 +690,79 @@ With static imports, different import possibilities exist:
     Note: ESM does not support loading modules without a  full file extension.
 \end{itemize}
 
+\subsection{Resolving a Module Path in CJS}
+The require function has a method called r\lstinline|equire.resolve|. This can be used to determine the absolute path for any required module.
 
-
-
-
+Example:
 
 \begin{lstlisting}[style=ES6]
+    # package resolution
+    # no path given: looks into node-modules
+    require('pino')  => /home/key/code/[...]/app/node_modules/pino/pino.js
+    require('standard')  => /[...]/app/node_modules/standard/index.js
+
+    # directory resolution
+    # resolves to index.js!
+    require('.') 	=> /home/key/code/[...]/app/index.js
+    require('../app') => /home/key/code/[...]/app/index.js
+
+    # file resolution
+    # path given: resolves to local file
+    # both with and without extension work
+    require('./format')  => /home/key/code/[...]/app/format.js
+    require('./format.js')  => /home/key/code/[...]/app/format.js
+
+    # core APIs resolution
+    require('fs') 	   => fs
+    require('util') 	   => util
 
 \end{lstlisting}
 
+\subsection{Resolving a Module Path in ESM}
+
+Currently there is experimental support for an \lstinline|import.meta.resolve| function which returns a promise that resolves to the relevant file:// URL for a given valid input. Since this is experimental, and behind the \lstinline|--experimental-import-meta-resolve| flag, we'll discuss an alternative approach to module resolution inside an EcmaScript Module.
+
+We can use the ecosystem \lstinline|import-meta-resolve| module to get the best results for now.
+
+import { resolve } from 'import-meta-resolve'
+
+console.log(
+`import 'pino'`,
+'=>',
+await resolve('pino', import.meta.url)
+)
+
+console.log(
+`import 'tap'`,
+'=>',
+await resolve('tap', import.meta.url)
+)
+
+
+
+
 
 \begin{lstlisting}[style=ES6]
+    import { resolve } from 'import-meta-resolve'
 
-\end{lstlisting}
+    console.log(
+    `import 'pino'`,
+    '=>',
+    await resolve('pino', import.meta.url)
+    )
 
+    // If a package's package.json exports field defines
+    // an ESM entry point, the require.resolve function will still
+    // resolve to the CJS entry point because require is a CJS API.
+    // import-meta-resolve has a workaround
+    console.log(
+    `import 'tap'`,
+    '=>',
+    await resolve('tap', import.meta.url)
+    )
 
+    // resolved to [...]/tap/dist/esm/index.js
 
-\begin{lstlisting}[style=ES6]
 
 \end{lstlisting}
 
