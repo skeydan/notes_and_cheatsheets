@@ -766,6 +766,187 @@ await resolve('tap', import.meta.url)
 
 \end{lstlisting}
 
+\section{ Asynchronous Control Flow }
+
+\subsection{Callbacks}
+
+Here, the readFile function schedules a task, which is to read the given file. When the file has been read, the readFile function will call the function provided as the second argument.
+
+The second argument to readFile is a function that has two parameters, err and contents. This function will be called when readFile has completed its task. If there was an error, then the first argument passed to the function will be an error object representing that error, otherwise it will be null. If the readFile function is successful, the first argument (err) will be null and the second argument (contents) will be the contents of the file.
+
+\begin{lstlisting}[style=ES6]
+    const { readFile } = require('fs')
+
+    // __filename holds the path of the file currently being executed
+    readFile(__filename, (err, contents) => {
+        if (err) {
+            console.error(err)
+            return
+        }
+        console.log(contents.toString())
+    })
+\end{lstlisting}
+
+This yields a way to achieve parallel execution in Node.js:
+
+\begin{lstlisting}[style=ES6]
+    const { readFile } = require('fs')
+    const [ bigFile, mediumFile, smallFile ] =
+        Array.from(Array(3)).fill(__filename)
+
+    const print = (err, contents) => {
+        if (err) {
+            console.error(err)
+            return
+        }
+        console.log(contents.toString())
+    }
+    readFile(bigFile, print)
+    readFile(mediumFile, print)
+    readFile(smallFile, print)
+\end{lstlisting}
+
+Here the smallest file will be printed first, even though it's scheduled to be read last.
+
+If instead we wanted to use serial execution, let's say we wanted bigFile to print first, then mediumFile even though they take longer to load than smallFile, we'd have to place the callbacks inside each other:
+
+\begin{lstlisting}[style=ES6]
+    readFile(bigFile, (err, contents) => {
+        print(err, contents)
+        readFile(mediumFile, (err, contents) => {
+            print(err, contents)
+            readFile(smallFile, print)
+        })
+    })
+\end{lstlisting}
+
+
+Thus, serial execution with callbacks is achieved by waiting for the callback to call before starting the next asynchronous operation.
+
+\subsection{Promises}
+
+A promise is an object that represents an asynchronous operation. It's either pending or settled, and if it is settled it's either resolved or rejected.
+
+Being able to treat an asynchronous operation as an object is a useful abstraction. For instance, instead of passing a function that should be called when an asynchronous operation completes into another function (e.g., a \textit{callback}), a \textit{promise} that represents the asynchronous operation can be returned from a function instead.
+
+This is a callback-based approach:
+
+\begin{lstlisting}[style=ES6]
+
+    function myAsyncOperation (cb) {
+        doSomethingAsynchronous((err, value) => { cb(err, value) })
+    }
+
+    myAsyncOperation(functionThatHandlesTheResult)
+
+\end{lstlisting}
+
+This is the same in promise form:
+
+\begin{lstlisting}[style=ES6]
+
+    function myAsyncOperation () {
+        return new Promise((resolve, reject) => {
+            // doSomethingAsynchronous expects a callback
+            doSomethingAsynchronous((err, value) => {
+                if (err) reject(err)
+                else resolve(value)
+            })
+        })
+    }
+
+    const promise = myAsyncOperation()
+    // next up: do something with promise
+
+
+\end{lstlisting}
+
+This gets a lot nicer with the promisify function from the util module:
+
+\begin{lstlisting}[style=ES6]
+
+    const { promisify } = require('util')
+    const doSomething = promisify(doSomethingAsynchronous)
+    function myAsyncOperation () {
+        return doSomething()
+    }
+
+    const promise = myAsyncOperation()
+
+\end{lstlisting}
+
+Promise success or failure are handled using \lstinline|then| and \lstinline|catch|:
+
+\begin{lstlisting}[style=ES6]
+
+    const promise = myAsyncOperation()
+    // then and catch always return a promise, so they can be chained
+    promise
+    .then((value) => { console.log(value) })
+    .catch((err) => { console.error(err) })
+
+\end{lstlisting}
+
+Below, we have the same readFile operation as in the last section, but the promisify function is used to convert a callback-based API to a promise-based one.
+
+\begin{lstlisting}[style=ES6]
+
+    const { promisify } = require('util')
+    const { readFile } = require('fs')
+
+    const readFileProm = promisify(readFile)
+
+    const promise = readFileProm(__filename)
+
+    promise.then((contents) => {
+        console.log(contents.toString())
+    })
+
+    promise.catch((err) => {
+        console.error(err)
+    })
+\end{lstlisting}
+
+However, using promisify with fs is not necessary, since fs already exports a promises object with promise-based versions. Using this, we can write
+
+\begin{lstlisting}[style=ES6]
+
+    const { readFile } = require('fs').promises
+
+    readFile(__filename)
+    .then((contents) => {
+        console.log(contents.toString())
+    })
+    .catch(console.error)
+\end{lstlisting}
+
+Here, even though an intermediate promise is created by the first then, we still only need the one catch handler, as rejections are propagated.
+
+Promises also allow for an easy serial execution pattern:
+
+\begin{lstlisting}[style=ES6]
+
+    readFile(bigFile)
+    // returns a promise for reading mediumFile
+    .then((contents) => {
+        print(contents)
+        return readFile(mediumFile)
+        }}
+    //returns a promise for reading smallFile
+    .then((contents) => {
+        print(contents)
+        return readFile(smallFile)
+        })
+    // returns itself
+   .then(print)
+   .catch(console.error)
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
 \begin{lstlisting}[style=ES6]
 
 \end{lstlisting}
@@ -774,6 +955,29 @@ await resolve('tap', import.meta.url)
 
 \end{lstlisting}
 
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
 
 \begin{lstlisting}[style=ES6]
 

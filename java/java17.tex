@@ -307,6 +307,8 @@
         final ___ song = 6; // can be int, long, double (automatic promotion from int)
     \end{lstlisting}
 
+    When used as an argument to overloaded methods, ints will preferentially be promoted to long (or double) before autoboxing to Integer is considered.
+
 \subsubsection{Autoboxing}
 
     Beware: cannot autobox and promote at the same time!
@@ -714,6 +716,12 @@
     When a parent method is static, the child cannot "override" (\textit{nor complement}) this by a same-arg instance method.
 
 \subsection{Classes}
+
+\subsubsection{Top-level classes}
+
+Top-level classes may only have public or
+package access.
+
 \subsubsection{Nested Classes}
 
     There are four types of nested classes: inner, static, local, and anonymous.
@@ -757,6 +765,8 @@
     Note:
 
     \textit{Inner, local, and anonymous} classes can \textit{access private members} of the class in which they are defined, provided the latter two are used inside an instance method.
+
+    \textit{Static} nested classes cannot access the instance variables or methods of the outer class.
 
     \textit{All four} types of nested classes can now define static variables and methods.
 
@@ -807,6 +817,8 @@
     \item Methods \textit{with a body} must be declared \textit{default, static or private}.
 
     \item     \textit{Default} methods are implicitly public. There is no modifier that can prevent a default method from being overridden in a class implementing an interface.
+
+    \item Interfaces cannot have a constructor.
 
     \item     If implementing two interfaces that define a default method with the same signature, classes (incl. abstract classes) have to override it explicitly, or their declaration will not compile. (I.e., this fails on compilation already, not on call. See example.)
 
@@ -954,6 +966,24 @@
             public boolean hasHair() { return hasHair; }
             public int swim() { return 0; }
         }
+
+    \end{lstlisting}
+
+    An Enum constructor can accept multiple values. Example:
+
+    \begin{lstlisting}
+       public enum Element {
+           H("Hydrogen", 1, 1.008f),
+           HE("Helium", 2, 4.0026f),
+           // ...
+           NE("Neon", 10, 20.180f);
+
+           private Element(String label, int atomicNumber, float atomicWeight) {
+               this.label = label;
+               //
+           }
+      }
+
 
     \end{lstlisting}
 
