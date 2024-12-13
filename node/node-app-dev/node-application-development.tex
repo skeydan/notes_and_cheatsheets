@@ -943,41 +943,193 @@ Promises also allow for an easy serial execution pattern:
 
 \end{lstlisting}
 
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
+If parallel execution is desired, \lstinline|Promise.all| can be used to wait for all tasks to be handled. Promise.all takes an array of promises and returns a promise that resolves when all promises have been resolved. That returned promise resolves to an array of the values for each of the promises. This will give the same result of asynchronously reading all the files and concatenating them in a prescribed order.
 
 \begin{lstlisting}[style=ES6]
 
+    const readers = files.map((file) => readFile(file))
+
+    Promise.all(readers)
+    .then(print)
+    .catch(console.error)
+
 \end{lstlisting}
+
+If one of the promises were to fail, Promise.all would reject, and any successfully resolved promises are ignored. If we want more tolerance of individual errors, \lstinline|Promise.allSettled| can be used:
 
 \begin{lstlisting}[style=ES6]
 
+    const { readFile } = require('fs').promises
+    const files = [__filename, 'not a file', __filename]
+    const print = (results) => {
+        results
+        .filter(({status}) => status === 'rejected')
+        .forEach(({reason}) => console.error(reason))
+        const data = results
+        .filter(({status}) => status === 'fulfilled')
+        .map(({value}) => value)
+        const contents = Buffer.concat(data)
+        console.log(contents.toString())
+    }
+
+    const readers = files.map((file) => readFile(file))
+
+    Promise.allSettled(readers)
+    .then(print)
+    .catch(console.error)
+
 \end{lstlisting}
+
+The Promise.allSettled function returns an array of objects representing the settled status of each promise. Each object has a status property, which may be rejected or fulfilled. Objects with a rejected status will contain a reason property containing the error associated with the rejection. Objects with a fulfilled status will have a value property containing the resolved value.
+
+Finally, if we want promises to run in parallel independently, we can either use \lstinline|Promise.allSettled| or simply execute each of them with their own then and catch handlers:
+
+\begin{lstlisting}[style=ES6]
+    readFile(bigFile).then(print).catch(console.error)
+    readFile(mediumFile).then(print).catch(console.error)
+    readFile(smallFile).then(print).catch(console.error)
+\end{lstlisting}
+
+\subsection{Async/Await}
+
+An async function always returns a promise. The promise will resolve to whatever is returned inside the async function body.
+
+The await keyword can only be used inside of async functions.Calling await will pause the execution of the async function until the awaited promise is resolved. The resolved value of that promise will be returned from an await expression.
+
+Here's an example of the same readFile operation from the previous section, but this time using an async function:
 
 \begin{lstlisting}[style=ES6]
 
+    const { readFile } = require('fs').promises
+
+    async function run () {
+        const contents = await readFile(__filename)
+        console.log(contents.toString())
+    }
+
+    run().catch(console.error)
+
 \end{lstlisting}
+
+An async function always returns a promise, so we call the catch method to ensure that any rejections within the async function are handled.
+
+This is how serial execution would work with async/await:
 
 \begin{lstlisting}[style=ES6]
 
+    async function run () {
+        print(await readFile(bigFile))
+        print(await readFile(mediumFile))
+        print(await readFile(smallFile))
+    }
+
+    run().catch(console.error)
+
 \end{lstlisting}
+
+I the output only has to be ordered, but the order in which asynchronous operations resolves is immaterial, we can again use \lstinline|Promise.all| but this time await the promise that Promise.all returns:
 
 \begin{lstlisting}[style=ES6]
 
+    async function run () {
+        const readers = files.map((file) => readFile(file))
+        const data = await Promise.all(readers)
+        print(Buffer.concat(data))
+    }
+
+    run().catch(console.error)
+
 \end{lstlisting}
+
+To get the exact same parallel operation behavior as in the initial callback example, so that the files are printed as soon as they are loaded, we have to create the promises, use a \lstinline|then| handler and then await the promises later on:
 
 \begin{lstlisting}[style=ES6]
 
+    async function run () {
+        const big = readFile(bigFile)
+        const medium = readFile(mediumFile)
+        const small = readFile(smallFile)
+
+        big.then(print)
+        medium.then(print)
+        small.then(print)
+
+        await small
+        await medium
+        await big
+    }
+
+    run().catch(console.error)
+
 \end{lstlisting}
+
+
+This will ensure the contents are printed out chronologically, according to the time it took each of them to load. If the complexity for parallel execution grows it may be better to use a callback based approach and wrap it at a higher level into a promise so that it can be used in an async/await function:
 
 \begin{lstlisting}[style=ES6]
 
+    const { promisify } = require('util')
+    const { readFile } = require('fs')
+    const [ bigFile, mediumFile, smallFile ] = Array.from(Array(3)).fill(__filename)
+
+    const read = promisify((cb) => {
+        let index = 0
+        const print = (err, contents) => {
+            index += 1
+            if (err) {
+                console.error(err)
+                if (index === 3) cb()
+                return
+            }
+            console.log(contents.toString())
+            if (index === 3) cb()
+        }
+        readFile(bigFile, print)
+        readFile(mediumFile, print)
+        readFile(smallFile, print)
+    })
+
+    async function run () {
+        await read()
+        console.log('finished!')
+    }
+
+    run().catch(console.error)
 \end{lstlisting}
+
+Here the read function returns a promise that resolves when all three parallel operations are done.
+
+\subsection{Canceling Asynchronous Operations}
+
+To cancel asynchronous operations, Node core has embraced the  \href{https://developer.mozilla.org/en-US/docs/Web/API/AbortController}{AbortController} with AbortSignal Web APIs.
+
+While AbortController with AbortSignal can be used for callback-based APIs, it's generally used in Node to solve for the fact that promise-based APIs return promises:
+
 
 \begin{lstlisting}[style=ES6]
 
+    import { setTimeout } from 'timers/promises'
+
+    const ac = new AbortController()
+    const { signal } = ac
+    const timeout = setTimeout(1000, 'will NOT be logged', { signal })
+
+    setImmediate(() => {
+        ac.abort()
+    })
+
+    try {
+        console.log(await timeout)
+    } catch (err) {
+        // ignore abort errors:
+        if (err.code !== 'ABORT_ERR') throw err
+    }
+
 \end{lstlisting}
+
+The AbortController constructor is a global, so we instantiate it and assign it to the ac constant. An AbortController instance has an AbortSignal instance on its signal property. We pass this via the options argument to timers/promises setTimeout; internally the API will listen for an abort event on the signal instance and then cancel the operation if it is triggered.
+
+Many parts of the Node core API accept a signal option, including fs, net, http, events, child\_process, readline and stream.
 
 \begin{lstlisting}[style=ES6]
 

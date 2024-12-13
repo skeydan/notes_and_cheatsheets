@@ -778,7 +778,7 @@ package access.
          sealed class Friendly extends Mandrill permits Silly {}
     \end{lstlisting}
 
-    Parent and child must be in same package. If they are in same file or the extension is nested, no permits clause is needed (but the extends still is!).
+     In an \textit{unnamed} module, the sealed class and its subclasses must be within the same package. If they are in same file or the extension is nested, no permits clause is needed (but the extends still is!).
 
     Every class that directly extends a sealed class must specify exactly one of the following three modifiers: final, sealed, or non-­sealed.
 
@@ -786,6 +786,7 @@ package access.
 
 
     \begin{itemize}
+        \item Sealed classes cannot be final (otherwise the permits clause would make no sense).
         \item   We can have sealed interfaces (permitting both extensions and implementations).
         \item While a sealed class is commonly extended by a subclass marked final, it can also be extended by a sealed or non-­sealed subclass marked abstract.
     \end{itemize}
@@ -1071,7 +1072,7 @@ package access.
 
     Beware: Variables newly created in the initializer block are in scope only there!
 
-    If any instance variable is final, it must be initialized.
+    If an instance variable is final, it must be assigned a value when it is declared, either in an instance initializer or in a constructor.
 
 \subsubsection{Overall initialization order}
 
