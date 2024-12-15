@@ -1243,6 +1243,118 @@ The AbortController constructor is a global, so we instantiate it and assign it 
 
 Many parts of the Node core API accept a signal option, including fs, net, http, events, child\_process, readline and stream.
 
+\section{Event System}
+
+The EventEmitter constructor in the events module is the functional backbone of many Node core API's. For instance, HTTP and TCP servers are an event emitter, a TCP socket is an event emitter, HTTP request and response objects are event emitters. In this chapter, we'll explore how to create and consume EventEmitters.
+
+\subsection{Creating an Event Emitter}
+
+To be able to create an EventEmitter, either import it like this
+
+\begin{lstlisting}[style=ES6]
+
+    // the events module exports an EventEmitter constructor
+    import { EventEmitter } from 'node:events';
+
+    // this should work in .cjs files, but yields undefined
+    // const { EventEmitter } = require('events')
+
+\end{lstlisting}
+
+or like so:
+
+\begin{lstlisting}[style=ES6]
+
+    // in modern node the events module is
+    // the EventEmitter constructor, too :
+    import EventEmitter from 'node:events';
+
+    // see events.js:
+    /*
+    class EventEmitter<T extends EventMap<T> = DefaultEventMap> {
+        constructor(options?: EventEmitterOptions);
+        // ...
+    }
+
+    import internal = require("node:events");
+    namespace EventEmitter {
+        // Should just be `export { EventEmitter }`,
+        // but that doesn't work in TypeScript 3.4
+        export { internal as EventEmitter };
+        // ...
+    */
+
+    // resp.
+    const EventEmitter = require('events')
+
+\end{lstlisting}
+
+To create an EventEmitter instance, inherit from the EventEmitter class:
+
+\begin{lstlisting}[style=ES6]
+
+    class MyEmitter extends EventEmitter {}
+
+    const myEmitter = new MyEmitter();
+    myEmitter.on('event', () => {
+        console.log('an event occurred!');
+    });
+    myEmitter.emit('event');
+
+\end{lstlisting}
+
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+
+
 
 \section{Appendix}
 
@@ -1348,6 +1460,28 @@ Its syntax is similar to function expression, function declaration, or method de
 
 
 \begin{lstlisting}[style=ES6]
+    he events module exports an EventEmitter constructor:
+
+    const { EventEmitter } = require('events')
+
+    In modern node the events module is the EventEmitter constructor as well:
+
+    const EventEmitter = require('events')
+
+    Both forms are fine for contemporary Node.js usage.
+
+    To create a new event emitter, call the constructor with new:
+
+    const myEmitter = new EventEmitter()
+
+    A more typical pattern of usage with EventEmitter, however, is to inherit from it:
+
+    class MyEmitter extends EventEmitter {
+        constructor (opts = {}) {
+            super(opts)
+            this.name = opts.name
+        }
+    }
 
 \end{lstlisting}
 

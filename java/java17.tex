@@ -301,10 +301,10 @@
 \subsection{Numbers}
 \subsubsection{Number types: automatic promotion}
 
-    Integer literals are considered int by default (size notwithstanding). But they can be automatically promoted to long or double.
+    Integer literals are considered int by default (size notwithstanding). But they can be automatically promoted to long, float, or double.
 
     \begin{lstlisting}
-        final ___ song = 6; // can be int, long, double (automatic promotion from int)
+        final ___ song = 6; // can be int, long, float, double (automatic promotion from int)
     \end{lstlisting}
 
     When used as an argument to overloaded methods, ints will preferentially be promoted to long (or double) before autoboxing to Integer is considered.
