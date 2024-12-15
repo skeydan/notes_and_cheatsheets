@@ -1013,7 +1013,7 @@ Here's an example of the same readFile operation from the previous section, but 
 
 An async function always returns a promise, so we call the catch method to ensure that any rejections within the async function are handled.
 
-This is how serial execution would work with async/await:
+This is how serial execution would work with async/await. Both variants print ABC:
 
 \begin{lstlisting}[style=ES6]
 
@@ -1027,7 +1027,66 @@ This is how serial execution would work with async/await:
 
 \end{lstlisting}
 
-I the output only has to be ordered, but the order in which asynchronous operations resolves is immaterial, we can again use \lstinline|Promise.all| but this time await the promise that Promise.all returns:
+Here is a serial execution example promisifying a "normal" function:
+
+\begin{lstlisting}[style=ES6]
+// see https://yieldcode.blog/post/implementing-promisable-set-timeout/
+
+function setTimeoutPromise(cb, ms) {
+    return new Promise((resolve) => {
+        setTimeout(() => resolve(cb()), ms);
+    });
+}
+
+const print = (err, contents) => {
+    if (err) console.error(err)
+    else console.log(contents )
+}
+
+const opA = async (cb) => {
+    //setTimeout(() => {
+        await setTimeoutPromise(() => {
+            cb(null, 'A')
+        }, 500)
+    }
+
+const opB = async (cb) => {
+        await setTimeoutPromise(() => {
+            cb(null, 'B')
+        }, 250)
+    }
+
+const opC = async (cb) => {
+        await setTimeoutPromise(() => {
+            cb(null, 'C')
+        }, 125)
+    }
+
+function sleep(delay) {
+        return new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+const run = async () => {
+        // option 1, using then()
+        opA(print).then(() => {
+            // opC needs to called inside this!!
+            opB(print).then(() => {
+                opC(print)}
+            )
+        });
+
+        await sleep(3000);
+
+        // option 2, using await
+        await opA(print);
+        await opB(print);
+        await opC(print);
+    }
+
+run()
+\end{lstlisting}
+
+If the output only has to be ordered, but the order in which asynchronous operations resolves is immaterial, we can again use \lstinline|Promise.all| but this time await the promise that Promise.all returns:
 
 \begin{lstlisting}[style=ES6]
 
@@ -1063,14 +1122,67 @@ To get the exact same parallel operation behavior as in the initial callback exa
 
 \end{lstlisting}
 
+This will ensure the contents are printed out chronologically, according to the time it took each of them to load.
 
-This will ensure the contents are printed out chronologically, according to the time it took each of them to load. If the complexity for parallel execution grows it may be better to use a callback based approach and wrap it at a higher level into a promise so that it can be used in an async/await function:
+To get that behavior with the timeout example, we rewrite the code as follows. Note no then handlers are needed:
+
+\begin{lstlisting}[style=ES6]
+    // see https://yieldcode.blog/post/implementing-promisable-set-timeout/
+
+    function setTimeoutPromise(cb, ms) {
+        return new Promise((resolve) => {
+            setTimeout(() => resolve(cb()), ms);
+        });
+    }
+
+    const print = (err, contents) => {
+        if (err) console.error(err)
+        else console.log(contents )
+    }
+
+    const opA = async (cb) => {
+        //setTimeout(() => {
+            await setTimeoutPromise(() => {
+                cb(null, 'A')
+            }, 500)
+        }
+
+        const opB = async (cb) => {
+            await setTimeoutPromise(() => {
+                cb(null, 'B')
+            }, 250)
+        }
+
+        const opC = async (cb) => {
+            await setTimeoutPromise(() => {
+                cb(null, 'C')
+            }, 125)
+        }
+
+        const run = async () => {
+
+            const A = opA(print);
+            const B = opB(print);
+            const C = opC(print);
+
+            await A;
+            await B;
+            await C;
+
+        }
+
+        run()
+
+\end{lstlisting}
+
+If the complexity for parallel execution grows it may be better to use a callback based approach and wrap it at a higher level into a promise so that it can be used in an async/await function:
 
 \begin{lstlisting}[style=ES6]
 
     const { promisify } = require('util')
     const { readFile } = require('fs')
-    const [ bigFile, mediumFile, smallFile ] = Array.from(Array(3)).fill(__filename)
+    const [ bigFile, mediumFile, smallFile ] =
+        Array.from(Array(3)).fill(__filename)
 
     const read = promisify((cb) => {
         let index = 0
@@ -1130,6 +1242,114 @@ While AbortController with AbortSignal can be used for callback-based APIs, it's
 The AbortController constructor is a global, so we instantiate it and assign it to the ac constant. An AbortController instance has an AbortSignal instance on its signal property. We pass this via the options argument to timers/promises setTimeout; internally the API will listen for an abort event on the signal instance and then cancel the operation if it is triggered.
 
 Many parts of the Node core API accept a signal option, including fs, net, http, events, child\_process, readline and stream.
+
+
+\section{Appendix}
+
+\subsection{JavaScript Function Definitions}
+
+From:  \url{https://dmitripavlutin.com/6-ways-to-declare-javascript-functions/}
+
+\subsubsection{Function declaration}
+
+A function \textit{declaration} starts with \lstinline|function|.
+
+An important property of this syntax is its \textit{hoisting} mechanism. Hoisting allows the function to be used before its declaration.
+
+\begin{lstlisting}[style=ES6]
+    function isNil(value) {
+        return value == null;
+    }
+\end{lstlisting}
+
+\subsubsection{Function expression (unnamed)}
+
+An unnamed \textit{expression} containing the word \textit{function}.
+
+\begin{lstlisting}[style=ES6]
+
+    // create a method on an object
+    { sum: function() {...},
+      //
+    }
+
+    // use as a callback
+    array.map(function(...) {...})
+
+\end{lstlisting}
+
+
+\subsubsection{Function expression (named)}
+
+A named \textit{expression} containing the word \textit{function}.
+
+\begin{lstlisting}[style=ES6]
+
+    const isTruthy = function(value) {
+        return !!value;
+    }
+    // or
+    let count = function(...) {...}
+
+\end{lstlisting}
+
+\subsubsection{Shorthand method definition}
+
+Like a function definition/expression, but missing the word \textit{function}.
+
+\begin{lstlisting}[style=ES6]
+
+    const collection = {
+        items: [],
+        add(...items) {
+            this.items.push(...items);
+        },
+        get(index) {
+            return this.items[index];
+        }
+    };
+
+    collection.add('C', 'Java', 'PHP');
+
+\end{lstlisting}
+
+\subsubsection{Arrow function}
+
+The arrow function does not itself create its execution context, but takes it lexically (contrary to function expression or function declaration, which create their own \lstinline|this| depending on invocation).
+
+\begin{lstlisting}[style=ES6]
+
+    const absValue = (number) => {
+        if (number < 0) {
+            return -number;
+        }
+        return number;
+    }
+
+\end{lstlisting}
+
+\subsubsection{Generator function}
+
+The generator function in JavaScript returns a Generator object.
+Its syntax is similar to function expression, function declaration, or method declaration, but it requires a star character *.
+
+\begin{lstlisting}[style=ES6]
+
+    const obj = {
+        *indexGenerator() {
+            var index = 0;
+            while(true) {
+                yield index++;
+            }
+        }
+    }
+
+\end{lstlisting}
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
 
 \begin{lstlisting}[style=ES6]
 

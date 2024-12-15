@@ -888,7 +888,7 @@ package access.
     \begin{lstlisting}
     public record Crane(int numberEggs, String name) {
         public Crane(String firstName, String lastName) {
-        // must be first call, must either call another constructor or the long constructor
+        // must be first call, must either call 1) another long constructor or 2) the short or 3) the default constructor
         this(0, firstName + " " + lastName);
     }}
     \end{lstlisting}
@@ -1063,7 +1063,7 @@ package access.
 
     Static variables cannot access instance variables.
 
-    If any static variable is final, it must be initialized.
+    If any static variable is final, it must be initialized (either at declaration or in a static initializer).
 
 \subsubsection{Instance}
 
@@ -1084,6 +1084,34 @@ package access.
         \item instance initializers in order
         \item local variables created in constructor
     \end{enumerate}
+
+Example:
+
+\begin{lstlisting}
+    abstract class Car {
+        // 1st (on class load)
+        static { System.out.print("1"); }
+        public Car(String name) {
+            super();
+            // 3rd
+            System.out.print("2");
+        }
+        // 2nd
+        // instance initializer, runs due to super() in BlueCar()
+        { System.out.print("3"); } }
+    public class BlueCar extends Car {
+        // 4th
+        { System.out.print("4"); }
+        public BlueCar() {
+            super("blue");
+            // 5th
+            System.out.print("5");
+        }
+        public static void main(String[] gears) {
+            new BlueCar();
+    } }
+\end{lstlisting}
+
 
 \section{Collections}
 
