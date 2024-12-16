@@ -318,7 +318,7 @@
     \end{lstlisting}
 
 
-\subsubsection{\lstinline$ Math $ methods}
+\subsubsection{Math methods}
     \begin{lstlisting}
         Math.round() // double -> double
         Math.max() // overloaded, returns passed-in type
@@ -684,6 +684,15 @@
         \end{lstlisting}
 
     \end{itemize}
+
+    Like lambdas, method references use type inference.
+
+    \begin{lstlisting}
+
+        // does not compile
+        var c4 = ArrayList::new;
+
+    \end{lstlisting}
 
 \subsection{Mixed notes on functions}
 \subsubsection{compose()}
@@ -1398,28 +1407,33 @@ Example:
 
 
 
-    \begin{lstlisting}
-
-    \end{lstlisting}
-
 \section{Streams, functional interfaces, and lambda functions}
 \subsection{Lambda functions}
 
-    Lambdas and method references use type inference.
+     Lambdas (as well as method references) use type inference. The parameter list may contain types, but does not have to.
+     If var is used, it has to be used for all parameters.
+
+     Cmp. the following valid and invalid declarations.
 
     \begin{lstlisting}
-        // does not compile
-        var c4 = ArrayList::new;
 
-        // nor does this:
+        // these are fine
+        Comparator<String> c1 = (j, k) -> 0;
+        Comparator<String> c2 = (String j, String k) -> 0;
+         Comparator<String> c5 = (var j, var k) -> 0;
+
+        // these don't
+        Comparator<String> c3 = (var j, String k) -> 0;
+        Comparator<String> c4 = (var j, k) -> 0;
+
         var dino = s -> "dino".equals(animal);
         var dragon = s -> "dragon".equals(animal);
-        var combined = dino.or(dragon); // because var
+        // does not compile, because var
+        var combined = dino.or(dragon);
+
     \end{lstlisting}
 
-    Lambdas can reference any instance or static variable, as well as any lambda parameter. Local variables and method parameters must be final to be accessible.
-
-
+    Lambdas can reference any instance or static variable, as well as any lambda parameter. Local variables and method parameters must be \textit{effectively final} to be accessible.
 
     Lambda expressions cannot redeclare any local variable defined in an enclosing scope.
 

@@ -1303,37 +1303,137 @@ To create an EventEmitter instance, inherit from the EventEmitter class:
 
 \end{lstlisting}
 
+\subsection{Emitting Events}
 
+To emit an event call the emit method:
 
 \begin{lstlisting}[style=ES6]
+
+    const { EventEmitter } = require('events')
+    const myEmitter = new EventEmitter()
+    // arguments: event namespace, 2/3: passed to listener
+    myEmitter.emit('an-event', some, args)
 
 \end{lstlisting}
 
+\subsection{Listening for Events}
+
 \begin{lstlisting}[style=ES6]
+
+    const { EventEmitter } = require('events')
+
+    const ee = new EventEmitter()
+    ee.on('close', () => { console.log('close event fired!') })
+    ee.emit('close')
 
 \end{lstlisting}
 
+Process additional arguments passed to emit like so:
+
 \begin{lstlisting}[style=ES6]
+
+    ee.on('add', (a, b) => { console.log(a + b) }) // logs 13
+    ee.emit('add', 7, 6)
 
 \end{lstlisting}
 
+Listeners are called in the order they are registered. prepedListener is used to add a listener in top position.
+
 \begin{lstlisting}[style=ES6]
+
+    const { EventEmitter } = require('events')
+    const ee = new EventEmitter()
+    ee.on('my-event', () => { console.log('1st') })
+    ee.on('my-event', () => { console.log('2nd') })
+    ee.prependListener('my-event', () => { console.log('really 1st') })
+    ee.emit('my-event')
 
 \end{lstlisting}
 
+To have a listener called at most once, use eventEmitter.once() instead of on().
+
 \begin{lstlisting}[style=ES6]
+
+    const { EventEmitter } = require('events')
+    const ee = new EventEmitter()
+    ee.once('my-event', () => { console.log('my-event fired') })
+    ee.emit('my-event')
+    ee.emit('my-event')
+    ee.emit('my-event')
 
 \end{lstlisting}
 
+To remove listeners, use \lstinline|removeListener("eventName", listenerVar)|.
+
+Call \lstinline|removeAllListeners("eventName")| to remove them all.
+
 \begin{lstlisting}[style=ES6]
+
+    const { EventEmitter } = require('events')
+    const ee = new EventEmitter()
+
+    const listener1 = () => { console.log('listener 1') }
+    const listener2 = () => { console.log('listener 2') }
+
+    ee.on('my-event', listener1)
+    ee.on('my-event', listener2)
+
+    setInterval(() => {
+        ee.emit('my-event')
+    }, 200)
+
+    setTimeout(() => {
+        ee.removeListener('my-event', listener1)
+    }, 500)
+
+    setTimeout(() => {
+        ee.removeListener('my-event', listener2)
+    }, 1100)
 
 \end{lstlisting}
 
+\subsection{The error Event}
+
+Emitting an 'error' event on an event emitter will cause the event emitter to throw an exception if a listener for the 'error' event has not been registered.
+
+Here a crash will not occur:
+
 \begin{lstlisting}[style=ES6]
+
+    const { EventEmitter } = require('events')
+    const ee = new EventEmitter()
+
+    process.stdin.resume() // keep process alive
+
+    ee.on('error', (err) => {
+        console.log('got error:', err.message )
+    })
+
+    ee.emit('error', new Error('oh oh'))
 
 \end{lstlisting}
 
+\subsection{Promise-Based Single Use Listener and AbortController}
+
+When \lstinline|await|ing an event, AbortController can be used as an escape hatch.
+
 \begin{lstlisting}[style=ES6]
+
+    const uneventful = new EventEmitter()
+
+    const ac = new AbortController()
+    const { signal } = ac
+
+    setTimeout(500).then(() => ac.abort())
+
+    try {
+        await once(uneventful, 'ping', { signal })
+        console.log('pinged!')
+    } catch (err) {
+        // ignore abort errors:
+        if (err.code !== 'ABORT_ERR') throw err
+        console.log('canceled')
+    }
 
 \end{lstlisting}
 
