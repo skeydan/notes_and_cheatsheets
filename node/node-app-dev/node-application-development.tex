@@ -1419,6 +1419,9 @@ When \lstinline|await|ing an event, AbortController can be used as an escape hat
 
 \begin{lstlisting}[style=ES6]
 
+    import { once, EventEmitter } from 'events'
+    import { setTimeout } from 'timers/promises'
+
     const uneventful = new EventEmitter()
 
     const ac = new AbortController()
@@ -1437,6 +1440,350 @@ When \lstinline|await|ing an event, AbortController can be used as an escape hat
 
 \end{lstlisting}
 
+\section{Handling Errors}
+\subsection{Native Error Constructors}
+
+\lstinline|Error| is the native constructor for generating an error object. To create an error, call new Error and pass a string as a message:
+
+\begin{lstlisting}[style=ES6]
+    new Error('this is an error message')
+\end{lstlisting}
+
+There are six other native error constructors that inherit from the base Error constructor, these are:
+
+\begin{lstlisting}[style=ES6]
+    EvalError
+    SyntaxError
+    RangeError
+    ReferenceError
+    TypeError
+    URIError
+\end{lstlisting}
+
+There's mainly two errors that are likely to be thrown in library or application code: RangeError and TypeError.
+
+\subsection{Custom Errors: Set error code on Error object}
+
+\begin{lstlisting}[style=ES6]
+    function doTask (amount) {
+        if (typeof amount !== 'number')
+         throw new TypeError('amount must be a number')
+        if (amount <= 0)
+         throw new RangeError('amount must be greater than zero')
+        if (amount % 2) {
+            const err = Error('amount must be even')
+            err.code = 'ERR_MUST_BE_EVEN'
+            throw err
+        }
+        return amount / 2
+    }
+\end{lstlisting}
+
+\subsection{Custom Errors: Inheriting from Error}
+
+\begin{lstlisting}[style=ES6]
+    class OddError extends Error {
+        constructor (varName = '') {
+            super(varName + ' must be even')
+        }
+        get name () { return 'OddError' }
+    }
+
+    // can additionally add a code
+    class OddError extends Error {
+        constructor (varName = '') {
+            super(varName + ' must be even')
+            this.code = 'ERR_MUST_BE_EVEN'
+        }
+        get name () {
+            return 'OddError [' + this.code + ']'
+        }
+    }
+\end{lstlisting}
+
+\subsection{Try/Catch}
+
+We can separately handle different kinds of errors like so:
+
+\begin{lstlisting}[style=ES6]
+    try {
+        const result = doTask(4)
+        console.log('result', result)
+    } catch (err) {
+        if (err instanceof TypeError) {
+            console.error('wrong type')
+        } else if (err instanceof RangeError) {
+            console.error('out of range')
+        } else if (err instanceof OddError) {
+            console.error('cannot be odd')
+        } else {
+            console.error('Unknown error', err)
+        }
+    }
+\end{lstlisting}
+
+However, it is more reliable to throw and check for error codes:
+
+\begin{lstlisting}[style=ES6]
+    function codify (err, code) {
+        err.code = code
+        return err
+    }
+
+    function doTask (amount) {
+        if (typeof amount !== 'number') throw codify(
+        new TypeError('amount must be a number'),
+        'ERR_AMOUNT_MUST_BE_NUMBER'
+        )
+        if (amount <= 0) throw codify(
+        new RangeError('amount must be greater than zero'),
+        'ERR_AMOUNT_MUST_EXCEED_ZERO'
+        )
+        if (amount % 2) throw new OddError('amount')
+        return amount/2
+    }
+
+    try {
+        const result = doTask(4)
+        result()
+        console.log('result', result)
+    } catch (err) {
+        if (err.code === 'ERR_AMOUNT_MUST_BE_NUMBER') {
+            console.error('wrong type')
+        } else if (err.code === 'ERRO_AMOUNT_MUST_EXCEED_ZERO') {
+            console.error('out of range')
+        } else if (err.code === 'ERR_MUST_BE_EVEN') {
+            console.error('cannot be odd')
+        } else {
+            console.error('Unknown error', err)
+        }
+    }
+\end{lstlisting}
+
+It's important to keep in mind that try/catch cannot catch errors that are thrown in a callback function that is called at some later point. Consider the following:
+
+\begin{lstlisting}[style=ES6]
+    // WARNING: NEVER DO THIS:
+    try  {
+        setTimeout(() => {
+            const result = doTask(3)
+            console.log('result', result)
+        }, 100)
+    } catch (err) {
+        // ...
+    }
+\end{lstlisting}
+
+An easy fix is to move the try/catch into the body of the callback function:
+
+\begin{lstlisting}[style=ES6]
+    setTimeout(() => {
+        try  {
+            const result = doTask(3)
+            console.log('result', result)
+        } catch (err) {
+            // ...
+        }
+    }, 100)
+\end{lstlisting}
+
+\subsection{Rejected Promises}
+
+Assuming a function that accepts a Promise:
+
+\begin{lstlisting}[style=ES6]
+    function doTask (amount) {
+        return new Promise((resolve, reject) => {
+            if (typeof amount !== 'number') {
+                reject(new TypeError('amount must be a number'))
+                return
+            }
+            if (amount <= 0) {
+                //
+            }
+            if (amount % 2) {
+                //
+            }
+            resolve(amount/2)
+        })
+    }
+\end{lstlisting}
+
+to catch rejections we have to use a \lstinline|catch| clause:
+
+\begin{lstlisting}[style=ES6]
+    doTask(3)
+    .then((result) => {
+        //
+    })
+    .catch((err) => {
+        //
+    })
+\end{lstlisting}
+
+When the \lstinline|throw| appears inside a promise handler, that will not be an exception, that is, it won't be an error that is synchronous.
+Instead it will be a rejection: The then or catch handler will return a \textit{new promise} that rejects as a result of a throw within the handler.
+
+Example:
+
+\begin{lstlisting}[style=ES6]
+    doTask(4)
+    .then((result) => {
+        throw Error('spanner in the works')
+    })
+    .catch((err) => {
+        //
+    })
+\end{lstlisting}
+
+Here the catch clause does not run, and an error is thrown.
+
+\subsection{Async Try/Catch}
+
+The same try/catch works for async/await, as async/await is nothing but syntactic sugar around Promise.
+
+For example:
+
+\begin{lstlisting}[style=ES6]
+    async function run () {
+        try {
+            //
+        } catch (err) {
+            //
+        }
+    }
+\end{lstlisting}
+
+If a throw occurs in an async function, the returned promise rejects. This means that with async/await, we can simply throw again. As a result, the code looks exaxtly like synchronous code, apart from the async keyword itself:
+
+\begin{lstlisting}[style=ES6]
+    async function doTask (amount) {
+        if (typeof amount !== 'number')
+         throw new TypeError('amount must be a number')
+        if (amount <= 0)
+         throw new RangeError('amount must be greater than zero')
+        if (amount % 2) throw new OddError('amount')
+        return amount/2
+    }
+\end{lstlisting}
+
+In consequence, async/await can conveniently be nested:
+
+\begin{lstlisting}[style=ES6]
+    async function doTask (amount) {
+        if (typeof amount !== 'number')
+         throw new TypeError('amount must be a number')
+        if (amount <= 0)
+         throw new RangeError('amount must be greater than zero')
+        if (amount % 2) throw new OddError('amount')
+        const result = await asyncFetchResult(amount)
+        return result
+    }
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+    async function doTask (amount) {
+        if //
+        if // ...
+        // fetch something from a server
+        const result = await asyncFetchResult(amount)
+        return result
+    }
+\end{lstlisting}
+
+    Here, if the promise returned from asyncFetchResult rejects, this will cause the promise returned from doTask to reject.
+    Thus, one catch block can be used to handle all cases.
+
+
+\subsection{Error Propagation}
+
+Error propagation is where, instead of handling the error, we make it the responsibility of the caller instead. Here is an example handling known errors but propagating unknown ones:
+
+\begin{lstlisting}[style=ES6]
+
+    // custom error definitions ....
+
+    async function doTask (amount) {
+        if (/* ...  */) throw new TypeError(// ...
+        if (/* ...  */) throw new RangeError(// ...
+        if (/* ...  */) throw new OddError(// ...
+        return amount/2
+    }
+
+    async function run () {
+        try {
+            const result = await doTask(4)
+            console.log('result', result)
+        } catch (err) {
+            if // ...
+            } else if // ...
+            } else if // ...
+            // unknown error
+            } else {
+                throw err
+            }
+        }
+    }
+    // catch remaining errors
+    run().catch((err) => { console.error('Error caught', err) })
+\end{lstlisting}
+
+Here is the equivalent example using a callback:
+
+\begin{lstlisting}[style=ES6]
+
+    // now takes a callback
+    function doTask (amount, cb) {
+        if (/* ... */ {
+            cb( // ....
+            return
+        }
+        if (/* ... */ {
+            cb( // ....
+            return
+        }
+        if (/* ... */ {
+            cb(Error('some other error'))
+            return
+        }
+
+        cb(null, amount/2)
+    }
+
+    // 1. passes an error-first callback to doTask()
+    // 2. later, calls its own caller using the passed-in argument cb
+    // beware: cb is not the callback passed to doTask!
+    function run (cb) {
+        // callback passed to doTask() is created by run()!
+        doTask(4, (err, result) => {
+            // if error, check code
+            // if not a known one pass on as-is
+            if (err) {
+                if (err.code === // ...
+                    cb(Error('wrong type'))
+                } else if (err.code === // ...
+                    cb(Error('out of range'))
+                } else if // ...
+                    cb(Error('cannot be odd'))
+                } else {
+                    cb(err)
+                }
+                return
+            }
+
+            console.log('result', result)
+        })
+    }
+
+    run((err) => {
+        if (err) console.error('Error caught', err);
+    })
+
+
+\end{lstlisting}
+
+
+
 \begin{lstlisting}[style=ES6]
 
 \end{lstlisting}
@@ -1444,17 +1791,6 @@ When \lstinline|await|ing an event, AbortController can be used as an escape hat
 \begin{lstlisting}[style=ES6]
 
 \end{lstlisting}
-
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
-
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
-
-
-
 
 \section{Appendix}
 
