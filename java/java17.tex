@@ -644,53 +644,106 @@
 
 \subsection{Method references}
 
-    Method references cannot take parameters. Therefore, the output from the previous expression needs to match the input parameters of the referenced method signature.
+    \subsubsection{static methods}
 
-    Types:
-    \begin{itemize}
-        \item Static method
-        \item Instance method called on object \textit{instance}
+    \begin{lstlisting}
+        interface Converter {
+            long round(double num);
+        }
+
+        Converter methodRef = Math::round;
+
+        // same as lambda
+        Converter lambda = x -> Math.round(x);
+    \end{lstlisting}
+
+    Like with lambdas, Java uses type inference to infer that x here is a double.
+
+    \subsubsection{Instance methods on an instance object}
+
+    Here are two ways of calling an \textit{instance method that takes no parameters}.
+
+    With the first, the interface method, too, takes no parameters:
+
+
+    \begin{lstlisting}
+        interface StringChecker {
+            boolean check();
+        }
+
+        var str = "";
+        // uses concrete instance, not class method
+        StringChecker methodRef = str::isEmpty;
+
+        // same as lambda
+        StringChecker lambda = () -> str.isEmpty();
+    \end{lstlisting}
+
+    With the second, the interface method takes one parameter:
+
+    \begin{lstlisting}
+        interface StringParameterChecker {
+            boolean check(String text);
+        }
+
+        // now uses class!
+        StringParameterChecker methodRef = String::isEmpty;
+
+        // same as lambda
+        StringParameterChecker lambda = s -> s.isEmpty();
+    \end{lstlisting}
+
+    How about \textit{instance methods that take one or more parameters}?
+    Here, the \textit{interface method takes two parameters}:
 
         \begin{lstlisting}
-        // No need to specify parameters explicitly if will get as many arguments as needed
-        createBicyclesList()
-          .stream()
-          .sorted(bikeFrameSizeComparator::compare);
+            // the lambda
+            StringTwoParameterChecker lambda = (s, p) -> s.startsWith(p);
 
-        // equivalent to
-        createBicyclesList()
-          .stream()
-          .sorted((a, b) -> bikeFrameSizeComparator.compare(a, b));
+            interface StringTwoParameterChecker {
+                boolean check(String text, String prefix);
+            }
+
+            // uses class method!
+            StringTwoParameterChecker methodRef = String::startsWith;
+
+            // first parameter is instance, all others are method parameters
+            methodRef.check("Zoo", "A"));
         \end{lstlisting}
 
-        \item Instance method called on object \textit{type}
+    \subsubsection{Constructors}
 
-        \begin{lstlisting}
-        // lambda way
-        numbers.stream()
-          .sorted((a, b) -> a.compareTo(b))
-          .forEach(s -> System.out.print(s + " "));
+    This example mimics a \textit{lambda calling a constructor that takes no parameters}.
 
-        // method ref way
-        numbers.stream()
-          .sorted(Integer::compareTo)
-          .forEach(s -> System.out.print(s + " "));
-        \end{lstlisting}
+    \begin{lstlisting}
+        interface EmptyStringCreator {
+            String create();
+        }
 
-        \item  constructor
+        EmptyStringCreator methodRef = String::new;
+        var myString = methodRef.create();
+        System.out.println(myString.equals("Snake"))
 
-        \begin{lstlisting}
-        Bicycle[]::new
-        \end{lstlisting}
+        // lambda
+        EmptyStringCreator lambda = () -> new String();
 
-    \end{itemize}
+    \end{lstlisting}
 
-    Like lambdas, method references use type inference.
+    Here, Java sees that we are passing a String parameter and \textit{calls the constructor of String that takes such a parameter}:
 
     \begin{lstlisting}
 
-        // does not compile
-        var c4 = ArrayList::new;
+        // lambda
+        StringCopier lambda = x - new String(x);
+
+        interface StringCopier {
+            String copy(String value);
+        }
+
+        // same method reference!
+        StringCopier methodRef = String::new;
+
+        var myString = methodRef.copy("Zebra");
 
     \end{lstlisting}
 
