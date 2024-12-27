@@ -900,42 +900,47 @@ package access.
     \end{lstlisting}
 
 
-
-     The exact rule is as given in the following two statements:
-     1.
-     2.
-
     Every class that directly extends a sealed class must specify exactly one of the following three modifiers: final, sealed, or non-­sealed.
 
     Rules regarding \textit{permit}:
 
     \begin{itemize}
-        \item  If the permitting and permitted classes are in same file, or if the permitted is nested, no permits clause is needed (but the extends still is!).
+        \item A sealed class/interface must have a permits clause. An exception is that if all the direct subclasses/subinterfaces are defined in the same compilation unit, then the permits clause is not needed.
+        \item Beware though: the extends clause still is! See:
+
+\begin{lstlisting}
+    // MyClass.java:25: error: cannot find symbol
+    //sealed class Friendly extends Mandrill permits Silly {}
+    //                  ^
+    // symbol: class Mandrill
+    // MyClass.java:25: error: invalid permits clause
+    //
+    sealed class Friendly extends Mandrill permits Silly {}
+    //                ^
+    // (subclass Silly must extend sealed class)
+    // 2 errors
+\end{lstlisting}
         \item  If a sealed class C is associated with a \textit{named module}, then every class specified in the permits clause must be associated with the same \textit{module} as C.
         \item If a sealed class C is associated with an \textit{unnamed module} , then every class specified in the permits clause must belong to the same \textit{package} as C.
     \end{itemize}
 
     Note:
 
-
     \begin{itemize}
         \item Sealed classes cannot be final (otherwise the permits clause would make no sense).
-        \item   We can have sealed interfaces (permitting both extensions and implementations).
+        \item   We can have sealed interfaces (permitting both extensions and implementations). There are no sealed enums or records, though.
+        Records are implicitly final, so it doesn't make sense to mark them as sealed.
+        Enums are either implicitly final (if its declaration contains no enum constants that have a class body) or implicitly sealed (if its declaration contains at least one enum constant that has a class body, in which case the anonymous classes implicitly declared by the enum constants are its only permitted subclasses).
+        However, enums (as well as records) may implement a sealed interface:
+
+        \begin{lstlisting}
+            sealed interface I permits X, R{ }
+            enum X implements I{ }
+            record R(int value) implements I{ }
+        \end{lstlisting}
         \item While a sealed class is commonly extended by a subclass marked final, it can also be extended by a sealed or non-­sealed subclass marked abstract.
     \end{itemize}
 
-    \begin{lstlisting}
-        // MyClass.java:25: error: cannot find symbol
-        //sealed class Friendly extends Mandrill permits Silly {}
-        //                  ^
-        // symbol: class Mandrill
-        // MyClass.java:25: error: invalid permits clause
-        //
-        sealed class Friendly extends Mandrill permits Silly {}
-        //                ^
-        // (subclass Silly must extend sealed class)
-        // 2 errors
-    \end{lstlisting}
 \subsubsection{Final and Immutable Classes}
 
     - Classes marked as final can’t be extended.
@@ -997,9 +1002,18 @@ package access.
 
 Constructors can be compact or long, as well as canonical or non-canonical.
 
+\paragraph{Canonical or Non-canonical}
+
+Canonical constructors are passed all of the fields mentioned in the record declaration.
+Non-canonical constructors may take less (no, even) or more arguments.
+
 \paragraph{Long vs. Compact}
 
+Both the long as well as the short constructor are \textit{canonical constructors}, i.e., they operate on the exact record fields mentioned in the record declaration.
+
 The following is a short constructor. Of those, a record can have at most one (since a short contructor uses the fields specified in the record declaration).
+
+At the end of the compact record constructor, the compiler adds code that sets all the fields to the values passed in the constructor. E.g., if the constructor changes a passed value, the updated value will be given to respective field.
 
     \begin{lstlisting}
         public Crane { // no parens
@@ -1069,7 +1083,7 @@ Constructors may be overloaded:
     \item have any access modifier.
     \item contain nested classes, interfaces, annotations, enums, and other records.
     \item contain instance \textit{methods}.
-    \item contain \textit{static} initializers and static methods.
+    \item contain \textit{static} fields, initializers and methods.
     \end{itemize}
 
     \paragraph{Records may not:}
@@ -1077,7 +1091,7 @@ Constructors may be overloaded:
     \begin{itemize}
         \item extend other classes.
         \item be subclassed, since they are implicitly final.
-        \item  declare instance \textit{variables} or instance \textit{initializers}. (This would break immutability.)
+        \item  declare instance \textit{variables} or instance \textit{initializers}.
     \end{itemize}
 
 \subsection{Enums}
