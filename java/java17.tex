@@ -216,6 +216,10 @@
      long get(TemporalUnit unit)
      int getNano()
      long getSeconds()
+
+     // static methods, e.g.
+     // throws UnsupportedTemporalTypeException if passed a LocalDate
+     Duration between(LocalDateTime now, LocalDateTime other);
      \end{lstlisting}
 
  \subsection{String and StringBuilder}
@@ -355,6 +359,41 @@
         String[] delta[];
         String epsilon[][];
     \end{lstlisting}
+
+\subsection{\lstinline|java.util.Optional<T>|}
+
+\begin{lstlisting}
+
+   // to obtain:
+   static <T> Optional<T> 	empty()
+   static <T> Optional<T> 	of(T value)empty Optional
+   // if value null return
+   static <T> Optional<T> 	ofNullable(T value)
+
+   // instance methods, e.g.
+
+   // If a value is present and predicate matched, return Optional with value, otherwise return an empty Optional.
+   Optional<T> 	filter(Predicate<? super T> predicate)
+
+   // may throw NoSuchElementException
+   T get()
+
+   void ifPresent(Consumer<? super T> consumer)
+
+   // If value present, apply mapping function to it, and if the result is non-null, return an Optional describing the result.
+   <U> Optional<U> 	map(Function<? super T,? extends U> mapper)
+
+   // Return the value if present, otherwise return other.
+   T orElse(T other)
+
+   //  Return value if present, otherwise invoke other
+   T orElseGet(Supplier<? extends T> other)
+
+   <X extends Throwable> T orElseThrow(Supplier<? extends X> exceptionSupplier)
+
+\end{lstlisting}
+
+
 
 \section{Operators}
 \subsection{Kinds}
@@ -752,9 +791,29 @@
 
     The \lstinline{a.compose(b)} method calls the Function parameter b before the reference Function variable a.
 
+    To memorize:
+
+    \begin{lstlisting}
+        after.compose(before)
+
+        // is like
+        after o before
+
+    \end{lstlisting}
+
 
 \section{Classes, Interfaces, Records and Enums}
-\subsection{General notes on inheritance}
+\subsection{General Notes}
+
+\subsubsection{Member (Class and Instance) Variables}
+
+All member fields (static and non-static) are initialized to their default values.
+
+Objects are initialized to null, numeric types to 0 (or 0.0), and boolean to false.
+
+If a static variable is final, it must be initialized, either in the declaration or in a static initializer.
+
+\subsubsection{Inheritance}
 
     When a parent defines a with-argument constructor only, the child must call the parent constructor explicitly. It is not enough for both to take the same arguments. See:
 
@@ -840,9 +899,21 @@ package access.
          sealed class Friendly extends Mandrill permits Silly {}
     \end{lstlisting}
 
-     In an \textit{unnamed} module, the sealed class and its subclasses must be within the same package. If they are in same file or the extension is nested, no permits clause is needed (but the extends still is!).
+
+
+     The exact rule is as given in the following two statements:
+     1.
+     2.
 
     Every class that directly extends a sealed class must specify exactly one of the following three modifiers: final, sealed, or non-­sealed.
+
+    Rules regarding \textit{permit}:
+
+    \begin{itemize}
+        \item  If the permitting and permitted classes are in same file, or if the permitted is nested, no permits clause is needed (but the extends still is!).
+        \item  If a sealed class C is associated with a \textit{named module}, then every class specified in the permits clause must be associated with the same \textit{module} as C.
+        \item If a sealed class C is associated with an \textit{unnamed module} , then every class specified in the permits clause must belong to the same \textit{package} as C.
+    \end{itemize}
 
     Note:
 
@@ -922,7 +993,13 @@ package access.
 
     Records may optionally have constructors.
 
-    A (short) constructor (at most one):
+\subsubsection{Record Constructors}
+
+Constructors can be compact or long, as well as canonical or non-canonical.
+
+\paragraph{Long vs. Compact}
+
+The following is a short constructor. Of those, a record can have at most one (since a short contructor uses the fields specified in the record declaration).
 
     \begin{lstlisting}
         public Crane { // no parens
@@ -933,7 +1010,7 @@ package access.
         }
     \end{lstlisting}
 
-    A long constructor (may have several):
+And this is long constructor (there may be several):
 
     \begin{lstlisting}
         public Crane(int numberEggs, String name) {
@@ -943,38 +1020,41 @@ package access.
         }
     \end{lstlisting}
 
-    Records may:
+Constructors may be overloaded:
 
-    \begin{itemize}
-    \item have overloaded constructors:
     \begin{lstlisting}
-    public record Crane(int numberEggs, String name) {
-        public Crane(String firstName, String lastName) {
-        // must be first call, must either call 1) another long constructor or 2) the short or 3) the default constructor
-        this(0, firstName + " " + lastName);
-    }}
+        public record Crane(int numberEggs, String name) {
+            public Crane(String firstName, String lastName) {
+                // must be first call, must either call 1) another long constructor or 2) the short or 3) the default constructor
+                this(0, firstName + " " + lastName);
+        }}
     \end{lstlisting}
 
     An example where both are present:
 
     \begin{lstlisting}
-    public record Disco(int beats) {
-        public Disco(String beats) {
-            this(20);
+        public record Disco(int beats) {
+            public Disco(String beats) {
+                this(20);
+            }
+            public Disco {
+                beats = 10;
+            }
+            public int getBeats() {
+                return beats;
+            }
+            public static void main(String[] args) {
+                // beats() is provided by default
+                // calls default constructor
+                System.out.print(new Disco(30).beats());
+            }
         }
-        public Disco {
-            beats = 10;
-        }
-        public int getBeats() {
-            return beats;
-        }
-        public static void main(String[] args) {
-            // beats() is provided by default
-            // calls default constructor
-            System.out.print(new Disco(30).beats());
-        }
-    }
     \end{lstlisting}
+
+
+    \paragraph{Records may:}
+
+    \begin{itemize}
     \item implement interfaces:
     \begin{lstlisting}
     public record Crane(int numberEggs, String name) implements Bird {}
@@ -992,7 +1072,7 @@ package access.
     \item contain \textit{static} initializers and static methods.
     \end{itemize}
 
-    Records may not:
+    \paragraph{Records may not:}
 
     \begin{itemize}
         \item extend other classes.
@@ -1061,7 +1141,7 @@ package access.
 
     \end{lstlisting}
 
-\subsection{Overriding, overloading and method hiding}
+\subsection{Overriding, overloading and Hiding}
 \subsubsection{Overloading}
 
     Overloading works also for pairs of primitive + wrapper, e.g.
@@ -1080,23 +1160,34 @@ package access.
         }
     \end{lstlisting}
 
-\subsubsection{Overriding}
+\subsubsection{Overriding and Hiding}
 
-    Overridden and hidden methods can only have covariant return types.
-    This also applies to implementing abstract methods.
-
-    Methods and variables are considered separately.
+   Methods and variables are considered separately.
 
     \begin{itemize}
         \item \textit{Variables}
 
         Instance variables are never overridden. They are always determined by the reference type.
 
+        The same goes for class variables. In the following example,the child class variable hides the parent's class variable; it is thus not a problem that the parent variable is final.
+
+        \begin{lstlisting}
+
+         class A{
+             final int fi = 10;
+         }
+         public class B extends A{
+             int fi = 15;
+         }
+         \end{lstlisting}
+
         \item \textit{Methods}
 
         \begin{itemize}
+            \item  Overridden and hidden methods can only have covariant return types.
+            This also applies to implementing abstract methods.
             \item
-            When an instance method is private, no overriding takes place (so the child can do what it wants). In other words, the parent variable is \textit{hidden}.
+            When an instance method is private, no overriding takes place (so the child can do what it wants). In other words, the parent method is \textit{hidden}.
 
              \item
             Overriding replaces the method \textit{regardless of the reference type}.
@@ -1110,8 +1201,7 @@ package access.
 
             This is determined at \textit{compile} time, as opposed to overriding of instance methods, which is resolved at runtime.
 
-            The child \textit{cannot} complement the parent's static method
-            by a same-argument instance method.
+            The child \textit{cannot} complement the parent's static method by a same-argument instance method.
         \end{itemize}
 
 
@@ -1397,6 +1487,15 @@ Example:
          // Wildcard with lower bound
          //	? super type
          List<? super Exception> a = new ArrayList<Object>();
+
+         // e.g.
+         public List<? super Number> getList(){
+             // could be any of
+             return new ArrayList<Number>();
+             return new ArrayList<Object>();
+             return new ArrayList();
+            }
+
     \end{lstlisting}
 
      Wildcards are only allowed in variable references (on left side), not in a class definition.
@@ -1613,6 +1712,25 @@ Example:
 
     \end{lstlisting}
 
+\subsubsection{Summary statistics}
+
+Collectors may also return summary statistic. Example:
+
+\begin{lstlisting}
+
+    Car[] cars = new Car[]{ new SUV("Ford", 5000), // ... new
+       }
+
+    DoubleSummaryStatistics dss =
+        Stream.of(cars)
+        .filter(c->c instanceof SUV)
+        .collect(Collectors.summarizingDouble(c-> ((SUV)c).milage));
+
+    // note: methods like getMax(), as opposed to max() etc. on primitive streams
+    System.out.println(dss.getMax());
+
+\end{lstlisting}
+
 \subsection{Comparing and sorting}
 
 \subsubsection{Using Comparator}
@@ -1705,21 +1823,38 @@ Example:
         IntFunction<Integer> f1 = (Integer f) -> f; // Integer is NOT unboxed to int
     \end{lstlisting}
 
+     However, both \lstinline|IntSupplier| and \lstinline|Supplier<Integer>| \textit{can} return a double!
+
+      \begin{lstlisting}
+         IntSupplier s = new MyIntSupplier();
+         int i = s.getAsInt();
+
+         // unboxing
+         Supplier<Integer> s = new MyIntSupplier();
+         int i = s.get();
+     \end{lstlisting}
+
+     Here is another auto-unboxing example. All these can be assigned to \lstinline|ToDoubleBiFunction|:
+
+     \begin{lstlisting}
+         // unboxing
+         (Integer a, Double b) -> {int c; return b;}
+
+         (h,i) -> (long)h
+
+         (x,y) -> {int z=2; return y/z;}
+     \end{lstlisting}
 \subsubsection{Optional types}
 
-    Nearly all statistics operations on primitive streams return optional types.
+    Nearly all statistics operations on primitive streams return \textit{optional types}.
     Only sum() returns 0.
 
     \begin{lstlisting}
         OptionalDouble opt = s.average()
         opt.getAsDouble() // (may throw NoSuchElementException)
-    \end{lstlisting}
 
-\subsubsection{Summary statistics}
-
-    \begin{lstlisting}
-       // note:
-       // methods like getMax(), as opposed to max() etc. on streams
+        // max (Comparator) returns an Optional
+        mylist.stream().max(Comparator.comparing(a->a)).get();
     \end{lstlisting}
 
 \subsection{Mapping, reducing, filtering}
@@ -1731,6 +1866,14 @@ Example:
         var data = List.of(1,2,3);
         int j = data.parallelStream().reduce(1, (a,b) -> a+b, (a,b) -> a+b); // 9
         int f = data.stream().reduce(1, (a,b) -> a+b, (a,b) -> a+b); // 7
+    \end{lstlisting}
+
+    Reductions where no initial value is provided return an Optional:
+
+    \begin{lstlisting}
+
+        List<Integer> ls = Arrays.asList(10, 47, 33, 23);
+        int max = ls.stream().reduce(Integer.MIN_VALUE, (a, b)-> a>b?a:b).get()
     \end{lstlisting}
 
 \subsubsection{flatmap()}
@@ -1952,6 +2095,30 @@ Example:
         Path zooPath3 = Paths.get("/home/tiger/data/stripes.txt");
         Path zooPath4 = Paths.get("/home", "tiger", "data", "stripes.txt");
     \end{lstlisting}
+
+ \subsubsection{Getting individual parts: getName()}
+
+ How it works:
+
+ \begin{itemize}
+     \item Indices for path names start from 0.
+     \item Root (i.e. c:\\) is not included in path names.
+     \item \ is NOT a part of a path name.
+     \item If you pass a negative index or a value greater than or equal to the number of elements, or this path has zero name elements, java.lang.IllegalArgumentException is thrown. It DOES NOT return null.
+ \end{itemize}
+
+ Example:
+
+\begin{lstlisting}
+    // Path is "c:\\code\\java\\PathTest.java"
+
+    p1.getRoot() // c:\\
+    p1.getName(0) // code
+    p1.getName(1) // java
+    p1.getName(2) // PathTest.java
+    p1.getName(3) // IllegalArgumentException
+\end{lstlisting}
+
 
 \subsubsection{Conversion to or back from java.io.File}
 
@@ -2470,6 +2637,8 @@ Example:
          public static List<Tour> findAllTours() {
             List<Tour> tours = new ArrayList<>();
             ServiceLoader<Tour> loader = ServiceLoader.load(Tour.class);
+            // implements Iterable
+            // can also use findFirst() to get first found
             for (Tour tour : loader)
             tours.add(tour);
             return tours;
@@ -2509,6 +2678,22 @@ Example:
             requires zoo.tours.api;
             provides zoo.tours.api.Tour with zoo.tours.agency.TourImpl;
     \end{lstlisting}
+
+\subsection{Migration}
+
+\subsubsection{Top-down}
+
+If A.jar depends on B.jar B.jar depends on C.jar, in the top down approach we directly make A.jar modular by including a module-info and adding a \lstinline|requires B;| clause.
+
+We create an automatic module for B.jar by simply placing it on module-path (instead of the classpath).
+
+We leave C.jar on the classpath so that B.jar may access it.
+
+\subsubsection{Bottom-up}
+
+While modularizing an app using the bottom-up approach, you need to convert lower level libraries first. Thus, bottom up approach is possible only when the dependencies are modularized already.
+
+Effectively, when bottom-up migration is complete, every class/package of an application is put on the module-path. Nothing is left on the classpath.
 
 \end{document}
 
