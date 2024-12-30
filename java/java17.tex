@@ -283,6 +283,29 @@
      // there is no reverse()
      \end{lstlisting}
 
+     Strings use lexicographic ordering (based on the Unicode representation) for \lstinline|compareTo()|.
+
+     In lexicographic ordering, if two strings are different, then either they have different characters at some index that is a valid index for both strings, or their lengths are different, or both.
+
+     If they have different characters at one or more index positions, let k be the smallest such index; then the string whose character at position k has the smaller value, as determined by using the < operator, lexicographically precedes the other string. In this case, compareTo returns the difference of the two character values at position k in the two string - that is, the value:
+
+     \begin{lstlisting}
+
+         this.charAt(k)-anotherString.charAt(k);
+
+     \end{lstlisting}
+
+     \textit{If there is no index position at which they differ, then the shorter string lexicographically precedes the longer string.} In this case, compareTo returns the difference of the lengths of the strings - that is, the value:
+
+     \begin{lstlisting}
+
+        this.length()-anotherString.length();
+
+     \end{lstlisting}
+
+
+
+
  \subsubsection{\lstinline$ StringBuilder $}
 
     \begin{lstlisting}
@@ -1096,29 +1119,37 @@ Constructors may be overloaded:
 
 \subsection{Enums}
 
-    Enums can have constructors, methods, and fields. Methods may be abstract, while enum classes may not.
+    Like records, enums are implicitly final, and may not be extended, since just as every Record inherits from Record every enum inherits from enum.
+
+    Enums can have constructors, methods, and fields. Methods may be abstract, while the enums themselves may not.
+
+    Enum constants must be declared before everything else.
 
     Example:
 
-        \begin{lstlisting}
+    \begin{lstlisting}
         enum Flavors {
             VANILLA, CHOCOLATE, STRAWBERRY;
-            // must declare values before members
             static final Flavors DEFAULT = STRAWBERRY;
         }
     \end{lstlisting}
 
-    Constructors are implicitly private. Example:
+    Constructors are optional; if provided they are implicitly private. It is ok not to provide any access modifier; public and protected are explicitly disallowed.
+
+    Instance fields may never be of type var. (Only method-local variables may be.)
 
      \begin{lstlisting}
         enum Animals {
-              // When an enum contains any other members, such as a constructor or variable, a semicolon is required:
+            // When an enum contains any other members, such as a constructor or variable, a semicolon is required:
             MAMMAL(true), INVERTEBRATE(Boolean.FALSE), BIRD(false),REPTILE(false),
-            AMPHIBIAN(false), FISH(false) {public int swim() { return 4; }};
+            AMPHIBIAN(false),
+            // fish is actually an anonymous subclass overriding swim()
+            FISH(false) {public int swim() { return 4; }};
 
             final boolean hasHair;
 
-            private Animals(boolean hasHair) {this.hasHair = hasHair;}
+            // implicitly private
+            Animals(boolean hasHair) {this.hasHair = hasHair;}
 
             public boolean hasHair() { return hasHair; }
             public int swim() { return 0; }
@@ -1153,7 +1184,15 @@ Constructors may be overloaded:
         // instance method to get the ordinal (starts with 0)
         final int ordinal()
 
+        // returns enum constant; may be overridden
+        toString()
+
+        // to iterate over enum constants, the compiler provides values() that returns an array of values in the order they have been defined
+        for (var c : Card.values()) /...
+
     \end{lstlisting}
+
+    Enums implement Comparable; they are sorted in the order they are defined.
 
 \subsection{Overriding, overloading and Hiding}
 \subsubsection{Overloading}
@@ -1234,7 +1273,7 @@ Constructors may be overloaded:
 \subsubsection{Instance}
 
     \textit{Instance initialization} blocks are invoked after the \textit{parent class constructor} has been invoked (i.e., after the super() constructor call).
-    An instance initializer can also access any static variables.
+   \textit{ As opposed to the constructor}, an instance initializer can also access any static variables.
 
     Beware: Variables newly created in the initializer block are in scope only there!
 
@@ -2497,6 +2536,32 @@ Collectors may also return summary statistic. Example:
 
     Calling interrupt() on a thread already in a RUNNABLE state doesn’t change the state.
 
+    Example:
+
+    \begin{lstlisting}
+
+        class A extends Thread {
+            boolean flag = true;
+
+            public void run()    {
+                System.out.println("Starting loop");
+                while(!isInterrupted()) { }
+                System.out.println("Ending loop");
+            }
+        }
+
+        public class TestClass {
+            public static void main(String args[]) throws Exception {
+                A a = new A();
+                a.start();
+                Thread.sleep(1000);
+                // InterruptedException would be thrown only if the interrupted thread were blocked in an invocation of the sleep, wait, or of the join methods.
+                a.interrupt();
+            }
+        }
+
+    \end{lstlisting}
+
 \subsection{Interface Runnable}
     \begin{lstlisting}
         // def.
@@ -2589,8 +2654,34 @@ Collectors may also return summary statistic. Example:
 
 \subsection{volatile}
 
-    Ensures that only one thread is modifying a variable at one time and that data read among multiple threads is consistent.
-    But operations are not atomic!
+    Ensures that only \textit{one thread is modifying a variable at one time} and that data read among multiple threads is \textit{consistent}.
+    But operations are \textit{not atomic}!
+
+    Example:
+
+    \begin{lstlisting}
+       class A extends Thread {
+
+           // without volatile, the change made to flag by the main thread may not even be visible to the other thread, and it will keep running the while loop
+           volatile boolean flag = true;
+
+           public void run()    {
+               System.out.println("Starting loop");
+               while( flag ){ };
+               System.out.println("Ending loop");
+           }
+       }
+
+       public class TestClass {
+           public static void main(String args[]) throws Exception {
+               A a = new A();
+               a.start();
+               Thread.sleep(1000);
+               a.flag = false;
+           }
+       }
+    \end{lstlisting}
+
 
 \section{Modules and services}
 \subsection{Modules}
