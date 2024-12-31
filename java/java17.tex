@@ -311,18 +311,34 @@
     \begin{lstlisting}
 
         // instance methods, e.g.
+
+        // Appends a subsequence of the specified CharSequence to this sequence
+        // so: start and end refer to the new sequence!
+        // If s is null, then this method appends characters as if the s parameter was a sequence containing the four characters "null".
+        StringBuilder append(CharSequence s, int start, int end) throws IndexOutOfBoundsException
+
+        // inserts a subsequence of the specified CharSequence into this sequence.
+        // dstOffset is the offset in this sequence.
+        StringBuilder insert(int dstOffset, CharSequence s, int start, int end) throws IndexOutOfBoundsException
+
+        //  Replaces the characters in a substring of this sequence with characters in the specified String.
+        StringBuilder replace(int start, int end, String str) throws StringIndexOutOfBoundsException
+
+
+        StringBuilder delete(int start, int end)
+
+        // beware: returns a new String!
+        String substring(start, end) throws StringIndexOutOfBoundsException
+
         char charAt(int index)
+
         IntStream chars()
 
         int indexOf(String str)
 
         int length()
 
-        StringBuilder
-        delete(int start, int end)
 
-        // beware: returns a new String!
-        String substring(start, end)
     \end{lstlisting}
 
 \subsection{Numbers}
@@ -974,7 +990,7 @@ package access.
 
     \item     \textit{Variables} are always public, static, final. No other modifiers are allowed.
 
-    \item     \textit{Methods} can be either \textit{default} (these are always public), static (always public), private, or private and static. Methods cannot be final nor protected. If there is no modifier, a method is implicitly public.
+    \item     \textit{Methods} can be either \textit{default} (these are always public), static (always public, must have a body), private, or private and static. Methods cannot be final nor protected. If there is no modifier, a method is implicitly public.
 
     \item Methods \textit{with a body} must be declared \textit{default, static or private}.
 
@@ -1007,6 +1023,8 @@ package access.
     \item     \textit{Static} methods are only accessible with a qualifier. A static method can be invoked from other static or from default method. A static method cannot be overridden or changed in the implementation class. The static methods are implicitly public — there's no need to specify the public modifier.
 
     \item     Interfaces may contain member type declarations (nested type). A member type declaration in an interface is implicitly static and public. It is permitted to redundantly specify either or both of these modifiers.
+
+    \item Interfaces may contain nested sealed classes or interfaces. No permits clause is necessary, but the sealed class or interface must be followed by an inheriting/extending subclass/interface.
 
 
 \end{itemize}
@@ -1262,6 +1280,21 @@ Constructors may be overloaded:
     \end{itemize}
 
 \subsection{Class loading and initialization}
+
+\subsubsection{General Rules}
+
+A class or interface type T will be initialized immediately before the first occurrence of any one of the following:
+
+\begin{itemize}
+    \item T is a class and an instance of T is created.
+    \item A static method declared by T is invoked.
+    \item A static field declared by T is assigned.
+    \item A static field declared by T is used and the field is not a constant variable.
+    \item When a class is initialized, its superclasses are initialized (if they have not been previously initialized), as well as any superinterfaces that declare any default methods (if they have not been previously initialized).
+    \item Initialization of an \textit{interface} does \textit{not}, of itself, cause initialization of any of its \textit{superinterfaces}.
+    \item A reference to a \textit{static field} causes initialization of only the class or interface that actually declares it, \textit{even though it might be referred to} through the name of a subclass, a subinterface, or a class that implements an interface.
+\end{itemize}
+
 \subsubsection{Class}
 
     First, static variables are created, then static initializers are run.
@@ -2365,7 +2398,20 @@ Collectors may also return summary statistic. Example:
 
     \end{lstlisting}
 
-\section{Exception handling}
+\section{Exceptions and Exception Handling}
+
+Selected methods on Exception:
+
+\begin{lstlisting}
+    // prints only the name of the exception class and the message
+    System.out.println(exception);
+
+    // prints stack trace
+    exception.printStackTrace();
+
+\end{lstlisting}
+
+
 \subsection{Multi-catch}
 
 
@@ -2696,7 +2742,6 @@ Collectors may also return summary statistic. Example:
 
     Note: Code on the classpath can access the module path. By contrast, code on the module path is unable to read from the classpath.
 
-\subsubsection{Migration}
 
 \subsection{Services}
 
@@ -2799,6 +2844,17 @@ We leave C.jar on the classpath so that B.jar may access it.
 While modularizing an app using the bottom-up approach, you need to convert lower level libraries first. Thus, bottom up approach is possible only when the dependencies are modularized already.
 
 Effectively, when bottom-up migration is complete, every class/package of an application is put on the module-path. Nothing is left on the classpath.
+
+\subsubsection{Using a modular jar from a not-modularized application}
+
+A module jar is no different from a regular jar. It contains classes in the same structure and so, it can be used as a regular jar in a non-modular application.
+
+Example:
+
+\begin{lstlisting}
+    // abc.utils.jar is modularized
+   java -classpath .;abc.utils.jar Main
+\end{lstlisting}
 
 \end{document}
 
