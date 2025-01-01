@@ -424,6 +424,10 @@
 
    // Return the value if present, otherwise return other.
    T orElse(T other)
+   // e.g.
+   OptionalDouble opt = s.average();
+   opt.orElse(0.0)
+
 
    //  Return value if present, otherwise invoke other
    T orElseGet(Supplier<? extends T> other)
@@ -693,10 +697,21 @@
         }
     \end{lstlisting}
 
+
+
     \begin{lstlisting}
         if (number instanceof Integer i && Math.abs(i) == 0) // ok
         if (number instanceof Integer i || Math.abs(i) == 0) // i not defined
         if (number instanceof int i && Math.abs(i) == 0) // can't use primitives
+    \end{lstlisting}
+
+ Beware: A pattern variable is not allowed to \textit{shadow} a local variable.
+ This will not compile:
+
+    \begin{lstlisting}
+        static void processBase(Base base){
+            A a = null;
+            if(base instanceof A a ){ // ...
     \end{lstlisting}
 
 \subsection{Loops}
@@ -1454,7 +1469,7 @@ Example:
 
         // inserts the specified element
         // returns true if the element was added to this queue, else false
-        boolean offer ()
+        boolean offer (E e)
 
         // --------------------- RETRIEVAL -------------------------
         // retrieves, but does not remove, the head of this queue
@@ -1557,7 +1572,7 @@ Example:
 
     \end{lstlisting}
 
-
+Note: \lstinline|<>| is only ever used on the right side of the assignment!
 
 \subsection{Wildcards}
 
@@ -1859,8 +1874,25 @@ Collectors may also return summary statistic. Example:
         // Sort using reverse of order specified by Comparable implementation on object itself.
         reverseOrder()
 
-        //Method chaining
-        reversed(), thenComparing(function), thenComparingDouble(function) ...
+        //Method chaining, e.g.
+        //  generates a Comparator that reverses the order of the Comparator on which it is invoked.
+        reversed()
+
+        // adds on a Comparator to the existing Comparator. This additional Comparator is used only when two objects are determined to be equal by the first Comparator.
+        thenComparing(// ...
+        // 3 forms:
+        // 1
+        default Comparator<T> thenComparing(Comparator<? super T> other)
+        // 2
+        // This method uses the supplied Function to get a value from the objects to be compared and then compares that value. The value returned by the function must be Comparable.
+        public <U extends Comparable<? super U>> Comparator<T> thenComparing(Function<? super T,? extends U> keyExtractor)
+        // 3
+        // Returns a lexicographic-order comparator with a function that extracts a key to be compared with the given Comparator. This is useful when the value returned by the Function does not implement Comparable.
+        public <U> Comparator<T> thenComparing(Function<? super T,? extends U> keyExtractor, Comparator<? super U> keyComparator)
+
+
+
+        thenComparingDouble(f// ...
 
     \end{lstlisting}
 
@@ -1937,7 +1969,8 @@ Collectors may also return summary statistic. Example:
 
     \begin{lstlisting}
         OptionalDouble opt = s.average()
-        opt.getAsDouble() // (may throw NoSuchElementException)
+        // throws NoSuchElementException if stream empty
+        opt.getAsDouble()
 
         // max (Comparator) returns an Optional
         mylist.stream().max(Comparator.comparing(a->a)).get();
@@ -2096,6 +2129,27 @@ Collectors may also return summary statistic. Example:
         return go
     \end{lstlisting}
 
+    \paragraph{Versioning and serialVersionUID}
+
+    Ideally, every class that implements Serializable should explicitly define a static final serialVersionUID field of type long.If you make changes to the class and if you still want old objects to be successfully deserialized into the updated class objects, you should keep the same value for serialVersionUID.
+
+    If you did not define serialVersionUID explicitly in the old class, the compiler will create this field and provide a value for it on its own. You can inspect this value and use it to define serialVersionUID in your updated class.
+
+    It is possible to deserialize older objects into a newer version even if the original class did not explicitly define the serialVersionUID field.
+    In this case, the compiler automatically adds this field. It assigns this field a value that is computed based on the attributes of the class, such as the fields and the implemented interfaces.  It is possible to determine this value by various means. For example, by using the serialver tool provided by the JDK:
+
+    \begin{lstlisting}
+        serialver MyClass
+    \end{lstlisting}
+
+     or by using the
+
+     \begin{lstlisting}
+        ObjectInputStream.readClassDescriptor()
+     \end{lstlisting}
+
+      method.  Once you get this number, you can assign the same number to serialVersionUID in your updated class.
+
 \subsubsection{Abstract base classes}
 
     InputStream, OutputStream, Reader, Writer.
@@ -2116,6 +2170,22 @@ Collectors may also return summary statistic. Example:
 
     Beware: As opposed to BufferedInputStream, Buffered Reader does not have a method to read all lines!
 
+\subsubsection{OutputStreamWriter: Writing Characters to Binary Output)}
+
+An OutputStreamWriter is a bridge from character streams to byte streams: Characters written to it are encoded into bytes using a specified charset. The charset that it uses may be specified by name or may be given explicitly, or the default charset may be accepted.
+
+\begin{lstlisting}
+    public class OutputStreamWriter extends Writer
+    // direct subclass: FileWriter
+
+    // to use a different charset
+    Writer out = new BufferedWriter(
+        new OutputStreamWriter(
+            new FileOutputStream("utf8.txt"), Charset.forName("UTF-8").newEncoder())
+    )
+
+\end{lstlisting}
+
 \subsubsection{Console}
 
     \begin{lstlisting}
@@ -2131,9 +2201,15 @@ Collectors may also return summary statistic. Example:
 
         // methods e.g.
         reader()
+
+        // throws IOError
         readLine() - this we wouldn't get from the Reader field!
+
         // NOT: read() - we have to get the Reader first
         reader.read()
+
+        // throws IOError
+        char[] readPassword
     \end{lstlisting}
 
 \subsubsection{Using mark()}
@@ -2205,6 +2281,9 @@ Collectors may also return summary statistic. Example:
     p1.getName(3) // IllegalArgumentException
 \end{lstlisting}
 
+\subsubsection{Getting individual parts: getRoot()}
+
+Returns the root component of this path as a Path object, or null if this path does not have a root component.
 
 \subsubsection{Conversion to or back from java.io.File}
 
@@ -2334,8 +2413,24 @@ Collectors may also return summary statistic. Example:
 
 
     \begin{lstlisting}
+
+        // read all lines into lazily-populated stream
+        Stream<String> lines(Path path, Charset cs)
+
+        // read all lines into eagerly-populated list
+        List<String> readAllLines(Path path, Charset cs)
+
         // find
+        // searches recursively
         Stream<Path> find(Path start, int maxDepth, BiPredicate<Path, BasicFileAttributes> matcher, FileVisitOption... options) throws IOException
+        // e.g.
+        Stream<Path> lines = Files.find(Paths.get("test.txt"));
+
+        // throws java.nio.file.NotDirectoryException if passed a file
+        // does not recurse
+        Stream<Path> list(Path dir)
+        // e.g.
+        Stream<Path> lines = Files.list(Paths.get("c:\\temp\\test"));
 
         // walk
         public static Stream<Path> walk(Path start, int maxDepth, FileVisitOption... options) throws IOException
@@ -2414,6 +2509,9 @@ Selected methods on Exception:
 
 \subsection{Multi-catch}
 
+We cannot include classes that are related by inheritance in the same multi-catch block.
+
+Only one variable name is allowed.
 
     \begin{lstlisting}
         // DOES NOT COMPILE
