@@ -342,6 +342,12 @@
     \end{lstlisting}
 
 \subsection{Numbers}
+\subsubsection{Primitive Types}
+
+In binary operations such as addition, when one of the operands is of type int, long, float, or double and the other operand is of a smaller size, the result will be a int, long, float, or double, respectively.
+
+Whenever both operands of a mathematical operator (such as / and *) are integral types except long (i.e. byte, char, short, and int), the result is always the integer value that remains after truncating the fractional value.
+
 \subsubsection{Number types: automatic promotion}
 
     Integer literals are considered int by default (size notwithstanding). But they can be automatically promoted to long, float, or double.
@@ -1439,6 +1445,15 @@ Example:
 
 \subsection{Maps}
 
+Notes on methods:
+
+ \begin{lstlisting}
+    // both key and value may be null
+    public Object put(Object key, Object value);
+\end{lstlisting}
+
+
+
 \subsection{Sets}
 
 \subsection{Queues}
@@ -1543,6 +1558,22 @@ Example:
 
     Deques can also be used as LIFO (Last-In-First-Out) stacks. This interface should be used in preference to the legacy Stack class. When a deque is used as a stack, elements are pushed and popped from the beginning of the deque.
 
+    Methods inherited from Stack include:
+
+    \begin{lstlisting}
+
+       // Looks at the object at the top of this stack without removing it from the stack.
+
+       E peek()
+
+       // Removes the object at the top of this stack and returns that object as the value of this function.
+       E pop()
+
+       // Pushes an item onto the top of this stack.
+       E push(E item)
+
+    \end{lstlisting}
+
 
 \section{Generics}
 \subsection{Declare}
@@ -1622,42 +1653,78 @@ Note: \lstinline|<>| is only ever used on the right side of the assignment!
         public static void getExceptions(Collection<? extends Mammal)
     \end{lstlisting}
 
-\subsection{When and why use lower bounds?}
+\subsection{Why upper bounds allow for retrieval only, while lower bounds permit just addition}
 
-    Consider:
+Upper-bounds example:
 
-    \begin{lstlisting}
-        List<String> strings = new ArrayList<String>();
-        strings.add("tweet");
+\begin{lstlisting}
+    List<? extends Number> l;
 
-        List<Object> objects = new ArrayList<Object>(strings);
+    // can get stuff out, knowing that these have to be some Number types
 
-        // to a List<Object>, can't pass List<String> (need exact match)
-        public static void addSound(List<? super String> list) {list.add("quack");}
-        addSound(strings);
-        addSound(objects);
+    // can't put anything in though, since this might e.g. a List of Integers and we couldn't put our Double
 
-        // to be able to do those...
-        coll.add(new RuntimeException());
-        coll.add(new Exception());
-        // need this:
-        public static void getExceptions(Collection<? super Exception>)
-        // whereas here, we could not add a broader type
-        public static void getExceptions(Collection<? super RuntimeException>)
+\end{lstlisting}
 
-        // another example
-        List<? super IOException> exceptions = new ArrayList<Exception>();
 
-        // DOES NOT COMPILE because this could be a List<IOException>
-        exceptions.add(new Exception());
+Lower-bounds example:
 
-        exceptions.add(new IOException());
-        exceptions.add(new FileNotFoundException());
+\begin{lstlisting}
 
-        // BUT this is ok:
-        List<? super Exception>
-    \end{lstlisting}
 
+     List<? super Number> l;
+
+     // can't retrieve anything while being assured this really is a Number (could be any Object)
+
+     // but can put a Number or an Object in
+
+\end{lstlisting}
+
+\subsection{Overloading and Overriding with Generics}
+
+This is a correct overloading example, since the bounds defined by \lstinline|<T extends Number>| vs. \lstinline|<T>| are different:
+
+\begin{lstlisting}
+    class Base{
+        public  <T extends Number, Z extends Number> Map<T, Z> getMap(T t, Z z)    {
+            return new HashMap<T, Z>();
+        }
+    }
+
+    class Derived extends Base{
+        public  <T, Z> TreeMap<T, Z> getMap(T t, Z z) {
+            return new TreeMap<T, Z>();
+        }
+    }
+
+\end{lstlisting}
+
+These are correct overriding examples, since subtypes of Number are returned:
+
+\begin{lstlisting}
+
+    class Base{
+        public  <T extends Number, Z extends Number> Map<T, Z> getMap(T t, Z z)    {
+            return new HashMap<T, Z>();
+        }
+    }
+
+     class Derived extends Base{
+         public  Map<Number, Number> getMap(Number t, Number z) {
+             return new TreeMap<Number, Number>();
+         }
+
+         public  Map<Integer, Integer> getMap(Number t, Number z) {
+             return new HashMap<Integer, Integer>();
+         }
+     }
+
+\end{lstlisting}
+
+
+Overriding methods may remove, but not introduce, type parameters. For example, if the overridden method has \lstinline|Set<Integer>|, then the overriding method can use Set or \lstinline|Set<Integer>|. But if overridden method has Set, then the overriding method must also have Set for a valid override.
+
+Keep in mind that because of type erasure, two methods whose parameter types differ only in the type specification are not really different methods. For example, \lstinline|void m(Set<CharSequence> cs)|, \lstinline|void m(Set<String> s)|, and \lstinline|void m(Set<SomeOtherClass> o)| are not different method signatures at all. If you remove the type specification, they all resolve to the same signature, i.e. \lstinline|void m(Set x)|.
 
 
 \section{Streams, functional interfaces, and lambda functions}
@@ -1718,6 +1785,43 @@ Note: \lstinline|<>| is only ever used on the right side of the assignment!
         // So this will not compile:
         Consumer<Object> c2 = String::new; // there is no new String(object)
     \end{lstlisting}
+
+\subsection{Types of Streams}
+
+\subsubsection{Intermediate}
+
+U.a.:
+
+\begin{lstlisting}
+    map()
+    filter()
+    distinct()
+    sorted()
+    limit()
+    skip()
+\end{lstlisting}
+
+\subsubsection{Terminal}
+
+U.a.:
+
+\begin{lstlisting}
+    forEach()
+    toArray()
+    reduce()
+    collect()
+
+    Optional<T> min()
+    Optional<T> max()
+    long count()
+
+    boolean anyMatch()
+    boolean allMatch()
+    boolean noneMatch()
+
+    Optional<T>findFirst()
+    Optional<T> findAny()
+\end{lstlisting}
 
 \subsection{Stream characteristics}
 
@@ -2305,6 +2409,8 @@ Returns the root component of this path as a Path object, or null if this path d
         Path path2 = Path.of("food");
         System.out.println(path1.resolve(path2));
         // /cats/../panther/food
+        // note: this would still be the case if path1 pointed to a file!
+        // e.g., /cats/../panther.txt/food
 
         // if input is absolute, return input
         Path path3 = Path.of("/turkey/food");
@@ -2831,7 +2937,7 @@ Only one variable name is allowed.
 \subsection{Modules}
 \subsubsection{Module types}
 
-    A \textit{named} module has the name inside the module-­info.java file and is on the module path
+    A \textit{named} module has the name inside the module-­info.java file and is on the module path.
 
     An \textit{automatic} module appears on the module path but does not contain a module-­info.java
     file. Exports all files to other modules on module path.
@@ -2840,6 +2946,22 @@ Only one variable name is allowed.
 
     Note: Code on the classpath can access the module path. By contrast, code on the module path is unable to read from the classpath.
 
+
+\subsubsection{Executing Modular Code}
+
+To run a class named \lstinline|com.xyz.fx.Main| which is part of a module named \lstinline|xyz.fx|, packaged in \lstinline|fx.jar|, do
+
+\begin{lstlisting}
+
+    java --module-path fx.jar --module com.xyz.fx.Main
+
+    // same using short options
+    java -p fx.jar -m com.xyz.fx.Main
+
+    // can also use pre-module standard syntax
+    java -classpath fx.jar com.xyz.fx.Main
+
+\end{lstlisting}
 
 \subsection{Services}
 
