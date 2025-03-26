@@ -1671,18 +1671,6 @@ In consequence, async/await can conveniently be nested:
 
 \begin{lstlisting}[style=ES6]
     async function doTask (amount) {
-        if (typeof amount !== 'number')
-         throw new TypeError('amount must be a number')
-        if (amount <= 0)
-         throw new RangeError('amount must be greater than zero')
-        if (amount % 2) throw new OddError('amount')
-        const result = await asyncFetchResult(amount)
-        return result
-    }
-\end{lstlisting}
-
-\begin{lstlisting}[style=ES6]
-    async function doTask (amount) {
         if //
         if // ...
         // fetch something from a server
@@ -1735,18 +1723,18 @@ Here is the equivalent example using a callback:
     // now takes a callback
     function doTask (amount, cb) {
         if (/* ... */ {
-            cb( // ....
+            cb( // .... throw some Error
             return
         }
         if (/* ... */ {
-            cb( // ....
+            cb( // .... throw some Error
             return
         }
         if (/* ... */ {
             cb(Error('some other error'))
             return
         }
-
+        // first argument (Error) is null, pass result as second!
         cb(null, amount/2)
     }
 
@@ -1758,6 +1746,7 @@ Here is the equivalent example using a callback:
         doTask(4, (err, result) => {
             // if error, check code
             // if not a known one pass on as-is
+            // first argument (Error) is not null
             if (err) {
                 if (err.code === // ...
                     cb(Error('wrong type'))
@@ -1771,6 +1760,7 @@ Here is the equivalent example using a callback:
                 return
             }
 
+            // do some real stuff with result
             console.log('result', result)
         })
     }
@@ -1782,15 +1772,109 @@ Here is the equivalent example using a callback:
 
 \end{lstlisting}
 
+\section{Buffers}
 
+A buffer object is both an instance of Buffer and an instance (at the second degree) of Uint8Array (8 bytes of unsigned integers between 0-255; subclass of non-instantiable TypedArray).
+In consequence, methods from Uint8Array as well as those from Buffer are available.
+
+To safely create a buffer (meaning, zeroed-out bytes), we use \lstinline|Buffer.alloc(num_bytes)|.
+
+Buffers can conveniently be converted into/from strings:
 
 \begin{lstlisting}[style=ES6]
+    \\ not required, but recommended
+    const { Buffer } = require('node:buffer');
+
+    const buffer = Buffer.from('hello world')
+    buffer
+
+    // <Buffer 68 65 6c 6c 6f 20 77 6f 72 6c 64>
 
 \end{lstlisting}
 
+\subsection{Buffer creation}
+
+The default character set is UTF-8, which uses up to 4 bytes:
+
 \begin{lstlisting}[style=ES6]
+    // U+1F440 not displayed by tex
+    // length of string: ?!?
+    // https://mathiasbynens.be/notes/javascript-unicode
+    console.log('<EYES>'.length)
+    // 2
+
+    // utf-8 encoding uses 8 bytes
+    console.log(Buffer.from('<EYES>').length)
+    // 4
+    Buffer.from('U+1F440')
+    <Buffer f0 9f 91 80>
+\end{lstlisting}
+
+But a different character set can be specified:
+
+\begin{lstlisting}[style=ES6]
+    Buffer.from("U+00fc")
+    <Buffer c3 bc>
+
+    Buffer.from("U+00fc", "ascii")
+    <Buffer fc>
+
+    Buffer.from("U+00fc", "utf16le")
+    <Buffer fc 00>
 
 \end{lstlisting}
+
+\subsection{Character encodings}
+
+The\textit{ character encodings} currently supported by Node.js are the following:
+
+\begin{itemize}
+    \item 'utf8' (alias: 'utf-8')
+    \item 'utf16le' (alias: 'utf-16le'): each character in the string will be encoded using either 2 or 4 bytes. Node.js only supports the little-endian variant of UTF-16.
+    \item 'latin1': = ISO-8859-1. This character encoding only supports the Unicode characters from U+0000 to U+00FF. Each character is encoded using a single byte.
+\end{itemize}
+
+Converting a \textit{Buffer into a string} using one of the above is referred to as \textit{decoding}, and converting \textit{a string into a Buffer} is referred to as \textit{encoding}.
+
+The following legacy character encodings are also supported:
+
+\begin{itemize}
+    \item 'ascii': For 7-bit ASCII data only. When encoding a string into a Buffer, this is equivalent to using 'latin1'. When decoding a Buffer into a string, using this encoding will additionally unset the highest bit of each byte before decoding as 'latin1'. Generally, there should be no reason to use this encoding, as 'utf8' (or, if the data is known to always be ASCII-only, 'latin1') will be a better choice when encoding or decoding ASCII-only text. It is only provided for legacy compatibility.
+    \item 'binary': Alias for 'latin1'. The name of this encoding can be very misleading, as all of the encodings listed here convert between strings and binary data. For converting between strings and Buffers, typically 'utf8' is the right choice.
+    \item 'ucs2', 'ucs-2': Aliases of 'utf16le'. UCS-2 used to refer to a variant of UTF-16 that did not support characters that had code points larger than U+FFFF. In Node.js, these code points are always supported.
+\end{itemize}
+
+
+\subsection{Binary-to-text encodings}
+
+Node.js also supports the following \textit{binary-to-text} encodings. For binary-to-text encodings, the naming convention is reversed: Converting a \textit{Buffer into a string} is typically referred to as \textit{encoding}, and converting \textit{a string into a Buffer} as \textit{decoding}.
+
+\begin{itemize}
+    \item 'base64': Base64 encoding. Whitespace characters such as spaces, tabs, and new lines contained within the base64-encoded string are ignored.
+    \item 'base64url': base64url encoding as specified in RFC 4648, Section 5.When encoding a Buffer to a string, this encoding will omit padding.
+    \item 'hex': Encode each byte as two hexadecimal characters. Data truncation may occur when decoding strings that do not exclusively consist of an even number of hexadecimal characters. See below for an example.
+\end{itemize}
+
+Example:
+
+\begin{lstlisting}[style=ES6]
+
+    // utf-8 encoding of ASCII STRING
+    Buffer.from("8J+RgA==")
+    <Buffer 38 4a 2b 52 67 41 3d 3d>
+
+    // EYES is 8J+RgA== in base64
+    // utf-8 encoding of base64 decoding
+    Buffer.from("8J+RgA==", "base64")
+    <Buffer f0 9f 91 80>
+
+    // same as
+    Buffer.from('<EYES>')
+    <Buffer f0 9f 91 80>
+
+
+\end{lstlisting}
+
 
 \section{Appendix}
 
