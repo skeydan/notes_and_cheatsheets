@@ -1858,7 +1858,6 @@ Node.js also supports the following \textit{binary-to-text} encodings. For binar
 Example:
 
 \begin{lstlisting}[style=ES6]
-
     // utf-8 encoding of ASCII STRING
     Buffer.from("8J+RgA==")
     <Buffer 38 4a 2b 52 67 41 3d 3d>
@@ -1871,10 +1870,267 @@ Example:
     // same as
     Buffer.from('<EYES>')
     <Buffer f0 9f 91 80>
+\end{lstlisting}
 
+\subsection{Decoding to String}
+
+When converting to string, we can also specify an encoding:
+
+\begin{lstlisting}[style=ES6]
+    const buffer = Buffer.from('<EYES>')
+    console.log(buffer)
+    <Buffer f0 9f 91 80>
+
+    console.log(buffer.toString()) // default utf-8
+    <EYES>
+
+    console.log(buffer.toString('hex'))
+    f09f9180
+
+    console.log(buffer.toString('base64'))
+    8J+RgA==console.log(buffer.toString(')) // prints 8J+RgA==
+\end{lstlisting}
+
+
+
+\subsection{Using StringDecoder}
+The UTF8 encoding format has between 1 and 4 bytes to represent each character, if for any reason one or more bytes is truncated from a character this will result in encoding errors. So in situations where we have multiple buffers that might split characters across a byte boundar y the Node core string\_decoder module should be used.
+
+ Calling decoder.write will output a character only when all of the bytes representing that character have been written to the decoder:
+
+\begin{lstlisting}[style=ES6]
+   const { StringDecoder } = require('string_decoder')
+
+   const frag1 = Buffer.from('f09f', 'hex')
+   const frag2 = Buffer.from('9180', 'hex')
+
+   console.log(frag1.toString())
+   <question_mark>
+
+   console.log(frag2.toString())
+    <question_mark>
+
+   const decoder = new StringDecoder()
+
+   console.log(decoder.write(frag1)) // prints nothing
+   console.log(decoder.write(frag2)) // prints <EYES>
+   <EYES>
 
 \end{lstlisting}
 
+\subsection{JSON Serializing and Deserializing Buffers}
+
+ When JSON.stringify encounters any object it will attempt to call a toJSON method on that object if it exists. Buffer instances have a toJSON method which returns a plain JavaScript object in order to represent the buffer in a JSON-friendly way:
+
+\begin{lstlisting}[style=ES6]
+    buffer
+    <Buffer f0 9f 91 80>
+
+    buffer.toJSON()
+    { type: 'Buffer', data: [ 240, 159, 145, 128 ] }
+
+    JSON.stringify(buffer)
+    '{"type":"Buffer","data":[240,159,145,128]}'
+\end{lstlisting}
+
+When deserializing, JSON.parse will only turn that JSON representation of the buffer into a plain JavaScript object, to turn it into an object the data array must be passed to Buffer.from:
+
+\begin{lstlisting}[style=ES6]
+    const buffer = Buffer.from('<EYES>')
+    const json = JSON.stringify(buffer)
+
+    const parsed = JSON.parse(json)
+    console.log(parsed)
+    { type: 'Buffer', data: [ 240, 159, 145, 128 ] }
+
+    console.log(Buffer.from(parsed.data))
+    <Buffer f0 9f 91 80>
+\end{lstlisting}
+
+When an array of numbers is passed to Buffer.from they are converted to a buffer with byte values corresponding to those numbers.
+
+\subsection{Example}
+
+
+\begin{lstlisting}[style=ES6]
+    const str = 'buffers are neat'
+
+    // <Buffer 62 75 66 66 65 72 73 20 61 72 65 20 6e 65 61 74>
+    let y = Buffer.from(str)
+    // 'YnVmZmVycyBhcmUgbmVhdA=='
+    let z = y.toString('base64')
+
+    // 1liner
+    // const base64 = Buffer.from(str).toString('base64')
+
+    assert.equal(z, Buffer.from([
+    89,110,86,109,90,109,86,121,99,
+    121,66,104,99,109,85,103,98,109,
+    86,104,100,65,61,61]))
+\end{lstlisting}
+
+\section{Streams}
+\subsection{Stream Types}
+
+Constructors exposed by the base \textit{stream} module are:
+
+\begin{lstlisting}[style=ES6]
+    Stream
+    Readable
+    Writable
+    Duplex
+    Transform
+    PassThrough
+\end{lstlisting}
+
+The Stream constructor inherits from the \textit{EventEmitter} constructor from the \textit{events} module.
+
+Events emitted by various Stream implementations are:
+
+\begin{lstlisting}[style=ES6]
+    data
+    end
+    finish
+    close
+    error
+\end{lstlisting}
+
+\subsection{Stream Modes}
+
+The mode of a stream is determined by its \textit{objectMode} option passed when the stream is instantiated, the default being binary. \textit{Binary mode} streams only read or write \textit{Buffer} instances. \textit{object mode} streams read or write \textit{objects and primitives} (strings, numbers) except null.
+
+\subsection{Readable Streams}
+
+To create, using fs' \textit{createReadStream} constructor:
+
+\begin{lstlisting}[style=ES6]
+ 'use strict'
+ const fs = require('fs')
+
+ // file executing the code
+ const readable = fs.createReadStream(__filename)
+
+ readable.on('data', (data) => { console.log(' got data', data) })
+ readable.on('end', () => { console.log(' finished reading') })
+
+\end{lstlisting}
+
+
+Readable streams are usually connected to an I/O layer via a C-binding, but we can create a contrived readable stream ourselves using the Readable constructor:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { Readable } = require('stream')
+
+    const createReadStream = () => {
+        const data = ['some', 'data', 'to', 'read']
+        // pass an options object with a read method
+        return new Readable({
+            // ca pass size (how many bytes to read),
+            // highWaterMark (default 16kb)
+            read () {
+                // this points to readable stream instance
+                if (data.length === 0) this.push(null)
+                else this.push(data.shift())
+            }
+        })
+    }
+
+    const readable = createReadStream()
+
+    readable.on('data', (data) => { console.log('got data', data) })
+    readable.on('end', () => { console.log('finished reading') })
+\end{lstlisting}
+
+When each data event is emitted it receives a string instead of a buffer.
+However, the default stream mode is objectMode: false, meaning Buffer.
+
+
+Thus, a string is pushed to the Readable stream. That stream is then converted to a buffer. Finally, it is decoded to string using UTF8.
+
+When creating a readable stream without the intention of using buffers, we can instead set objectMode to true:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { Readable } = require('stream')
+
+    const createReadStream = () => {
+        const data = ['some', 'data', 'to', 'read']
+        return new Readable({
+            objectMode: true,
+            read () {
+                if (data.length === 0) this.push(null)
+                else this.push(data.pop())
+            }
+        })
+    }
+
+    const readable = createReadStream()
+
+    readable.on('data', (data) => { console.log('got data', data) })
+    readable.on('end', () => { console.log('finished reading') })
+\end{lstlisting}
+
+This time the string is being sent from the readable stream without converting to a buffer first.
+
+Using \textit{Readable.from}, streams can be created from iterable data structures, like arrays:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { Readable } = require('stream')
+
+    // objectMode is true by default
+    const readable = Readable.from(['some', 'data', 'to', 'read'])
+
+    readable.on('data', (data) => { console.log('got data', data) })
+    readable.on('end', () => { console.log('finished reading') })
+
+\end{lstlisting}
+
+
+
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+
+
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+
+
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
 
 \section{Appendix}
 
