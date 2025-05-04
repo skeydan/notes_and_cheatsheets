@@ -2087,50 +2087,352 @@ Using \textit{Readable.from}, streams can be created from iterable data structur
 
 \end{lstlisting}
 
+\subsection{Writable Streams}
+
+To create:
+
+\begin{lstlisting}[style=ES6]
+'use strict'
+const fs = require('fs')
+
+const writable = fs.createWriteStream('./out')
+writable.on('finish', () => { console.log('finished writing') })
+
+// strings are converted to buffers
+writable.write('A\n')
+writable.write('B\n')
+writable.write('C\n')
+writable.end('nothing more to write')
+\end{lstlisting}
+
+Like Readable streams, Writable streams are mostly useful for I/O, which means integrating a writable stream with a native C-binding, but we can likewise create a contrived write stream example:
+
+\begin{lstlisting}[style=ES6]
+'use strict'
+const { Writable } = require('stream')
+
+const createWriteStream = (data) => {
+    return new Writable({
+        write (chunk, enc, next) {
+            data.push(chunk)
+            // we are ready for the next piece of data
+            next()
+        }
+    })
+}
+const data = []
+
+const writable = createWriteStream(data)
+writable.on('finish', () => { console.log('finished writing', data) })
+
+writable.write('A\n')
+writable.write('B\n')
+writable.write('C\n')
+writable.end('nothing more to write')
+
+\end{lstlisting}
+
+The point of a next callback function is to allow for asynchronous operations within the write. This is essential for performing asynchronous I/O.
+
+Note again, as with readable streams, the default objectMode option is false, so each string written to our writable stream instance is converted to a buffer before it becomes the chunk argument passed to the write option function.
+
+If we are dealing with strings or Buffers only, we can avoid the unnecessary conversion by setting the decodeStrings option to false:
+
+\begin{lstlisting}[style=ES6]
+const createWriteStream = (data) => {
+    return new Writable({
+        decodeStrings: false,
+        write (chunk, enc, next) {
+            data.push(chunk)
+            next()
+        }
+    })
+}
+\end{lstlisting}
+
+Now trying to pass anything else (e.g., a number) will result in an error because we're attempting to write a JavaScript value that isn't a string to a binary stream.
+
+If instead we want to support strings and any other JavaScript value, we can instead set objectMode to true to create an object-mode writable stream:
+
+\begin{lstlisting}[style=ES6]
+'use strict'
+const { Writable } = require('stream')
+
+const createWriteStream = (data) => {
+    return new Writable({
+        objectMode: true,
+        write (chunk, enc, next) {
+            data.push(chunk)
+            next()
+        }
+    })
+}
+const data = []
+
+const writable = createWriteStream(data)
+writable.on('finish', () => { console.log('finished writing', data) })
+writable.write('A\n')
+writable.write(1)
+writable.end('nothing more to write')
+\end{lstlisting}
+
+\subsection{Readable-Writable Streams}
+
+In addition to the Readable and Writable stream constructors there are three more core stream constructors that have both readable and writable interfaces: Duplex, Transform, and PassThrough.
+
+\subsubsection{Duplex}
+
+With a Duplex stream, both read and write methods are implemented but there doesn't have to be a causal relationship between them. Just because something is written to a Duplex stream doesn't necessarily mean that it will result in any change to what can be read from the stream, although it might.
+
+A TCP network socket is a great example of a Duplex stream:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const net = require('net')
+
+    net.createServer((socket) => {
+        const interval = setInterval(() => {
+            // writable side of the stream
+            socket.write('beat')
+        }, 1000)
+        // readable side of the stream
+        socket.on('data', (data) => {
+            // writable side of the stream
+            socket.write(data.toString().toUpperCase())
+        })
+        // readable side of the stream
+        socket.on('end', () => { clearInterval(interval) })
+    }).listen(3000)
+\end{lstlisting}
+
+The client socket is also a Duplex stream:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const net = require('net')
+
+    const socket = net.connect(3000)
+
+    socket.on('data', (data) => {
+        console.log('got data:', data.toString())
+    })
+
+    socket.write('hello')
+
+    setTimeout(() => {
+        socket.write('all done')
+        setTimeout(() => {
+            socket.end()
+        }, 250)
+    }, 3250)
+\end{lstlisting}
+
+\subsubsection{Transform}
+
+The Transform constructor inherits from the Duplex constructor. Transform streams are duplex streams with an additional constraint applied to enforce a causal relationship between the read and write interfaces. A good example is compression:
 
 
+\begin{lstlisting}[style=ES6]
 
+    'use strict'
+    const { createGzip } = require('zlib')
+
+    const transform = createGzip()
+
+    transform.on('data', (data) => {
+        console.log('got gzip data', data.toString('base64'))
+    })
+    transform.write('first')
+    setTimeout(() => {
+        transform.end('second')
+    }, 500)
+\end{lstlisting}
+
+The way that Transform streams create this causal relationship is through how a transform stream is created. Instead of supplying read and write options functions, a transform option is passed to the Transform constructor:
+
+
+\begin{lstlisting}[style=ES6]
+'use strict'
+const { Transform } = require('stream')
+const { scrypt } = require('crypto')
+
+const createTransformStream = () => {
+    return new Transform({
+        decodeStrings: false,
+        encoding: 'hex',
+        // same signature as write but
+        // the next function can be passed a second argument
+        // which should be the result of applying some kind
+        // of transform operation to the incoming chunk.
+        transform (chunk, enc, next) {
+            scrypt(chunk, 'a-salt', 32, (err, key) => {
+                if (err) {
+                    // emit an error event
+                    next(err)
+                    return
+                }
+                // null indicates no error,
+                // and data event is emitted from the readable side
+                next(null, key)
+            })
+        }
+    })
+}
+const transform = createTransformStream()
+transform.on('data', (data) => {
+    console.log('got data:', data)
+})
+transform.write('A\n')
+transform.write('B\n')
+transform.write('C\n')
+transform.end('nothing more to write')
+
+\end{lstlisting}
+
+\subsubsection{PassThrough}
+
+The PassThrough constructor inherits from the Transform constructor. It's essentially a transform stream where no transform is applied. It implements the identity function, that is, it's a useful placeholder when a transform stream is expected but no transform is desired.
+
+\subsubsection{Determining End-of-Stream}
+
+As we discussed earlier, there are at least four ways for a stream to potentially become inoperative: close event, error event, finish event, and end event.
+
+We often need to know when a stream has closed so that resources can be deallocated, otherwise memory leaks become likely.
+
+Instead of listening to all four events, the stream.finished utility function provides a simplified way to do this:
+
+\begin{lstlisting}[style=ES6]
+'use strict'
+const net = require('net')
+const { finished } = require('stream')
+
+net.createServer((socket) => {
+    const interval = setInterval(() => {
+        socket.write('beat')
+    }, 1000)
+    socket.on('data', (data) => {
+        socket.write(data.toString().toUpperCase())
+    })
+    // The stream (socket) is passed to finished as the first argument
+    // the second argument is a callback for when the stream ends
+    // for any reason
+    finished(socket, (err) => {
+        // first argument of the callback is a potential error object
+        // If the stream were to emit an error event the callback would
+        // be called with the error object emitted by that event.
+        if (err) {
+            console.error('there was a socket error', err)
+        }
+        clearInterval(interval)
+    })
+}).listen(3000)
+
+\end{lstlisting}
+
+\subsubsection{Piping Streams}
+
+Let's adapt the TCP client server from the "Readable-Writable Streams" page to use the pipe method. Here is the client from earlier:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const net = require('net')
+
+    const socket = net.connect(3000)
+
+    socket.on('data', (data) => {
+        console.log('got data:', data.toString())
+    })
+
+    socket.write('hello')
+    setTimeout(() => {
+        socket.write('all done')
+        setTimeout(() => {
+            socket.end()
+        }, 250)
+    }, 3250)
+\end{lstlisting}
+
+We'll replace the data event listener with a pipe:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const net = require('net')
+
+    const socket = net.connect(3000)
+
+    socket.pipe(process.stdout)
+
+    socket.write('hello')
+    setTimeout(() => {
+        socket.write('all done')
+        setTimeout(() => {
+            socket.end()
+        }, 250)
+    }, 3250)
+\end{lstlisting}
+
+The pipe method exists on Readable streams (recall socket is a Duplex stream instance and that Duplex inherits from Readable), and is passed a Writable stream (or a stream with Writable capabilities). Internally, the pipe method sets up a data listener on the readable stream and automatically writes to the writable stream as data becomes available.
+
+Since pipe returns the stream passed to it, it is possible to chain pipe calls together: streamA.pipe(streamB).pipe(streamC). This is a commonly observed practice, but it's also bad practice to create pipelines this way. If a stream in the middle fails or closes for any reason, the other streams in the pipeline will not automatically close. This can create severe memory leaks and other bugs.
+
+The correct way to pipe multiple streams is to use the stream.pipeline utility function.
+
+Combining the above Transform stream and the TCP server to create a pipeline of streams:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const net = require('net')
+    const { Transform, pipeline } = require('stream')
+    const { scrypt } = require('crypto')
+    const createTransformStream = () => {
+        return new Transform({
+            decodeStrings: false,
+            encoding: 'hex',
+            transform (chunk, enc, next) {
+                scrypt(chunk, 'a-salt', 32, (err, key) => {
+                    if (err) {
+                        next(err)
+                        return
+                    }
+                    next(null, key)
+                })
+            }
+        })
+    }
+
+    net.createServer((socket) => {
+        const transform = createTransformStream()
+        const interval = setInterval(() => {
+            socket.write('beat')
+        }, 1000)
+        pipeline(socket, transform, socket, (err) => {
+            if (err) {
+                console.error('there was a socket error', err)
+            }
+            clearInterval(interval)
+        })
+    }).listen(3000)
+
+\end{lstlisting}
+
+The pipeline command will call pipe on every stream passed to it, and will allow a function to be passed as the final function. Note how we removed the finished utility method. This is because the final function passed to the pipeline function will be called if any of the streams in the pipeline close or fail for any reason.
 
 \begin{lstlisting}[style=ES6]
 
 \end{lstlisting}
 
+\begin{lstlisting}[style=ES6]
 
-
+\end{lstlisting}
 
 \begin{lstlisting}[style=ES6]
 
 \end{lstlisting}
 
-
-
-
-
 \begin{lstlisting}[style=ES6]
 
 \end{lstlisting}
 
-
-
-
-
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
-
-
-
-
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
-
-
-
-
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
 
 \section{Appendix}
 
@@ -2261,17 +2563,6 @@ Its syntax is similar to function expression, function declaration, or method de
 
 \end{lstlisting}
 
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
-
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
-
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
 
 
 
