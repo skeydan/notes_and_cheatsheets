@@ -2417,8 +2417,428 @@ Combining the above Transform stream and the TCP server to create a pipeline of 
 
 The pipeline command will call pipe on every stream passed to it, and will allow a function to be passed as the final function. Note how we removed the finished utility method. This is because the final function passed to the pipeline function will be called if any of the streams in the pipeline close or fail for any reason.
 
+\section{Interacting with the File System}
+\subsection{File Paths}
+
+\begin{lstlisting}[style=ES6]
+    // absolute file paths
+    console.log('current filename', __filename)
+    console.log('current dirname', __dirname)
+\end{lstlisting}
+
+The path.join method generates platform-independent paths.
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { join } = require('path')
+    console.log('out file:', join(__dirname, 'out.txt'))
+\end{lstlisting}
+
+Alongside path.join the other path builders are:
+
+
+
 \begin{lstlisting}[style=ES6]
 
+    // Given two absolute paths, calculates the relative path between them.
+    path.relative
+
+    // e.g. path.resolve('/foo', 'bar', 'baz') yields '/foo/bar/baz',
+    // which is akin to executing cd /foo then cd bar then cd baz
+    path.resolve
+
+    // Resolves .. and . dot in paths and strips extra slashes, for
+    // instance path.normalize('/foo/../bar//baz') returns '/bar/baz
+    path.normalize
+
+    path.format
+    // Builds a string from an object. The object shape 'that path.format
+    // accepts, corresponds to the object returned from path.parse
+\end{lstlisting}
+
+The path deconstructors are path.parse, path.extname, path.dirname and path.basename.
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { parse, basename, dirname, extname } = require('path')
+    console.log('filename parsed:', parse(__filename))
+    console.log('filename basename:', basename(__filename))
+    console.log('filename dirname:', dirname(__filename))
+    console.log('filename extname:', extname(__filename))
+\end{lstlisting}
+
+\subsection{Reading and Writing}
+
+The fs module has lower level and higher level APIs. The lower level API's closely mirror POSIX system calls. For instance, fs.open opens and possibly creates a file and provides a file descriptor handle, taking same options as the POSIX open command.
+
+The higher level methods for reading and writing are provided in four abstraction types: Synchronous, callback-based, promise-based, and stream-based.
+
+\subsubsection{Synchronous}
+
+E.g.
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { readFileSync } = require('fs')
+
+    const contents = readFileSync(__filename)
+    // or set encoding
+    const contents = readFileSync(__filename, {encoding: 'utf8'})
+
+    console.log(contents)
+\end{lstlisting}
+
+The fs.writeFileSync function takes a path and a string or buffer and blocks the process until the file has been completely written:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { join } = require('path')
+
+    const { readFileSync, writeFileSync } = require('fs')
+    const contents = readFileSync(__filename, {encoding: 'utf8'})
+    writeFileSync(join(__dirname, 'out.txt'), contents.toUpperCase())
+    // or
+    writeFileSync(join(__dirname, 'out.txt'), contents.toUpperCase(), {
+        flag: 'a'
+    })
+
+\end{lstlisting}
+
+\subsubsection{Callback-based}
+
+Read:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { readFile } = require('fs')
+
+    readFile(__filename, {encoding: 'utf8'}, (err, contents) => {
+        if (err) {
+            console.error(err)
+            return
+        }
+        console.log(contents)
+    })
+\end{lstlisting}
+
+Read and write, asynchronously each:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { join } = require('path')
+    const { readFile, writeFile } = require('fs')
+
+    readFile(__filename, {encoding: 'utf8'}, (err, contents) => {
+        if (err) {
+            console.error(err)
+            return
+        }
+        const out = join(__dirname, 'out.txt')
+        writeFile(out, contents.toUpperCase(), (err) => {
+            if (err) { console.error(err) }
+        })
+    })
+\end{lstlisting}
+
+\subsubsection{Promise-based}
+
+The fs/promises API provides most of the same asynchronous methods that are available on fs, but the methods return promises instead of accepting callbacks.
+
+So instead of loading readFile and writeFile like so:
+
+\begin{lstlisting}[style=ES6]
+    const { readFile, writeFile } = require('fs')
+\end{lstlisting}
+
+We can load the promise-based versions like so:
+
+\begin{lstlisting}[style=ES6]
+    const { readFile, writeFile } = require('fs/promises')
+\end{lstlisting}
+
+It's also possible to load fs/promises with
+
+\begin{lstlisting}[style=ES6]
+    require('fs').promises
+\end{lstlisting}
+
+, which is backwards compatible with legacy Node versions (v12 and v10), but fs/promises supersedes fs.promises and aligns with other more recent API additions (such as stream/promises and timers/promises).
+
+Let's look at the same reading and writing example using fs/promises and using async/await to resolve the promises:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { join } = require('path')
+    const { readFile, writeFile } = require('fs/promises')
+
+    async function run () {
+        const contents = await readFile(__filename, {encoding: 'utf8'})
+        const out = join(__dirname, 'out.txt')
+        await writeFile(out, contents.toUpperCase())
+    }
+
+    run().catch(console.error)
+\end{lstlisting}
+
+\subsubsection{File Streams}
+
+The fs module has fs.createReadStream and fs.createWriteStream methods which allow us to read and write files in chunks. Streams are ideal when handling very large files that can be processed incrementally.
+
+Let's start by simply copying the file:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { pipeline } = require('stream')
+    const { join } = require('path')
+    const { createReadStream, createWriteStream } = require('fs')
+
+    pipeline(
+    createReadStream(__filename),
+    createWriteStream(join(__dirname, 'out.txt')),
+    (err) => {
+        if (err) {
+            console.error(err)
+            return
+        }
+        console.log('finished writing')
+    }
+    )
+\end{lstlisting}
+
+To reproduce the read, upper-case, write scenario we created in the previous section, we will need a transform stream to upper-case the content:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { pipeline } = require('stream')
+    const { join } = require('path')
+    const { createReadStream, createWriteStream } = require('fs')
+    const { Transform } = require('stream')
+    const createUppercaseStream = () => {
+        return new Transform({
+            transform (chunk, enc, next) {
+                const uppercased = chunk.toString().toUpperCase()
+                next(null, uppercased)
+            }
+        })
+    }
+
+    pipeline(
+    createReadStream(__filename),
+    createUppercaseStream(),
+    createWriteStream(join(__dirname, 'out.txt')),
+    (err) => {
+        if (err) {
+            console.error(err)
+            return
+        }
+        console.log('finished writing')
+    }
+    )
+\end{lstlisting}
+
+\subsubsection{Reading Directories}
+
+Directories are a special type of file, which hold a catalog of files. Similar to files the fs module provides multiple ways to read a directory: synchronous, callback-based, promise-based, and an async iterable that inherits from fs.Dir.
+
+ Let's look at synchronous, callback-based and promise-based at the same time:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { readdirSync, readdir } = require('fs')
+    const { readdir: readdirProm } = require('fs/promises')
+
+    // synchronous method may throw so wrap in try/catch
+    try {
+        console.log('sync', readdirSync(__dirname))
+    } catch (err) {
+        console.error(err)
+    }
+
+    // callback
+    readdir(__dirname, (err, files) => {
+        if (err) {
+            console.error(err)
+            return
+        }
+        console.log('callback', files)
+    })
+
+    async function run () {
+        const files = await readdirProm(__dirname)
+        console.log('promise', files)
+    }
+
+    // If readdirProm does reject, run will likewise reject
+    // This is why a catch handler is attached
+    run().catch((err) => {
+        console.error(err)
+    })
+
+\end{lstlisting}
+
+Example: streaming directory contents over HTTP in JSON format:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { createServer } = require('http')
+    const { Readable, Transform, pipeline } = require('stream')
+    const { opendir } = require('fs')
+
+
+    const createEntryStream = () => {
+        let syntax = '[\n'
+
+        return new Transform({
+            // true because dirStream is an object stream
+            writableObjectMode: true,
+            // false because res is a binary stream
+            readableObjectMode: false,
+            transform (entry, enc, next) {
+                next(null, `${syntax} "${entry.name}"`)
+                syntax = ',\n'
+            },
+            final (cb) {
+                this.push('\n]\n')
+                cb()
+            }
+        })
+    }
+
+    createServer((req, res) => {
+        if (req.url !== '/') {
+            res.statusCode = 404
+            res.end('Not Found')
+            return
+        }
+
+        opendir(__dirname, (err, dir) => {
+            if (err) {
+                res.statusCode = 500
+                res.end('Server Error')
+                return
+            }
+            // dir not a stream, but an async iterable
+            const dirStream = Readable.from(dir)
+            const entryStream = createEntryStream()
+            res.setHeader('Content-Type', 'application/json')
+            // pipeline from dirStream to entryStream to res
+            // passing a final callback to pipeline
+            pipeline(dirStream, entryStream, res, (err) => {
+                if (err) console.error(err)
+            })
+        })
+    }).listen(3000)
+\end{lstlisting}
+
+
+\subsection{File Metadata}
+
+Metadata about files can be obtained with the following methods:
+
+
+\begin{lstlisting}[style=ES6]
+    fs.stat
+    fs.statSync
+    fs/promises stat
+
+    fs.lstat
+    fs.lstatSync
+    fs/promises lstat
+\end{lstlisting}
+
+The only difference between the stat and lstat methods is that stat follows symbolic links, and lstat will get metadata for symbolic links instead of following them.
+
+These methods return an fs.Stat instance which has a variety of properties and methods for looking up metadata about a file.
+
+Let's start by reading the current working directory and finding out whether each entry is a directory or not.
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { readdirSync, statSync } = require('fs')
+
+    const files = readdirSync('.')
+
+    for (const name of files) {
+        const stat = statSync(name)
+        const typeLabel = stat.isDirectory() ? 'dir: ' : 'file: '
+        console.log(typeLabel, name)
+    }
+
+\end{lstlisting}
+
+Let's extend our example with time stats. There are four stats available for files:
+
+\begin{itemize}
+    \item Access time
+    \item Change time
+    \item Modified time
+    \item Birth time
+\end{itemize}
+
+The difference between change time and modified time, is modified time only applies to writes (although it can be manipulated by fs.utime), whereas change time applies to writes and any status changes such as changing permissions or ownership.
+
+With default options, the time stats are offered in two formats, one is a Date object and the other is milliseconds since the epoch. We'll use the Date objects and convert them to locale strings.
+
+Let's update our code to output the four different time stats for each file:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { readdirSync, statSync } = require('fs')
+
+    const files = readdirSync('.')
+
+    for (const name of files) {
+        const stat = statSync(name)
+        const typeLabel = stat.isDirectory() ? 'dir: ' : 'file: '
+        const { atime, birthtime, ctime, mtime } = stat
+        console.group(typeLabel, name)
+        console.log('atime:', atime.toLocaleString())
+        console.log('ctime:', ctime.toLocaleString())
+        console.log('mtime:', mtime.toLocaleString())
+        console.log('birthtime:', birthtime.toLocaleString())
+        console.groupEnd()
+        console.log()
+    }
+\end{lstlisting}
+
+\subsection{Watching}
+
+The fs.watch method is provided by Node core to tap into file system events. It is, however, fairly low level and not the most friendly of APIs. It's worth considering the ecosystem library, chokidar for file watching needs as it provides a friendlier high level API.
+
+Example use:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { watch } = require('fs')
+
+    watch('.', (evt, filename) => {
+        console.log(evt, filename)
+    })
+\end{lstlisting}
+
+\section{Process and Operating System}
+
+\subsection{STDIO}
+
+Example:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    console.log('initialized')
+    const { Transform } = require('stream')
+
+    const createUppercaseStream = () => {
+        return new Transform({
+            transform (chunk, enc, next) {
+                const uppercased = chunk.toString().toUpperCase()
+                next(null, uppercased)
+            }
+        })
+    }
+
+    const uppercase = createUppercaseStream()
+
+    process.stdin.pipe(uppercase).pipe(process.stdout)
 \end{lstlisting}
 
 \begin{lstlisting}[style=ES6]
@@ -2432,7 +2852,6 @@ The pipeline command will call pipe on every stream passed to it, and will allow
 \begin{lstlisting}[style=ES6]
 
 \end{lstlisting}
-
 
 \section{Appendix}
 
