@@ -2841,6 +2841,452 @@ Example:
     process.stdin.pipe(uppercase).pipe(process.stdout)
 \end{lstlisting}
 
+\subsection{Process Info}
+
+Among others:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+
+    console.log('Current Directory', process.cwd())
+    console.log('Process Platform', process.platform)
+    console.log('Process ID', process.pid)
+\end{lstlisting}
+
+To get the environment variables we can use process.env, and query for specific keys:
+To set environment variables, create a new key.
+
+\begin{lstlisting}[style=ES6]
+    process.env.MODULEPATH
+    /etc/modulefiles:/usr/share/modulefiles:/usr/share/modulefiles/Linux:
+    /usr/share/modulefiles/Core:/usr/share/lmod/lmod/modulefiles/Core
+
+    process.env.FOO='my env var'
+\end{lstlisting}
+
+\subsection{Process Stats}
+
+The process object has methods which allow us to query resource usage. We're going to look at the process.uptime(), process.cpuUsage and process.memoryUsage functions.
+
+Usage:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+
+    setTimeout(() => {
+        const uptime = process.uptime()
+        const { user, system } = process.cpuUsage()
+        const stats = [process.memoryUsage()]
+
+        console.log(uptime, user, system, (user + system)/1000000)
+    }, 1000)
+
+
+\end{lstlisting}
+
+\subsection{System Info}
+
+The os module can be used to get information about the Operating System.
+
+\begin{lstlisting}[style=ES6]
+  'use strict'
+  const os = require('os')
+
+  console.log('Hostname', os.hostname())
+  console.log('Home dir', os.homedir())
+  console.log('Temp dir', os.tmpdir())
+\end{lstlisting}
+
+There are two ways to identify the Operating System with the os module: the os.platform function which returns the same as process.platform property, and the os.type function which on non-Windows systems uses the uname command and on Windows it uses the ver command.
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const os = require('os')
+
+    console.log('platform', os.platform())
+    console.log('type', os.type())
+\end{lstlisting}
+
+\subsection{System Stats}
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const os = require('os')
+
+    setInterval(() => {
+        console.log('system uptime', os.uptime())
+        console.log('freemem', os.freemem())
+        console.log('totalmem', os.totalmem())
+        console.log()
+    }, 1000)
+\end{lstlisting}
+
+\section{Child processes}
+
+\subsection{Creating Child Processes}
+
+\subsubsection{execFile and execFileSync Methods}
+
+The execFile and execFileSync methods are variations of the exec and execSync methods. Rather than defaulting to executing a provided command in a shell, it attempts to execute the provided path to a binary executable directly.
+
+\subsubsection{fork}
+
+The fork method is a specialization of the spawn method. By default, it will spawn a new Node process of the currently executing JavaScript file (although a different JavaScript file to execute can be supplied). It also sets up Interprocess Communication (IPC) with the subprocess by default.
+
+\subsubsection{exec and execSync Methods}
+
+The child\_process.execSync method is the simplest way to execute a command.
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+
+    const { execSync } = require('child_process')
+    const output = execSync(
+    `node -e "console.log('subprocess stdio output')"`
+    )
+    console.log(output.toString())
+\end{lstlisting}
+
+The execSync method returns a buffer containing the output (from STDOUT) of the command.
+
+If we do want to execute the node binary as a child process, it's best to refer to the full path of the node binary of the currently executing Node process. This can be found with process.execPath. Using process.execPath ensures that no matter what, the subprocess will be executing the same version of Node.
+
+The following is the same example from earlier, but using process.execPath in place of just 'node':
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { execSync } = require('child_process')
+    const output = execSync(
+    `${process.execPath} -e "console.error('subprocess stdio output')"`
+    )
+    console.log(output.toString())
+\end{lstlisting}
+
+The exec method takes a shell command as a string and executes it the same way as execSync. Unlike execSync the asynchronous exec function splits the STDOUT and STDERR output by passing them as separate arguments to the callback function:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { exec } = require('child_process')
+
+    exec(
+    `"${process.execPath}" -e "console.log('A');console.error('B')"`,
+    (err, stdout, stderr) => {
+        console.log('err', err)
+        console.log('subprocess stdout: ', stdout.toString())
+        console.log('subprocess stderr: ', stderr.toString())
+    }
+    )
+\end{lstlisting}
+
+\subsubsection{spawn and spawnSync Methods}
+
+While exec and execSync take a full shell command, spawn takes the executable path as the first argument and then an array of flags that should be passed to the command as second argument:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { spawnSync } = require('child_process')
+
+    const result = spawnSync(
+    //  executable path
+    process.execPath,
+    // array of flags to be passed to spawned process
+    ['-e', `console.log('subprocess stdio output')`]
+    )
+    // While the execSync function returns a buffer
+    // containing the child process output,
+    // the spawnSync function returns an object containing
+    // information about the process that was spawned.
+    console.log(result)
+\end{lstlisting}
+
+Unlike execSync, the spawnSync method does not need to be wrapped in a try/catch. If a spawnSync process exits with a non-zero exit code, it does not throw:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { spawnSync } = require('child_process')
+    const result = spawnSync(process.execPath, [`-e`, `process.exit(1)`])
+    console.log(result)
+\end{lstlisting}
+
+Just as there are differences between execSync and spawnSync there are differences between exec and spawn.
+
+While exec accepts an optional callback, spawn does not. Both exec and spawn return a ChildProcess instance however, which has stdin, stdout and stderr streams and inherits from EventEmitter allowing for exit code to be obtained after a close event is emitted:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { spawn } = require('child_process')
+
+    const sp = spawn(
+    process.execPath,
+    [`-e`, `console.log('subprocess stdio output')`]
+    )
+
+    console.log('pid is', sp.pid)
+
+    // get the STDOUT of the child process
+    sp.stdout.pipe(process.stdout)
+
+    sp.on('close', (status) => {
+        console.log('exit status was', status)
+    })
+\end{lstlisting}
+
+There is one highly important differentiator between spawn and the other three methods we've been exploring (namely exec, execSync and spawnSync): the spawn method is the only method of the four that\textit{ doesn't buffer child process output}.
+
+Even though the exec method has stdout and stderr streams, they will stop streaming once the subprocess output has reached 1 mebibyte (or 1024 * 1024 bytes). This can be configured with a maxBuffer option, but no matter what, the other three methods have an upper limit on the amount of output a child process can generate before it is truncated.
+
+Since the spawn method does not buffer at all, it will continue to stream output for the entire lifetime of the subprocess, no matter how much output it generates. Therefore, for long running child processes it's recommended to use the spawn method.
+
+\subsection{Process Configuration}
+
+An options object can be passed as a third argument in the case of spawn and spawnSync or the second argument in the case of exec and execSync.
+
+We'll explore two options that can be passed which control the environment of the child process: cwd and env.
+
+We'll use spawn for our example but these options are universally the same for all the child creation methods.
+
+By default, the child process inherits the environment variables of the parent process:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { spawn } = require('child_process')
+
+    process.env.A_VAR_WE = 'JUST SET'
+    const sp = spawn(process.execPath, ['-p', 'process.env'])
+    sp.stdout.pipe(process.stdout)
+\end{lstlisting}
+
+If we pass an options object with an env property the parent environment variables will be overwritten:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+
+    const { spawn } = require('child_process')
+
+    process.env.A_VAR_WE = 'JUST SET'
+
+    const sp = spawn(process.execPath, ['-p', 'process.env'], {
+        env: {SUBPROCESS_SPECIFIC: 'ENV VAR'}
+    })
+
+    sp.stdout.pipe(process.stdout)
+\end{lstlisting}
+
+Another option that can be set when creating a child process is the cwd option:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { IS_CHILD } = process.env
+
+    if (IS_CHILD) {
+        console.log('Subprocess cwd:', process.cwd())
+        console.log('env', process.env)
+    } else {
+        const { parse } = require('path')
+        const { root } = parse(process.cwd())
+        const { spawn } = require('child_process')
+        const sp = spawn(process.execPath, [__filename], {
+            cwd: root,
+            env: {IS_CHILD: '1'}
+        })
+
+        sp.stdout.pipe(process.stdout)
+    }
+\end{lstlisting}
+
+\subsection{Child STDIO}
+
+So far we've covered that the asynchronous child creation methods (exec and spawn) return a ChildProcess instance which has stdin, stdout and stderr streams representing the I/O of the subprocess.
+
+This is the default behavior, but it can be altered.
+
+Let's start with an example with the default behavior:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { spawn } = require('child_process')
+    const sp = spawn(
+    process.execPath,
+    [
+    '-e',
+    `console.error('err output'); process.stdin.pipe(process.stdout)`
+    ],
+    // default
+    { stdio: ['pipe', 'pipe', 'pipe'] }
+    )
+
+    sp.stdout.pipe(process.stdout)
+    sp.stderr.pipe(process.stdout)
+    sp.stdin.write('this input will become output\n')
+    // ends the input stream, allowing the child process to exit
+    // which in turn allows the parent process to exit.
+    sp.stdin.end()
+\end{lstlisting}
+
+If we're piping the subprocess STDOUT to the parent process STDOUT without transforming the data in any way, we can instead set the second element of the stdio array to 'inherit'. This will cause the child process to inherit the STDOUT of the parent:
+
+
+We've changed the stdio[1] element from 'pipe' to 'inherit' and . This will result in the exact same output:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { spawn } = require('child_process')
+    const sp = spawn(
+    process.execPath,
+    [
+    '-e',
+    `console.error('err output'); process.stdin.pipe(process.stdout)`
+    ],
+    { stdio: ['pipe', 'inherit', 'pipe'] }
+    )
+
+    sp.stderr.pipe(process.stdout)
+    // removed the sp.stdout.pipe(process.stdout) line
+    // (in fact sp.stdout would now be null)
+    sp.stdin.write('this input will become output\n')
+    sp.stdin.end()
+\end{lstlisting}
+
+The stdio option can also be passed a stream directly. In our example, we're still piping the child process STDERR to the parent process STDOUT. Since process.stdout is a stream, we can set stdio[2] to process.stdout to achieve the same effect:
+
+
+
+Now both sp.stdout and sp.stderr will be null because neither of them are configured to 'pipe' in the stdio option.
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { spawn } = require('child_process')
+    const sp = spawn(
+    process.execPath,
+    [
+    '-e',
+    `console.error('err output'); process.stdin.pipe(process.stdout)`
+    ],
+    // now sp.stderr will be null as well
+    { stdio: ['pipe', 'inherit', process.stdout] }
+    )
+
+    sp.stdin.write('this input will become output\n')
+    sp.stdin.end()
+\end{lstlisting}
+
+To send input to a child process created with spawn or exec we can call the write method of the return ChildProcess instance ( sp.stdin.write('...\\n')).
+For the spawnSync and execSync functions an input option be used to achieve the same:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { spawnSync } = require('child_process')
+
+    spawnSync(
+    process.execPath,
+    [
+    '-e',
+    `console.error('err output'); process.stdin.pipe(process.stdout)`
+    ],
+    {
+        input: 'this input will become output\n',
+        stdio: ['pipe', 'inherit', 'ignore']
+    }
+    )
+\end{lstlisting}
+
+For the input option to work for spawnSync and execSync the stdio[0] option has to be pipe, otherwise the input option is ignored.
+
+\section{ Writing Unit Tests }
+
+\subsection{Assertions}
+
+ The core assert module exports a function that will throw an AssertionError when the value passed to it is falsy (meaning that the value can be coerced to false with !!val):
+
+ The core assert module has the following assertion methods:
+
+\begin{lstlisting}[style=ES6]
+    assert.ok(val) - the same as assert(val)
+
+    assert.equal(val1, val2) - val1 == val2
+    assert.notEqual(val1, val2) -val1 != val2
+
+    // also checks type
+    assert.strictEqual(val1, val2) - val1 === val2
+    assert.notStrictEqual(val1, val2) - val1 !== val2
+
+    // all values in an object
+    assert.deepEqual(obj1, obj2)
+    assert.notDeepEqual(obj1, obj2)
+
+    // al values in an object, also hecking type
+    assert.deepStrictEqual(obj1, obj2)
+    assert.notDeepStrictEqual(obj1, obj2)
+
+    assert.throws(function)
+    assert.doesNotThrow(function)
+
+    assert.rejects(promise||async function) -assert promise rjects
+    assert.doesNotReject(promise||async function) -assert promise resolves
+
+    assert.ifError(err) - check that an error object is falsy
+
+    assert.match(string, regex)
+    assert.doesNotMatch(string, regex)
+
+    assert.fail() -force an AssertionError to be thrown
+\end{lstlisting}
+
+The assert module also exposes a strict object where namespaces for non-strict methods are strict, so the above code could also be written as:
+
+\begin{lstlisting}[style=ES6]
+    const assert = require('assert')
+    const add = require('./get-add-from-somewhere.js')
+    assert.strict.equal(add(2, 2), 4)
+\end{lstlisting}
+
+It's worth noting that assert.equal and other non-strict (i.e. coercive) assertion methods are deprecated, which means they may one day be removed from Node core. Therefore if using the Node core assert module, best practice would be always to use assert.strict rather than assert, or at least always use the strict methods (e.g. assert.strictEqual).
+
+The error handling assertions (throws, ifError, rejects) are useful for asserting that error situations occur for synchronous, callback-based and promise-based APIs.
+
+Let's start with an error case from an API that is synchronous:
+
+\begin{lstlisting}[style=ES6]
+    const assert = require('assert')
+    const add = (a, b) => {
+        if (typeof a !== 'number' || typeof b !== 'number') {
+            throw Error('inputs must be numbers')
+        }
+        return a + b
+    }
+    // need to pass a function
+    assert.throws(() => add('5', '5'), Error('inputs must be numbers'))
+    assert.doesNotThrow(() => add(5, 5))
+\end{lstlisting}
+
+Notice that the invocation of add is wrapped inside another function. This is because the assert.throws and assert.doesNotThrow methods have to be , which they can then wrap and call to see if a throw occurs or not. When executed the above code will pass, which is to say, no output will occur and the process will exit.
+
+
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=ES6]
+
+\end{lstlisting}
+
 \begin{lstlisting}[style=ES6]
 
 \end{lstlisting}
