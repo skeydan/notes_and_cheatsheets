@@ -724,24 +724,6 @@ Currently there is experimental support for an \lstinline|import.meta.resolve| f
 
 We can use the ecosystem \lstinline|import-meta-resolve| module to get the best results for now.
 
-import { resolve } from 'import-meta-resolve'
-
-console.log(
-`import 'pino'`,
-'=>',
-await resolve('pino', import.meta.url)
-)
-
-console.log(
-`import 'tap'`,
-'=>',
-await resolve('tap', import.meta.url)
-)
-
-
-
-
-
 \begin{lstlisting}[style=ES6]
     import { resolve } from 'import-meta-resolve'
 
@@ -3259,45 +3241,198 @@ Let's start with an error case from an API that is synchronous:
     assert.doesNotThrow(() => add(5, 5))
 \end{lstlisting}
 
-Notice that the invocation of add is wrapped inside another function. This is because the assert.throws and assert.doesNotThrow methods have to be , which they can then wrap and call to see if a throw occurs or not. When executed the above code will pass, which is to say, no output will occur and the process will exit.
-
-
+For callback-based APIs, the assert.ifError will only pass if the value passed to it is either null or undefined. Typically the err param is passed to it, to ensure no errors occurred:
 
 \begin{lstlisting}[style=ES6]
+    const assert = require('assert')
+    const pseudoReq = (url, cb) => {
+        setTimeout(() => {
+            if (url === '...rror.com')
+             cb(Error('network error'))
+            else cb(null, Buffer.from('some data'))
+        }, 300)
+    }
+
+    pseudoReq('...mple.com', (err, data) => {
+        assert.ifError // does not throw an AssertionError
+        assert.ifError(err)
+    })
+
+    pseudoReq('...error.com', (err, data) => {
+        // trigger an error
+        // To test an error case with a callback API
+        // we can check the err param against the
+        // expected error object using assert.deepStrictEqual.
+        assert.deepStrictEqual(err, Error('network error'))
+    })
+\end{lstlisting}
+
+Finally for this section, let's consider asserting error or success states on a promise-based API:
+
+\begin{lstlisting}[style=ES6]
+    const assert = require('assert')
+    const { setTimeout: timeout } = require('timers/promises')
+
+    const pseudoReq = async (url) => {
+        await timeout(300)
+        if (url === '...error.com') throw Error('network error')
+        return Buffer.from('some data')
+    }
+    assert.doesNotReject(pseudoReq('.../example.com'))
+    assert.rejects(pseudoReq('...error.com'), Error('network error'))
 
 \end{lstlisting}
 
-\begin{lstlisting}[style=ES6]
+\subsection{Test libraries}
+\subsubsection{tap}
 
+Test for synchronous API:
+
+\begin{lstlisting}[style=ES6]
+    const { test } = require('tap')
+    const add = require('../add')
+
+    test('throw when inputs are not numbers', async ({ throws }) => {
+        throws(() => add('5', '5'), Error('inputs must be numbers'))
+        throws(() => add(5, '5'), Error('inputs must be numbers'))
+        throws(() => add('5', 5), Error('inputs must be numbers'))
+        throws(() => add({}, null), Error('inputs must be numbers'))
+    })
+
+    test('adds two numbers', async ({ equal }) => {
+        equal(add(5, 5), 10)
+        equal(add(-5, 5), 0)
+    })
+\end{lstlisting}
+
+Test for callback-based API:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { test } = require('tap')
+    const req = require('../req')
+
+    test('handles network errors', ({ strictSame, end }) => {
+        req('error.com', (err) => {
+            strictSame(err, Error('network error'))
+            end()
+        })
+    })
+
+    test('responds with data', ({ ok, strictSame, error, end }) => {
+        req('example.com', (err, data) => {
+            error(err)
+            ok(Buffer.isBuffer(data))
+            strictSame(data, Buffer.from('some data'))
+            end()
+        })
+    })
+\end{lstlisting}
+
+Test for promise-based API:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const { test } = require('tap')
+    const req = require('../req-prom')
+
+    test('handles network errors', async ({ rejects }) => {
+        await rejects(req('error.com'), Error('network error'))
+    })
+
+    test('responds with data', async ({ ok, strictSame }) => {
+        const data = await req('example.com')
+        ok(Buffer.isBuffer(data))
+        strictSame(data, Buffer.from('some d
+\end{lstlisting}
+
+\subsubsection{jest}
+
+Equivalently:
+
+\begin{lstlisting}[style=ES6]
+    'use strict'
+    const add = require('../add')
+    test('throw when inputs are not numbers', async () => {
+        expect(() => add('5', '5')).toThrowError(
+        Error('inputs must be numbers')
+        )
+        expect(() => add(5, '5')).toThrowError(
+        Error('inputs must be numbers')
+        )
+        expect(() => add('5', 5)).toThrowError(
+        Error('inputs must be numbers')
+        )
+        expect(() => add({}, null)).toThrowError(
+        Error('inputs must be numbers')
+        )
+    })
+    test('adds two numbers', async () => {
+        expect(add(5, 5)).toStrictEqual(10)
+        expect(add(-5, 5)).toStrictEqual(0)
+    })
 \end{lstlisting}
 
 \begin{lstlisting}[style=ES6]
+    'use strict'
+    const req = require('../req')
 
+    test('handles network errors', (done) => {
+        req('/error.com', (err) => {
+            expect(err).toStrictEqual(Error('network error'))
+            done()
+        })
+    })
+
+    test('responds with data', (done) => {
+        req('example.com', (err, data) => {
+            expect(err == null).toBe(true)
+            expect(Buffer.isBuffer(data)).toBeTruthy()
+            expect(data).toStrictEqual(Buffer.from('some data'))
+            done()
+        })
+    })
 \end{lstlisting}
 
 \begin{lstlisting}[style=ES6]
+    'use strict'
+    const req = require('../req-prom')
 
+    test('handles network errors', async () => {
+        await expect(req('error.com'))
+        .rejects
+        .toStrictEqual(Error('network error'))
+    })
+
+    test('responds with data', async () => {
+        const data = await req('example.com')
+        expect(Buffer.isBuffer(data)).toBeTruthy()
+        expect(data).toStrictEqual(Buffer.from('some data'))
+    })
 \end{lstlisting}
+
+\subsubsection{package.json}
 
 \begin{lstlisting}[style=ES6]
-
+    {
+        "name": "my-project",
+        "version": "1.0.0",
+        "description": "",
+        "main": "index.js",
+        "scripts": {
+            "test": "jest --coverage"
+        },
+        "keywords": [],
+        "author": "",
+        "license": "ISC"
+    }
 \end{lstlisting}
 
-\begin{lstlisting}[style=ES6]
+\subsubsection{Node's Built-in node:test Module}
 
-\end{lstlisting}
+The node:test built-in and the --test flag have been stable since Node v20 and are seeing more usage in the wild.
 
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
-
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
-
-\begin{lstlisting}[style=ES6]
-
-\end{lstlisting}
+The --test flag finds all test files per a file naming pattern (by default, *.test.js and *.spec.js) and runs them while summarizing test results in the terminal.
 
 \section{Appendix}
 
