@@ -1,0 +1,58 @@
+graph TD
+    %% Styles
+    classDef node fill:#f9f9f9,stroke:#333,stroke-width:1px,font-size:10px;
+    classDef leaf fill:#e6f7ff,stroke:#333,stroke-width:1px,font-size:10px;
+    classDef question fill:#fff2cc,stroke:#333,stroke-width:1px,font-size:10px;
+
+    %% Noeud racine
+    A[Début]:::node --> B{Effervescence à l'acide ?}
+
+    %% Branche Effervescence = Oui
+    B -->|Oui| C[Résistance à la pression ?]:::question
+    C -->|Cohérente| E[Calcaire]:::leaf
+    C -->|Intermédiaire| F[Craie]:::leaf
+    C -->|Friable| G[Marne]:::leaf
+
+    %% Branche Effervescence = Non
+    B -->|Non| D{Structures orientées ?}:::question
+
+    %% Branche Structures orientées = Oui
+    D -->|Oui| H{Débit en feuillets ?}:::question
+    H -->|Oui| J[Fissilité ?]:::question
+    J -->|Facile| L[Schiste ardoisier]:::leaf
+    J -->|Grossière| M[Schiste]:::question
+    M -->|Éclat métallique ?| N[Micaschiste]:::leaf
+    M -->|Couleur des minéraux ?| O[Couleur des minéraux]:::question
+    O -->|Vert| P[Schiste vert]:::leaf
+    O -->|Bleu| Q[Schiste bleu]:::leaf
+    O -->|Vert/Rouge| R[Éclogite]:::leaf
+
+    H -->|Non| K{Strates/affleurements visibles ?}:::question
+    K -->|Oui| P[Foliation ?]:::question
+    P -->|Complète| S[Gneiss]:::leaf
+    P -->|Incomplète| T[Migmatite]:::leaf
+    K -->|Non| U[Minéraux visibles ?]:::question
+    U -->|Jointifs, nombreux| V[Couleur ?]:::question
+    V -->|Claire| W[Granite]:::leaf
+    V -->|Sombre| X[Gabbro]:::leaf
+    V -->|Verte| Y[Péridotite]:::leaf
+    U -->|Rares dans matrice| Z[Couleur ?]:::question
+    Z -->|Sombre| AA[Basalte]:::leaf
+    Z -->|Gris| AB[Andésite]:::leaf
+    Z -->|Claire| AC[Rhyolite]:::leaf
+
+    %% Branche Structures orientées = Non
+    D -->|Non| I[Minéraux visibles ?]:::question
+    I -->|Oui| AD[Couleur ?]:::question
+    AD -->|Claire| AE[Granite]:::leaf
+    AD -->|Sombre| AF[Gabbro]:::leaf
+    AD -->|Verte| AG[Péridotite]:::leaf
+    I -->|Non| AH{Strates/affleurements visibles ?}:::question
+    AH -->|Oui| AI[Dureté ?]:::question
+    AI -->|Tendre| AJ[Argile]:::leaf
+    AI -->|Cohérente| AK[Taille des grains ?]:::question
+    AK -->|< 2mm| AL[Grès]:::leaf
+    AK -->|> 2mm| AM[Conglomérat]:::question
+    AM -->|Anguleux| AN[Brèche]:::leaf
+    AM -->|Arrondi| AO[Poudingue]:::leaf
+    AM -->|Meuble| AP[Sable]:::leaf
