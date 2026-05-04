@@ -49,8 +49,9 @@ graph TD
     AD -->|Verte| AG[Péridotite]:::leaf
     I -->|Non| AH{Strates/affleurements visibles ?}:::question
     AH -->|Oui| AI[Dureté ?]:::question
-    AI -->|Tendre| AJ[Argile]:::leaf
-    AI -->|Cohérente| AK[Taille des grains ?]:::question
+    AI -->|Tendre| AJ{Test à l'eau ?}:::question
+    AJ -->|Plastique| AK[Argile]:::leaf
+    AJ -->|Soluble| AL[Évaporite]:::leaf    AI -->|Cohérente| AK[Taille des grains ?]:::question
     AK -->|< 2mm| AL[Grès]:::leaf
     AK -->|> 2mm| AM[Conglomérat]:::question
     AM -->|Anguleux| AN[Brèche]:::leaf
